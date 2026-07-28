@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle2, ArrowLeft, ArrowRight, Clock } from "lucide-react";
+import { CheckCircle2, ArrowLeft, ArrowRight, Clock, Lock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function BookLesson() {
@@ -40,11 +40,22 @@ export default function BookLesson() {
   const activeLessonTypes = lessonTypes?.filter(lt => lt.isActive) || [];
   const selectedTypeDetails = activeLessonTypes.find(lt => lt.id === selectedLessonType);
   const remainingForSelected = dashboard?.packages?.find(p => p.lessonTypeId === selectedLessonType)?.remainingCredits ?? 0;
-  const canBookSelected = selectedLessonType == null
-    ? false
-    : selectedTypeDetails?.isTrial
-      ? !!dashboard?.trialAvailable
-      : remainingForSelected > 0;
+  const trialLessonTypeExists = activeLessonTypes.some(lt => lt.isTrial);
+
+  // A lesson type is bookable if it's the trial (and not yet used) or the
+  // student already has credits for it — locked cards can't be selected at
+  // all, so there's nothing to reject at confirm time.
+  function isBookable(lt: (typeof activeLessonTypes)[number]): boolean {
+    if (lt.isTrial) return !!dashboard?.trialAvailable;
+    const remaining = dashboard?.packages?.find(p => p.lessonTypeId === lt.id)?.remainingCredits ?? 0;
+    return remaining > 0;
+  }
+
+  function lockReason(lt: (typeof activeLessonTypes)[number]): string {
+    if (lt.isTrial) return "Trial already used";
+    if (trialLessonTypeExists && dashboard?.trialAvailable) return "Complete your free trial first";
+    return "Message your teacher to unlock";
+  }
 
   const handleBook = () => {
     if (!selectedLessonType || !selectedSlot) return;
@@ -87,49 +98,55 @@ export default function BookLesson() {
             </div>
           ) : (
             <div className="grid md:grid-cols-2 gap-6">
-              {activeLessonTypes.map(lt => (
-                <button
-                  key={lt.id}
-                  onClick={() => setSelectedLessonType(lt.id)}
-                  className={`text-left p-6 rounded-3xl border-2 transition-all ${
-                    selectedLessonType === lt.id 
-                      ? "border-primary bg-primary/5 shadow-md" 
-                      : "border-border bg-card hover:border-primary/50"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-xl font-bold text-foreground">{lt.name}</h3>
-                    {lt.isTrial && (
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-primary/10 text-primary">Free</span>
+              {activeLessonTypes.map(lt => {
+                const bookable = isBookable(lt);
+                return (
+                  <button
+                    key={lt.id}
+                    onClick={() => bookable && setSelectedLessonType(lt.id)}
+                    disabled={!bookable}
+                    className={`text-left p-6 rounded-3xl border-2 transition-all ${
+                      !bookable
+                        ? "border-border bg-accent/30 opacity-60 cursor-not-allowed"
+                        : selectedLessonType === lt.id
+                          ? "border-primary bg-primary/5 shadow-md"
+                          : "border-border bg-card hover:border-primary/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-xl font-bold text-foreground">{lt.name}</h3>
+                      {lt.isTrial && (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-primary/10 text-primary">Free</span>
+                      )}
+                    </div>
+                    <p className="text-primary font-medium mb-4">
+                      {lt.durationMinutes} minutes • {lt.isTrial ? "Free" : `$${(lt.priceCents / 100).toFixed(2)}`}
+                    </p>
+                    <p className="text-muted-foreground text-sm mb-4">{lt.description}</p>
+                    {!bookable && (
+                      <p className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                        <Lock className="w-3.5 h-3.5" />
+                        {lockReason(lt)}
+                      </p>
                     )}
-                  </div>
-                  <p className="text-primary font-medium mb-4">
-                    {lt.durationMinutes} minutes • {lt.isTrial ? "Free" : `$${(lt.priceCents / 100).toFixed(2)}`}
-                  </p>
-                  <p className="text-muted-foreground text-sm">{lt.description}</p>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           )}
 
-          {selectedLessonType != null && !canBookSelected && (
+          {activeLessonTypes.length > 0 && activeLessonTypes.every(lt => !isBookable(lt)) && (
             <div className="mt-6 p-4 bg-accent rounded-xl text-sm text-muted-foreground">
-              {selectedTypeDetails?.isTrial ? (
-                "You've already used your free trial lesson."
-              ) : (
-                <>
-                  You don't have any credits for this lesson yet.{" "}
-                  <Link href="/messages" className="text-primary font-medium hover:underline">
-                    Message your teacher
-                  </Link>{" "}
-                  to arrange one.
-                </>
-              )}
+              Nothing to book right now.{" "}
+              <Link href="/messages" className="text-primary font-medium hover:underline">
+                Message your teacher
+              </Link>{" "}
+              if you have questions.
             </div>
           )}
 
           <div className="mt-8 flex justify-end">
-            <Button onClick={() => setStep(2)} disabled={!canBookSelected} size="lg" className="px-8">
+            <Button onClick={() => setStep(2)} disabled={!selectedLessonType} size="lg" className="px-8">
               Next Step <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
