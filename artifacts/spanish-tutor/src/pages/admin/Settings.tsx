@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useGetAdminSiteSettings, useUpdateSiteSettings, useGetCalendarStatus, useDisconnectCalendar } from "@workspace/api-client-react";
+import type { WeeklyHours, DayHours } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,7 +9,28 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetAdminSiteSettingsQueryKey, getGetSiteSettingsQueryKey, getGetCalendarStatusQueryKey } from "@workspace/api-client-react";
-import { Calendar as CalendarIcon, CheckCircle2, AlertCircle, Unlink } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle2, AlertCircle, Unlink, Clock } from "lucide-react";
+
+const DAY_LABELS: Array<{ key: keyof WeeklyHours; label: string }> = [
+  { key: "mon", label: "Monday" },
+  { key: "tue", label: "Tuesday" },
+  { key: "wed", label: "Wednesday" },
+  { key: "thu", label: "Thursday" },
+  { key: "fri", label: "Friday" },
+  { key: "sat", label: "Saturday" },
+  { key: "sun", label: "Sunday" },
+];
+
+const DEFAULT_DAY_HOURS: DayHours = { enabled: true, start: "09:00", end: "20:00" };
+const DEFAULT_WEEKLY_HOURS: WeeklyHours = {
+  mon: { ...DEFAULT_DAY_HOURS },
+  tue: { ...DEFAULT_DAY_HOURS },
+  wed: { ...DEFAULT_DAY_HOURS },
+  thu: { ...DEFAULT_DAY_HOURS },
+  fri: { ...DEFAULT_DAY_HOURS },
+  sat: { ...DEFAULT_DAY_HOURS },
+  sun: { ...DEFAULT_DAY_HOURS },
+};
 
 export default function AdminSettings() {
   const { data: settings, isLoading } = useGetAdminSiteSettings();
@@ -25,6 +47,11 @@ export default function AdminSettings() {
     tutorPhotoUrl: "",
     freeTrialEnabled: false,
   });
+  const [weeklyHours, setWeeklyHours] = useState<WeeklyHours>(DEFAULT_WEEKLY_HOURS);
+
+  const updateDayHours = (day: keyof WeeklyHours, patch: Partial<DayHours>) => {
+    setWeeklyHours((prev) => ({ ...prev, [day]: { ...prev[day], ...patch } }));
+  };
 
   // Handle OAuth callback params in the hash
   useEffect(() => {
@@ -54,6 +81,9 @@ export default function AdminSettings() {
         tutorPhotoUrl: settings.tutorPhotoUrl || "",
         freeTrialEnabled: settings.freeTrialEnabled,
       });
+      if (settings.weeklyHours) {
+        setWeeklyHours(settings.weeklyHours);
+      }
     }
   }, [settings]);
 
@@ -70,7 +100,7 @@ export default function AdminSettings() {
   };
 
   const handleSave = () => {
-    updateMutation.mutate({ data: formData }, {
+    updateMutation.mutate({ data: { ...formData, weeklyHours } }, {
       onSuccess: () => {
         toast({ title: "Settings saved" });
         qc.invalidateQueries({ queryKey: getGetAdminSiteSettingsQueryKey() });
@@ -123,6 +153,60 @@ export default function AdminSettings() {
           <p className="text-sm text-muted-foreground mt-4">
             Connect your Google Calendar to automatically block busy times and add new lessons to your schedule.
           </p>
+        </div>
+
+        {/* Working Hours */}
+        <div className="bg-card border border-border rounded-3xl p-8">
+          <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-primary" /> Working Hours
+          </h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            Students can only book within these hours. For a one-off day off or vacation, just add an event
+            to your Google Calendar for that time — it's automatically blocked too.
+          </p>
+          <div className="space-y-2">
+            {DAY_LABELS.map(({ key, label }) => {
+              const day = weeklyHours[key];
+              return (
+                <div
+                  key={key}
+                  className="flex items-center gap-4 py-2.5 border-b border-border last:border-b-0"
+                >
+                  <Switch
+                    checked={day.enabled}
+                    onCheckedChange={(v) => updateDayHours(key, { enabled: v })}
+                  />
+                  <span className={`w-28 text-sm font-medium ${day.enabled ? "text-foreground" : "text-muted-foreground"}`}>
+                    {label}
+                  </span>
+                  {day.enabled ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="time"
+                        value={day.start}
+                        onChange={(e) => updateDayHours(key, { start: e.target.value })}
+                        className="w-32"
+                      />
+                      <span className="text-muted-foreground text-sm">to</span>
+                      <Input
+                        type="time"
+                        value={day.end}
+                        onChange={(e) => updateDayHours(key, { end: e.target.value })}
+                        className="w-32"
+                      />
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Closed</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div className="pt-6 flex justify-end">
+            <Button onClick={handleSave} disabled={updateMutation.isPending} size="lg">
+              Save Changes
+            </Button>
+          </div>
         </div>
 
         {/* Site Content */}

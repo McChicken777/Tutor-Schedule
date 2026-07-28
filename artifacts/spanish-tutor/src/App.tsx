@@ -14,6 +14,7 @@ import StudentDashboard from "@/pages/student/Dashboard";
 import StudentBookings from "@/pages/student/Bookings";
 import BookingDetail from "@/pages/student/BookingDetail";
 import BookLesson from "@/pages/student/Book";
+import StudentMessages from "@/pages/student/Messages";
 
 import AdminLogin from "@/pages/admin/Login";
 import AdminDashboard from "@/pages/admin/Dashboard";
@@ -24,6 +25,7 @@ import AdminStudents from "@/pages/admin/Students";
 import AdminTestimonials from "@/pages/admin/Testimonials";
 import AdminFaqs from "@/pages/admin/Faqs";
 import AdminSettings from "@/pages/admin/Settings";
+import AdminMessages from "@/pages/admin/Messages";
 
 import NotFound from "@/pages/not-found";
 
@@ -194,6 +196,9 @@ function ClerkProviderWithRoutes() {
             <Route path="/admin/settings">
               <AdminLayout><AdminSettings /></AdminLayout>
             </Route>
+            <Route path="/admin/messages">
+              <AdminLayout><AdminMessages /></AdminLayout>
+            </Route>
 
             {/* Student Portal */}
             <Route path="/dashboard">
@@ -207,6 +212,9 @@ function ClerkProviderWithRoutes() {
             </Route>
             <Route path="/book">
               <StudentPortal><BookLesson /></StudentPortal>
+            </Route>
+            <Route path="/messages">
+              <StudentPortal><StudentMessages /></StudentPortal>
             </Route>
 
             <Route component={NotFound} />

@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
-import { LogOut, LayoutDashboard, Calendar, BookOpen } from "lucide-react";
+import { LogOut, LayoutDashboard, Calendar, BookOpen, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function StudentLayout({ children }: { children: ReactNode }) {
@@ -14,6 +14,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Bookings", href: "/bookings", icon: Calendar },
     { label: "Book a Lesson", href: "/book", icon: BookOpen },
+    { label: "Messages", href: "/messages", icon: MessageCircle },
   ];
 
   return (
