@@ -1,7 +1,14 @@
 import { google } from "googleapis";
 import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { calendarTokensTable } from "@workspace/db";
+import { calendarTokensTable, DEFAULT_WEEKLY_HOURS, type WeeklyHours, type DayHours } from "@workspace/db";
+
+const DAY_KEYS: Array<keyof WeeklyHours> = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+
+function parseHhMm(value: string): { hour: number; minute: number } {
+  const [hour, minute] = value.split(":").map((n) => parseInt(n, 10));
+  return { hour: hour || 0, minute: minute || 0 };
+}
 
 export function createOAuth2Client() {
   return new google.auth.OAuth2(
@@ -130,35 +137,44 @@ export function generateAvailableSlots(
   startDate: Date,
   endDate: Date,
   durationMinutes: number,
-  workingHours = { start: 9, end: 20 }, // 9am - 8pm
+  weeklyHours: WeeklyHours = DEFAULT_WEEKLY_HOURS,
   slotIntervalMinutes = 60,
 ): Array<{ startTime: Date; endTime: Date }> {
   const slots: Array<{ startTime: Date; endTime: Date }> = [];
   const current = new Date(startDate);
-  current.setHours(workingHours.start, 0, 0, 0);
+  current.setHours(0, 0, 0, 0);
 
   while (current < endDate) {
-    const dayEnd = new Date(current);
-    dayEnd.setHours(workingHours.end, 0, 0, 0);
+    const dayHours: DayHours = weeklyHours[DAY_KEYS[current.getDay()]];
 
-    let slotStart = new Date(current);
-    while (slotStart < dayEnd) {
-      const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60 * 1000);
-      if (slotEnd > dayEnd) break;
+    if (dayHours.enabled) {
+      const { hour: startHour, minute: startMinute } = parseHhMm(dayHours.start);
+      const { hour: endHour, minute: endMinute } = parseHhMm(dayHours.end);
 
-      const isBusy = busySlots.some(
-        (busy) => slotStart < busy.end && slotEnd > busy.start,
-      );
+      const dayEnd = new Date(current);
+      dayEnd.setHours(endHour, endMinute, 0, 0);
 
-      if (!isBusy && slotStart > new Date()) {
-        slots.push({ startTime: new Date(slotStart), endTime: new Date(slotEnd) });
+      let slotStart = new Date(current);
+      slotStart.setHours(startHour, startMinute, 0, 0);
+
+      while (slotStart < dayEnd) {
+        const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60 * 1000);
+        if (slotEnd > dayEnd) break;
+
+        const isBusy = busySlots.some(
+          (busy) => slotStart < busy.end && slotEnd > busy.start,
+        );
+
+        if (!isBusy && slotStart > new Date()) {
+          slots.push({ startTime: new Date(slotStart), endTime: new Date(slotEnd) });
+        }
+
+        slotStart = new Date(slotStart.getTime() + slotIntervalMinutes * 60 * 1000);
       }
-
-      slotStart = new Date(slotStart.getTime() + slotIntervalMinutes * 60 * 1000);
     }
 
     current.setDate(current.getDate() + 1);
-    current.setHours(workingHours.start, 0, 0, 0);
+    current.setHours(0, 0, 0, 0);
   }
 
   return slots;

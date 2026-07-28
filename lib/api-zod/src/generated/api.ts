@@ -87,7 +87,44 @@ export const GetSiteSettingsResponse = zod.object({
   "tutorBio": zod.string(),
   "contactEmail": zod.string(),
   "freeTrialEnabled": zod.boolean(),
-  "tutorPhotoUrl": zod.string().nullable()
+  "tutorPhotoUrl": zod.string().nullable(),
+  "weeklyHours": zod.object({
+  "mon": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "tue": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "wed": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "thu": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "fri": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "sat": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "sun": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+})
+})
 })
 
 
@@ -368,6 +405,40 @@ export const ListStudentPackagesResponseItem = zod.object({
   "purchasedAt": zod.coerce.date()
 })
 export const ListStudentPackagesResponse = zod.array(ListStudentPackagesResponseItem)
+
+
+/**
+ * @summary Get the student's message thread with the teacher
+ */
+export const ListStudentMessagesResponseItem = zod.object({
+  "id": zod.number(),
+  "studentId": zod.number(),
+  "senderRole": zod.enum(['student', 'admin']),
+  "body": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "readAt": zod.coerce.date().nullable()
+})
+export const ListStudentMessagesResponse = zod.array(ListStudentMessagesResponseItem)
+
+
+/**
+ * @summary Send a message to the teacher
+ */
+
+
+
+export const SendStudentMessageBody = zod.object({
+  "body": zod.string().min(1)
+})
+
+export const SendStudentMessageResponse = zod.object({
+  "id": zod.number(),
+  "studentId": zod.number(),
+  "senderRole": zod.enum(['student', 'admin']),
+  "body": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "readAt": zod.coerce.date().nullable()
+})
 
 
 /**
@@ -654,6 +725,62 @@ export const GetAdminStudentResponse = zod.object({
 
 
 /**
+ * @summary List message threads (one per student), most recent first
+ */
+export const ListAdminMessageThreadsResponseItem = zod.object({
+  "studentId": zod.number(),
+  "studentName": zod.string(),
+  "studentEmail": zod.string(),
+  "lastMessageBody": zod.string(),
+  "lastMessageAt": zod.coerce.date(),
+  "unreadCount": zod.number()
+})
+export const ListAdminMessageThreadsResponse = zod.array(ListAdminMessageThreadsResponseItem)
+
+
+/**
+ * @summary Get the message thread with a specific student
+ */
+export const ListAdminStudentMessagesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListAdminStudentMessagesResponseItem = zod.object({
+  "id": zod.number(),
+  "studentId": zod.number(),
+  "senderRole": zod.enum(['student', 'admin']),
+  "body": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "readAt": zod.coerce.date().nullable()
+})
+export const ListAdminStudentMessagesResponse = zod.array(ListAdminStudentMessagesResponseItem)
+
+
+/**
+ * @summary Send a message to a student
+ */
+export const SendAdminMessageParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const SendAdminMessageBody = zod.object({
+  "body": zod.string().min(1)
+})
+
+export const SendAdminMessageResponse = zod.object({
+  "id": zod.number(),
+  "studentId": zod.number(),
+  "senderRole": zod.enum(['student', 'admin']),
+  "body": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "readAt": zod.coerce.date().nullable()
+})
+
+
+/**
  * @summary Grant a lesson package to a student
  */
 
@@ -844,7 +971,44 @@ export const GetAdminSiteSettingsResponse = zod.object({
   "tutorBio": zod.string(),
   "contactEmail": zod.string(),
   "freeTrialEnabled": zod.boolean(),
-  "tutorPhotoUrl": zod.string().nullable()
+  "tutorPhotoUrl": zod.string().nullable(),
+  "weeklyHours": zod.object({
+  "mon": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "tue": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "wed": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "thu": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "fri": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "sat": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "sun": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+})
+})
 })
 
 
@@ -856,7 +1020,44 @@ export const UpdateSiteSettingsBody = zod.object({
   "tutorBio": zod.string().optional(),
   "contactEmail": zod.string().optional(),
   "freeTrialEnabled": zod.boolean().optional(),
-  "tutorPhotoUrl": zod.string().optional()
+  "tutorPhotoUrl": zod.string().optional(),
+  "weeklyHours": zod.object({
+  "mon": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "tue": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "wed": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "thu": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "fri": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "sat": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "sun": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+})
+}).optional()
 })
 
 export const UpdateSiteSettingsResponse = zod.object({
@@ -865,7 +1066,44 @@ export const UpdateSiteSettingsResponse = zod.object({
   "tutorBio": zod.string(),
   "contactEmail": zod.string(),
   "freeTrialEnabled": zod.boolean(),
-  "tutorPhotoUrl": zod.string().nullable()
+  "tutorPhotoUrl": zod.string().nullable(),
+  "weeklyHours": zod.object({
+  "mon": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "tue": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "wed": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "thu": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "fri": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "sat": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+}),
+  "sun": zod.object({
+  "enabled": zod.boolean(),
+  "start": zod.string().describe('24h \"HH:mm\"'),
+  "end": zod.string().describe('24h \"HH:mm\"')
+})
+})
 })
 
 

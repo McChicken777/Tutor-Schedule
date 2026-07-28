@@ -372,6 +372,42 @@ paths:
         "401":
           description: Unauthorized
 
+  /student/messages:
+    get:
+      operationId: listStudentMessages
+      tags: [student]
+      summary: Get the student's message thread with the teacher
+      responses:
+        "200":
+          description: Messages, oldest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+        "401":
+          description: Unauthorized
+    post:
+      operationId: sendStudentMessage
+      tags: [student]
+      summary: Send a message to the teacher
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageInput"
+      responses:
+        "201":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "401":
+          description: Unauthorized
+
   # ─── ADMIN ────────────────────────────────────────────────────────────────
   /admin/login:
     post:
@@ -631,6 +667,75 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminStudentDetail"
+        "404":
+          description: Not found
+
+  /admin/messages:
+    get:
+      operationId: listAdminMessageThreads
+      tags: [admin]
+      summary: List message threads (one per student), most recent first
+      responses:
+        "200":
+          description: Message threads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MessageThread"
+        "401":
+          description: Unauthorized
+
+  /admin/students/{id}/messages:
+    get:
+      operationId: listAdminStudentMessages
+      tags: [admin]
+      summary: Get the message thread with a specific student
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Messages, oldest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not found
+    post:
+      operationId: sendAdminMessage
+      tags: [admin]
+      summary: Send a message to a student
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageInput"
+      responses:
+        "201":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "401":
+          description: Unauthorized
         "404":
           description: Not found
 
@@ -1322,6 +1427,48 @@ components:
         isVisible:
           type: boolean
 
+    DayHours:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        start:
+          type: string
+          description: 24h "HH:mm"
+        end:
+          type: string
+          description: 24h "HH:mm"
+      required:
+        - enabled
+        - start
+        - end
+
+    WeeklyHours:
+      type: object
+      properties:
+        mon:
+          $ref: "#/components/schemas/DayHours"
+        tue:
+          $ref: "#/components/schemas/DayHours"
+        wed:
+          $ref: "#/components/schemas/DayHours"
+        thu:
+          $ref: "#/components/schemas/DayHours"
+        fri:
+          $ref: "#/components/schemas/DayHours"
+        sat:
+          $ref: "#/components/schemas/DayHours"
+        sun:
+          $ref: "#/components/schemas/DayHours"
+      required:
+        - mon
+        - tue
+        - wed
+        - thu
+        - fri
+        - sat
+        - sun
+
     SiteSettings:
       type: object
       properties:
@@ -1337,6 +1484,8 @@ components:
           type: boolean
         tutorPhotoUrl:
           type: ["string", "null"]
+        weeklyHours:
+          $ref: "#/components/schemas/WeeklyHours"
       required:
         - id
         - tutorName
@@ -1344,6 +1493,7 @@ components:
         - contactEmail
         - freeTrialEnabled
         - tutorPhotoUrl
+        - weeklyHours
 
     SiteSettingsUpdate:
       type: object
@@ -1358,6 +1508,8 @@ components:
           type: boolean
         tutorPhotoUrl:
           type: string
+        weeklyHours:
+          $ref: "#/components/schemas/WeeklyHours"
 
     AdminLoginInput:
       type: object
@@ -1521,6 +1673,65 @@ components:
         - usedCredits
         - totalBookings
         - createdAt
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: number
+        studentId:
+          type: number
+        senderRole:
+          type: string
+          enum: [student, admin]
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        readAt:
+          type: ["string", "null"]
+          format: date-time
+      required:
+        - id
+        - studentId
+        - senderRole
+        - body
+        - createdAt
+        - readAt
+
+    MessageInput:
+      type: object
+      properties:
+        body:
+          type: string
+          minLength: 1
+      required:
+        - body
+
+    MessageThread:
+      type: object
+      properties:
+        studentId:
+          type: number
+        studentName:
+          type: string
+        studentEmail:
+          type: string
+        lastMessageBody:
+          type: string
+        lastMessageAt:
+          type: string
+          format: date-time
+        unreadCount:
+          type: number
+      required:
+        - studentId
+        - studentName
+        - studentEmail
+        - lastMessageBody
+        - lastMessageAt
+        - unreadCount
 
     AdminStudentDetail:
       type: object

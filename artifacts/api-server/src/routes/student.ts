@@ -8,6 +8,7 @@ import {
   lessonPackagesTable,
   homeworkTable,
   reviewsTable,
+  messagesTable,
 } from "@workspace/db";
 import {
   CreateBookingBody,
@@ -22,6 +23,7 @@ import {
   SubmitReviewBody,
   SubmitReviewParams,
   ListStudentBookingsQueryParams,
+  SendStudentMessageBody,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/requireAuth";
 import {
@@ -681,6 +683,55 @@ router.get("/student/packages", requireAuth, async (req, res): Promise<void> => 
       purchasedAt: r.pkg.purchasedAt,
     })),
   );
+});
+
+// ─── Messages ─────────────────────────────────────────────────────────────────
+
+router.get("/student/messages", requireAuth, async (req, res): Promise<void> => {
+  const clerkUserId = (req as any).clerkUserId;
+  const user = await getOrCreateUser(clerkUserId);
+
+  const rows = await db
+    .select()
+    .from(messagesTable)
+    .where(eq(messagesTable.studentId, user.id))
+    .orderBy(asc(messagesTable.createdAt));
+
+  // Mark the teacher's messages as read now that the student has viewed the thread
+  await db
+    .update(messagesTable)
+    .set({ readAt: new Date() })
+    .where(
+      and(
+        eq(messagesTable.studentId, user.id),
+        eq(messagesTable.senderRole, "admin"),
+        sql`${messagesTable.readAt} IS NULL`,
+      ),
+    );
+
+  res.json(rows);
+});
+
+router.post("/student/messages", requireAuth, async (req, res): Promise<void> => {
+  const clerkUserId = (req as any).clerkUserId;
+  const user = await getOrCreateUser(clerkUserId);
+
+  const parsed = SendStudentMessageBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [message] = await db
+    .insert(messagesTable)
+    .values({
+      studentId: user.id,
+      senderRole: "student",
+      body: parsed.data.body,
+    })
+    .returning();
+
+  res.status(201).json(message);
 });
 
 export default router;

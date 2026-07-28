@@ -8,3 +8,4 @@ export * from "./testimonials";
 export * from "./faqs";
 export * from "./siteSettings";
 export * from "./calendarTokens";
+export * from "./messages";

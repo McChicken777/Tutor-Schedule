@@ -5,6 +5,7 @@
  * Spanish Tutor Booking Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { WeeklyHours } from './weeklyHours';
 
 export interface SiteSettingsUpdate {
   tutorName?: string;
@@ -12,4 +13,5 @@ export interface SiteSettingsUpdate {
   contactEmail?: string;
   freeTrialEnabled?: boolean;
   tutorPhotoUrl?: string;
+  weeklyHours?: WeeklyHours;
 }

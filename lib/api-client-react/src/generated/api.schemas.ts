@@ -263,6 +263,24 @@ export interface FaqUpdate {
   isVisible?: boolean;
 }
 
+export interface DayHours {
+  enabled: boolean;
+  /** 24h "HH:mm" */
+  start: string;
+  /** 24h "HH:mm" */
+  end: string;
+}
+
+export interface WeeklyHours {
+  mon: DayHours;
+  tue: DayHours;
+  wed: DayHours;
+  thu: DayHours;
+  fri: DayHours;
+  sat: DayHours;
+  sun: DayHours;
+}
+
 export interface SiteSettings {
   id: number;
   tutorName: string;
@@ -271,6 +289,7 @@ export interface SiteSettings {
   freeTrialEnabled: boolean;
   /** @nullable */
   tutorPhotoUrl: string | null;
+  weeklyHours: WeeklyHours;
 }
 
 export interface SiteSettingsUpdate {
@@ -279,6 +298,7 @@ export interface SiteSettingsUpdate {
   contactEmail?: string;
   freeTrialEnabled?: boolean;
   tutorPhotoUrl?: string;
+  weeklyHours?: WeeklyHours;
 }
 
 export interface AdminLoginInput {
@@ -346,6 +366,38 @@ export interface AdminStudent {
   usedCredits: number;
   totalBookings: number;
   createdAt: string;
+}
+
+export type MessageSenderRole = typeof MessageSenderRole[keyof typeof MessageSenderRole];
+
+
+export const MessageSenderRole = {
+  student: 'student',
+  admin: 'admin',
+} as const;
+
+export interface Message {
+  id: number;
+  studentId: number;
+  senderRole: MessageSenderRole;
+  body: string;
+  createdAt: string;
+  /** @nullable */
+  readAt: string | null;
+}
+
+export interface MessageInput {
+  /** @minLength 1 */
+  body: string;
+}
+
+export interface MessageThread {
+  studentId: number;
+  studentName: string;
+  studentEmail: string;
+  lastMessageBody: string;
+  lastMessageAt: string;
+  unreadCount: number;
 }
 
 export interface AdminStudentDetail {

@@ -61,8 +61,16 @@ router.get("/available-slots", async (req, res): Promise<void> => {
   const end = new Date(endDate as unknown as string);
   end.setHours(23, 59, 59, 999);
 
+  const [settings] = await db.select().from(siteSettingsTable).limit(1);
+
   const busySlots = await getFreeBusySlots(start, end);
-  const slots = generateAvailableSlots(busySlots, start, end, lessonType.durationMinutes);
+  const slots = generateAvailableSlots(
+    busySlots,
+    start,
+    end,
+    lessonType.durationMinutes,
+    settings?.weeklyHours,
+  );
 
   res.json(slots.map((s) => ({ startTime: s.startTime, endTime: s.endTime })));
 });

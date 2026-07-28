@@ -49,6 +49,9 @@ import type {
   ListAdminBookingsParams,
   ListAdminHomeworkParams,
   ListStudentBookingsParams,
+  Message,
+  MessageInput,
+  MessageThread,
   PackageGrantInput,
   RescheduleInput,
   Review,
@@ -1387,6 +1390,154 @@ export function useListStudentPackages<TData = Awaited<ReturnType<typeof listStu
 
 
 
+export const getListStudentMessagesUrl = () => {
+
+
+
+
+  return `/api/student/messages`
+}
+
+/**
+ * @summary Get the student's message thread with the teacher
+ */
+export const listStudentMessages = async ( options?: Parameters<typeof customFetch>[1]): Promise<Message[]> => {
+
+  return customFetch<Message[]>(getListStudentMessagesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListStudentMessagesQueryKey = () => {
+    return [
+    `/api/student/messages`
+    ] as const;
+    }
+
+
+export const getListStudentMessagesQueryOptions = <TData = Awaited<ReturnType<typeof listStudentMessages>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStudentMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListStudentMessagesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listStudentMessages>>> = ({ signal }) => listStudentMessages({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listStudentMessages>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListStudentMessagesQueryResult = NonNullable<Awaited<ReturnType<typeof listStudentMessages>>>
+export type ListStudentMessagesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get the student's message thread with the teacher
+ */
+
+export function useListStudentMessages<TData = Awaited<ReturnType<typeof listStudentMessages>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStudentMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListStudentMessagesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSendStudentMessageUrl = () => {
+
+
+
+
+  return `/api/student/messages`
+}
+
+/**
+ * @summary Send a message to the teacher
+ */
+export const sendStudentMessage = async (messageInput: MessageInput, options?: Parameters<typeof customFetch>[1]): Promise<Message> => {
+
+  return customFetch<Message>(getSendStudentMessageUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(messageInput)
+  }
+);}
+
+
+
+
+
+export const getSendStudentMessageMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendStudentMessage>>, TError,{data: BodyType<MessageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendStudentMessage>>, TError,{data: BodyType<MessageInput>}, TContext> => {
+
+const mutationKey = ['sendStudentMessage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendStudentMessage>>, {data: BodyType<MessageInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  sendStudentMessage(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendStudentMessageMutationResult = NonNullable<Awaited<ReturnType<typeof sendStudentMessage>>>
+    export type SendStudentMessageMutationBody = BodyType<MessageInput>
+    export type SendStudentMessageMutationError = ErrorType<void>
+
+    /**
+ * @summary Send a message to the teacher
+ */
+export const useSendStudentMessage = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendStudentMessage>>, TError,{data: BodyType<MessageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendStudentMessage>>,
+        TError,
+        {data: BodyType<MessageInput>},
+        TContext
+      > => {
+      return useMutation(getSendStudentMessageMutationOptions(options));
+    }
+
 export const getAdminLoginUrl = () => {
 
 
@@ -2362,6 +2513,232 @@ export function useGetAdminStudent<TData = Awaited<ReturnType<typeof getAdminStu
 
 
 
+
+export const getListAdminMessageThreadsUrl = () => {
+
+
+
+
+  return `/api/admin/messages`
+}
+
+/**
+ * @summary List message threads (one per student), most recent first
+ */
+export const listAdminMessageThreads = async ( options?: Parameters<typeof customFetch>[1]): Promise<MessageThread[]> => {
+
+  return customFetch<MessageThread[]>(getListAdminMessageThreadsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminMessageThreadsQueryKey = () => {
+    return [
+    `/api/admin/messages`
+    ] as const;
+    }
+
+
+export const getListAdminMessageThreadsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminMessageThreads>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminMessageThreads>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminMessageThreadsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminMessageThreads>>> = ({ signal }) => listAdminMessageThreads({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminMessageThreads>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminMessageThreadsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminMessageThreads>>>
+export type ListAdminMessageThreadsQueryError = ErrorType<void>
+
+
+/**
+ * @summary List message threads (one per student), most recent first
+ */
+
+export function useListAdminMessageThreads<TData = Awaited<ReturnType<typeof listAdminMessageThreads>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminMessageThreads>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminMessageThreadsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListAdminStudentMessagesUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/students/${id}/messages`
+}
+
+/**
+ * @summary Get the message thread with a specific student
+ */
+export const listAdminStudentMessages = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<Message[]> => {
+
+  return customFetch<Message[]>(getListAdminStudentMessagesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminStudentMessagesQueryKey = (id: number,) => {
+    return [
+    `/api/admin/students/${id}/messages`
+    ] as const;
+    }
+
+
+export const getListAdminStudentMessagesQueryOptions = <TData = Awaited<ReturnType<typeof listAdminStudentMessages>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminStudentMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminStudentMessagesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminStudentMessages>>> = ({ signal }) => listAdminStudentMessages(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminStudentMessages>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminStudentMessagesQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminStudentMessages>>>
+export type ListAdminStudentMessagesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get the message thread with a specific student
+ */
+
+export function useListAdminStudentMessages<TData = Awaited<ReturnType<typeof listAdminStudentMessages>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminStudentMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminStudentMessagesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSendAdminMessageUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/students/${id}/messages`
+}
+
+/**
+ * @summary Send a message to a student
+ */
+export const sendAdminMessage = async (id: number,
+    messageInput: MessageInput, options?: Parameters<typeof customFetch>[1]): Promise<Message> => {
+
+  return customFetch<Message>(getSendAdminMessageUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(messageInput)
+  }
+);}
+
+
+
+
+
+export const getSendAdminMessageMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendAdminMessage>>, TError,{id: number;data: BodyType<MessageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendAdminMessage>>, TError,{id: number;data: BodyType<MessageInput>}, TContext> => {
+
+const mutationKey = ['sendAdminMessage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendAdminMessage>>, {id: number;data: BodyType<MessageInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  sendAdminMessage(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendAdminMessageMutationResult = NonNullable<Awaited<ReturnType<typeof sendAdminMessage>>>
+    export type SendAdminMessageMutationBody = BodyType<MessageInput>
+    export type SendAdminMessageMutationError = ErrorType<void>
+
+    /**
+ * @summary Send a message to a student
+ */
+export const useSendAdminMessage = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendAdminMessage>>, TError,{id: number;data: BodyType<MessageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendAdminMessage>>,
+        TError,
+        {id: number;data: BodyType<MessageInput>},
+        TContext
+      > => {
+      return useMutation(getSendAdminMessageMutationOptions(options));
+    }
 
 export const getGrantPackageUrl = () => {
 

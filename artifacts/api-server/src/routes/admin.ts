@@ -11,6 +11,7 @@ import {
   testimonialsTable,
   faqsTable,
   siteSettingsTable,
+  messagesTable,
 } from "@workspace/db";
 import {
   AdminLoginBody,
@@ -33,6 +34,7 @@ import {
   UpdateFaqParams,
   DeleteFaqParams,
   UpdateSiteSettingsBody,
+  SendAdminMessageBody,
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
 import { requireAdmin } from "../middlewares/requireAdmin";
@@ -492,6 +494,111 @@ router.get("/admin/students/:id", requireAdmin, async (req, res): Promise<void> 
   });
 });
 
+// ─── Messages ─────────────────────────────────────────────────────────────────
+
+router.get("/admin/messages", requireAdmin, async (_req, res): Promise<void> => {
+  const rows = await db
+    .select({ message: messagesTable, user: usersTable })
+    .from(messagesTable)
+    .innerJoin(usersTable, eq(messagesTable.studentId, usersTable.id))
+    .orderBy(asc(messagesTable.createdAt));
+
+  const threads = new Map<
+    number,
+    {
+      studentId: number;
+      studentName: string;
+      studentEmail: string;
+      lastMessageBody: string;
+      lastMessageAt: Date;
+      unreadCount: number;
+    }
+  >();
+
+  for (const r of rows) {
+    const isUnreadFromStudent = r.message.senderRole === "student" && !r.message.readAt;
+    const existing = threads.get(r.message.studentId);
+    if (!existing) {
+      threads.set(r.message.studentId, {
+        studentId: r.message.studentId,
+        studentName: r.user.displayName,
+        studentEmail: r.user.email,
+        lastMessageBody: r.message.body,
+        lastMessageAt: r.message.createdAt,
+        unreadCount: isUnreadFromStudent ? 1 : 0,
+      });
+    } else {
+      existing.lastMessageBody = r.message.body;
+      existing.lastMessageAt = r.message.createdAt;
+      if (isUnreadFromStudent) existing.unreadCount += 1;
+    }
+  }
+
+  const result = Array.from(threads.values()).sort(
+    (a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime(),
+  );
+
+  res.json(result);
+});
+
+router.get("/admin/students/:id/messages", requireAdmin, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+
+  const [student] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  if (!student) {
+    res.status(404).json({ error: "Student not found" });
+    return;
+  }
+
+  const rows = await db
+    .select()
+    .from(messagesTable)
+    .where(eq(messagesTable.studentId, id))
+    .orderBy(asc(messagesTable.createdAt));
+
+  await db
+    .update(messagesTable)
+    .set({ readAt: new Date() })
+    .where(
+      and(
+        eq(messagesTable.studentId, id),
+        eq(messagesTable.senderRole, "student"),
+        sql`${messagesTable.readAt} IS NULL`,
+      ),
+    );
+
+  res.json(rows);
+});
+
+router.post("/admin/students/:id/messages", requireAdmin, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+
+  const [student] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  if (!student) {
+    res.status(404).json({ error: "Student not found" });
+    return;
+  }
+
+  const parsed = SendAdminMessageBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [message] = await db
+    .insert(messagesTable)
+    .values({
+      studentId: id,
+      senderRole: "admin",
+      body: parsed.data.body,
+    })
+    .returning();
+
+  res.status(201).json(message);
+});
+
 router.post("/admin/packages", requireAdmin, async (req, res): Promise<void> => {
   const parsed = GrantPackageBody.safeParse(req.body);
   if (!parsed.success) {
@@ -687,6 +794,7 @@ router.patch("/admin/site-settings", requireAdmin, async (req, res): Promise<voi
   if (parsed.data.contactEmail != null) updateData.contactEmail = parsed.data.contactEmail;
   if (parsed.data.freeTrialEnabled != null) updateData.freeTrialEnabled = parsed.data.freeTrialEnabled;
   if (parsed.data.tutorPhotoUrl != null) updateData.tutorPhotoUrl = parsed.data.tutorPhotoUrl;
+  if (parsed.data.weeklyHours != null) updateData.weeklyHours = parsed.data.weeklyHours;
 
   const [updated] = await db
     .update(siteSettingsTable)

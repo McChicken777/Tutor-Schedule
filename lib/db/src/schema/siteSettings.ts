@@ -1,6 +1,28 @@
-import { pgTable, text, serial, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+
+export type DayHours = { enabled: boolean; start: string; end: string }; // start/end as "HH:mm", 24h
+export type WeeklyHours = {
+  mon: DayHours;
+  tue: DayHours;
+  wed: DayHours;
+  thu: DayHours;
+  fri: DayHours;
+  sat: DayHours;
+  sun: DayHours;
+};
+
+const defaultDayHours: DayHours = { enabled: true, start: "09:00", end: "20:00" };
+export const DEFAULT_WEEKLY_HOURS: WeeklyHours = {
+  mon: { ...defaultDayHours },
+  tue: { ...defaultDayHours },
+  wed: { ...defaultDayHours },
+  thu: { ...defaultDayHours },
+  fri: { ...defaultDayHours },
+  sat: { ...defaultDayHours },
+  sun: { ...defaultDayHours },
+};
 
 export const siteSettingsTable = pgTable("site_settings", {
   id: serial("id").primaryKey(),
@@ -9,6 +31,7 @@ export const siteSettingsTable = pgTable("site_settings", {
   contactEmail: text("contact_email").notNull().default(""),
   freeTrialEnabled: boolean("free_trial_enabled").notNull().default(false),
   tutorPhotoUrl: text("tutor_photo_url"),
+  weeklyHours: jsonb("weekly_hours").$type<WeeklyHours>().notNull().default(DEFAULT_WEEKLY_HOURS),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
