@@ -71,17 +71,40 @@ export default function Landing() {
             </div>
 
             <div className="relative">
-              <div className="absolute -bottom-5 -right-5 w-full h-full bg-secondary rounded-2xl -z-10" />
-              <div className="aspect-[4/5] rounded-2xl overflow-hidden border-4 border-background shadow-xl -rotate-1">
-                {settings?.tutorPhotoUrl ? (
-                  <img src={settings.tutorPhotoUrl} alt={tutorName} className="w-full h-full object-cover" />
-                ) : (
-                  <img src={`${basePath}/hero.jpg`} alt="Tutor" className="w-full h-full object-cover" />
-                )}
-              </div>
-              <p className="mt-4 text-sm text-muted-foreground italic font-serif -rotate-1">
-                {tutorName}, live from the first "hola"
-              </p>
+              <div className="absolute -bottom-5 -right-5 w-full h-full bg-primary rounded-2xl -z-10" />
+              {settings?.tutorPhotoUrl ? (
+                <>
+                  <div className="aspect-[4/5] rounded-2xl overflow-hidden border-4 border-background shadow-xl -rotate-1">
+                    <img src={settings.tutorPhotoUrl} alt={tutorName} className="w-full h-full object-cover" />
+                  </div>
+                  <p className="mt-4 text-sm text-muted-foreground italic font-serif -rotate-1">
+                    {tutorName}, live from the first "hola"
+                  </p>
+                </>
+              ) : (
+                <div
+                  className="aspect-[4/5] rounded-2xl border-4 border-background shadow-xl -rotate-1 bg-secondary text-secondary-foreground p-9 flex flex-col justify-between"
+                  style={{
+                    backgroundImage:
+                      "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.14) 1px, transparent 0)",
+                    backgroundSize: "18px 18px",
+                  }}
+                >
+                  <span className="text-xs font-sans font-semibold tracking-[0.2em] uppercase opacity-60">
+                    Lección uno
+                  </span>
+                  <div>
+                    <p className="font-serif text-4xl md:text-5xl leading-[1.05] mb-4">
+                      Hola.
+                      <br />
+                      Empecemos.
+                    </p>
+                    <p className="text-sm opacity-75 max-w-[230px] font-sans leading-relaxed">
+                      "Hello. Let's begin." Real conversation from lesson one — not just flashcards.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>
