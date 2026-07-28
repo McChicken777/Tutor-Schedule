@@ -100,7 +100,7 @@ export default function BookLesson() {
           )}
           
           <div className="mt-8 flex justify-end">
-            <Button onClick={() => setStep(2)} disabled={!selectedLessonType} size="lg" className="rounded-full px-8">
+            <Button onClick={() => setStep(2)} disabled={!selectedLessonType} size="lg" className="px-8">
               Next Step <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
@@ -158,10 +158,10 @@ export default function BookLesson() {
           </div>
           
           <div className="mt-8 flex justify-between">
-            <Button onClick={() => setStep(1)} variant="outline" size="lg" className="rounded-full">
+            <Button onClick={() => setStep(1)} variant="outline" size="lg">
               <ArrowLeft className="w-4 h-4 mr-2" /> Back
             </Button>
-            <Button onClick={() => setStep(3)} disabled={!selectedSlot} size="lg" className="rounded-full px-8">
+            <Button onClick={() => setStep(3)} disabled={!selectedSlot} size="lg" className="px-8">
               Review <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
@@ -200,10 +200,10 @@ export default function BookLesson() {
           </div>
           
           <div className="flex justify-between">
-            <Button onClick={() => setStep(2)} variant="outline" size="lg" className="rounded-full">
+            <Button onClick={() => setStep(2)} variant="outline" size="lg">
               <ArrowLeft className="w-4 h-4 mr-2" /> Back
             </Button>
-            <Button onClick={handleBook} disabled={createMutation.isPending} size="lg" className="rounded-full px-8">
+            <Button onClick={handleBook} disabled={createMutation.isPending} size="lg" className="px-8">
               {createMutation.isPending ? "Confirming..." : "Confirm Booking"}
             </Button>
           </div>

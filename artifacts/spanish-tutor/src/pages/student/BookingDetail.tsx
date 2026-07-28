@@ -89,7 +89,7 @@ export default function BookingDetail() {
       <div className="bg-card border border-border rounded-3xl p-8 mb-8">
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
           <div>
-            <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium mb-4 ${
+            <span className={`inline-block px-3 py-1 rounded-md text-sm font-medium mb-4 ${
               booking.status === 'completed' ? 'bg-secondary/10 text-secondary' :
               booking.status === 'cancelled' ? 'bg-destructive/10 text-destructive' :
               'bg-primary/10 text-primary'

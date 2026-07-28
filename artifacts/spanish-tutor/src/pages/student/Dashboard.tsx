@@ -47,52 +47,48 @@ export default function StudentDashboard() {
 
       {/* Hero / Next Class */}
       {nextBooking ? (
-        <div className="bg-primary text-primary-foreground rounded-3xl p-8 mb-8 shadow-lg relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
-          
-          <div className="relative z-10">
-            <h2 className="text-xl font-medium mb-2 opacity-90">Next Class</h2>
-            <div className="text-3xl md:text-5xl font-bold mb-4">
-              {format(new Date(nextBooking.startTime), "EEEE, MMMM d")}
-              <span className="block text-2xl md:text-3xl mt-2 opacity-90">
-                {format(new Date(nextBooking.startTime), "h:mm a")} - {format(new Date(nextBooking.endTime), "h:mm a")}
-              </span>
-            </div>
-            <p className="text-lg opacity-90 mb-8 flex items-center gap-2">
-              <Clock className="w-5 h-5" />
-              {nextBooking.lessonTypeName}
-            </p>
-            
-            <div className="flex flex-wrap gap-4">
-              <Button 
-                variant={canJoin ? "secondary" : "outline"} 
-                size="lg"
-                className={!canJoin ? "bg-white/20 text-white border-white/30 hover:bg-white/30" : ""}
-                disabled={!canJoin || isEnded || !nextBooking.meetLink}
-                asChild={canJoin && !isEnded && nextBooking.meetLink ? true : false}
-              >
-                {canJoin && !isEnded && nextBooking.meetLink ? (
-                  <a href={nextBooking.meetLink} target="_blank" rel="noreferrer">
-                    <Video className="w-5 h-5 mr-2" />
-                    Join Class
-                  </a>
-                ) : (
-                  <>
-                    <Video className="w-5 h-5 mr-2" />
-                    {isEnded ? "Class Ended" : "Join Class"}
-                  </>
-                )}
-              </Button>
-              <Button variant="outline" size="lg" className="bg-transparent border-white/30 text-white hover:bg-white/10" asChild>
-                <Link href={`/bookings/${nextBooking.id}`}>View Details</Link>
-              </Button>
-            </div>
-            {!canJoin && !isEnded && (
-              <p className="text-sm opacity-80 mt-3">
-                Join link will be active 15 minutes before class starts.
-              </p>
-            )}
+        <div className="bg-primary text-primary-foreground rounded-3xl p-8 mb-8">
+          <h2 className="text-xl font-medium mb-2 opacity-90">Next Class</h2>
+          <div className="text-3xl md:text-5xl font-bold mb-4">
+            {format(new Date(nextBooking.startTime), "EEEE, MMMM d")}
+            <span className="block text-2xl md:text-3xl mt-2 opacity-90">
+              {format(new Date(nextBooking.startTime), "h:mm a")} - {format(new Date(nextBooking.endTime), "h:mm a")}
+            </span>
           </div>
+          <p className="text-lg opacity-90 mb-8 flex items-center gap-2">
+            <Clock className="w-5 h-5" />
+            {nextBooking.lessonTypeName}
+          </p>
+
+          <div className="flex flex-wrap gap-4">
+            <Button
+              variant={canJoin ? "secondary" : "outline"}
+              size="lg"
+              className={!canJoin ? "bg-white/20 text-white border-white/30 hover:bg-white/30" : ""}
+              disabled={!canJoin || isEnded || !nextBooking.meetLink}
+              asChild={canJoin && !isEnded && nextBooking.meetLink ? true : false}
+            >
+              {canJoin && !isEnded && nextBooking.meetLink ? (
+                <a href={nextBooking.meetLink} target="_blank" rel="noreferrer">
+                  <Video className="w-5 h-5 mr-2" />
+                  Join Class
+                </a>
+              ) : (
+                <>
+                  <Video className="w-5 h-5 mr-2" />
+                  {isEnded ? "Class Ended" : "Join Class"}
+                </>
+              )}
+            </Button>
+            <Button variant="outline" size="lg" className="bg-transparent border-white/30 text-white hover:bg-white/10" asChild>
+              <Link href={`/bookings/${nextBooking.id}`}>View Details</Link>
+            </Button>
+          </div>
+          {!canJoin && !isEnded && (
+            <p className="text-sm opacity-80 mt-3">
+              Join link will be active 15 minutes before class starts.
+            </p>
+          )}
         </div>
       ) : (
         <div className="bg-card border border-border rounded-3xl p-8 mb-8 text-center">
@@ -148,9 +144,9 @@ export default function StudentDashboard() {
                 </div>
                 <div className="flex items-center gap-4">
                   {hw.reviewedAt ? (
-                    <span className="text-sm font-medium px-3 py-1 rounded-full bg-secondary/10 text-secondary">Reviewed</span>
+                    <span className="text-sm font-medium px-3 py-1 rounded-md bg-secondary/10 text-secondary">Reviewed</span>
                   ) : (
-                    <span className="text-sm font-medium px-3 py-1 rounded-full bg-accent text-muted-foreground">Pending Review</span>
+                    <span className="text-sm font-medium px-3 py-1 rounded-md bg-accent text-muted-foreground">Pending Review</span>
                   )}
                   <Button variant="outline" size="sm" asChild>
                     <Link href={`/bookings/${hw.bookingId}`}>View</Link>

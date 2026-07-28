@@ -62,7 +62,7 @@ export default function StudentBookings() {
                   <div key={booking.id} className="bg-card border border-border rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:shadow-md transition">
                     <div>
                       <div className="flex items-center gap-3 mb-2">
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        <span className={`px-2.5 py-0.5 rounded-md text-xs font-medium ${
                           booking.status === 'completed' ? 'bg-secondary/10 text-secondary' :
                           booking.status === 'cancelled' ? 'bg-destructive/10 text-destructive' :
                           'bg-primary/10 text-primary'
