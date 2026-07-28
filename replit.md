@@ -45,6 +45,9 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 - Google Calendar sync (`artifacts/api-server/src/lib/calendar.ts`) is single-tenant: `calendar_tokens` is expected to hold at most one row (the tutor's OAuth tokens), and all the calendar helper functions read/update "the" row without a student/user id. Don't reuse this table for per-student calendars.
 - Customer login (Clerk `<SignIn>`/`<SignUp>`) vs. calendar OAuth (`/api/calendar/auth`) are two separate Google OAuth flows. Enabling "Sign in with Google" for students is a Clerk Dashboard setting (Social Connections), not a code change. Connecting the tutor's calendar is done from Admin → Settings and requires `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_REDIRECT_URI` to be set.
+- Messaging (`messages` table) is one thread per student, single-teacher: rows are keyed only by `studentId`, there's no `teacherId`/conversation concept. If this ever becomes multi-teacher, this table needs a teacher/conversation dimension before it'll work correctly — don't just add teachers without revisiting it.
+- Availability = weekly working hours (`site_settings.weekly_hours`, per-weekday enabled/start/end) intersected with the tutor's Google Calendar free/busy. One-off days off (vacation, appointments) are handled by adding an event to her Google Calendar, not through the app — there's no separate "block this date" UI, since Calendar already covers it.
+- After pulling schema changes (new columns/tables), always run `pnpm --filter @workspace/db run push` before starting the server — the app will error on missing columns otherwise.
 
 ## Pointers
 
