@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { format, addDays, startOfDay, endOfDay, isBefore } from "date-fns";
-import { 
-  useListLessonTypes, 
-  useGetAvailableSlots, 
+import {
+  useListLessonTypes,
+  useGetAvailableSlots,
   useCreateBooking,
-  useGetStudentProfile,
+  useGetStudentDashboard,
   getGetAvailableSlotsQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -17,18 +17,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function BookLesson() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  
+
   const [step, setStep] = useState(1);
   const [selectedLessonType, setSelectedLessonType] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
 
-  const { data: profile } = useGetStudentProfile();
+  const { data: dashboard } = useGetStudentDashboard();
   const { data: lessonTypes, isLoading: loadingTypes } = useListLessonTypes();
-  
+
   const startDate = selectedDate ? startOfDay(selectedDate).toISOString() : new Date().toISOString();
   const endDate = selectedDate ? endOfDay(addDays(selectedDate, 14)).toISOString() : addDays(new Date(), 14).toISOString();
-  
+
   const slotsParams = { lessonTypeId: selectedLessonType || 0, startDate, endDate };
   const { data: slots, isLoading: loadingSlots } = useGetAvailableSlots(
     slotsParams,
@@ -39,6 +39,8 @@ export default function BookLesson() {
 
   const activeLessonTypes = lessonTypes?.filter(lt => lt.isActive) || [];
   const selectedTypeDetails = activeLessonTypes.find(lt => lt.id === selectedLessonType);
+  const remainingForSelected = dashboard?.packages?.find(p => p.lessonTypeId === selectedLessonType)?.remainingCredits ?? 0;
+  const hasCreditsForSelected = selectedLessonType != null && remainingForSelected > 0;
 
   const handleBook = () => {
     if (!selectedLessonType || !selectedSlot) return;
@@ -91,16 +93,33 @@ export default function BookLesson() {
                       : "border-border bg-card hover:border-primary/50"
                   }`}
                 >
-                  <h3 className="text-xl font-bold text-foreground mb-2">{lt.name}</h3>
-                  <p className="text-primary font-medium mb-4">{lt.durationMinutes} minutes • ${(lt.priceCents/100).toFixed(2)}</p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-xl font-bold text-foreground">{lt.name}</h3>
+                    {lt.isTrial && (
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-primary/10 text-primary">Free</span>
+                    )}
+                  </div>
+                  <p className="text-primary font-medium mb-4">
+                    {lt.durationMinutes} minutes • {lt.isTrial ? "Free" : `$${(lt.priceCents / 100).toFixed(2)}`}
+                  </p>
                   <p className="text-muted-foreground text-sm">{lt.description}</p>
                 </button>
               ))}
             </div>
           )}
-          
+
+          {selectedLessonType != null && !hasCreditsForSelected && (
+            <div className="mt-6 p-4 bg-accent rounded-xl text-sm text-muted-foreground">
+              You don't have any credits for this lesson yet.{" "}
+              <Link href="/messages" className="text-primary font-medium hover:underline">
+                Message your teacher
+              </Link>{" "}
+              to arrange one.
+            </div>
+          )}
+
           <div className="mt-8 flex justify-end">
-            <Button onClick={() => setStep(2)} disabled={!selectedLessonType} size="lg" className="px-8">
+            <Button onClick={() => setStep(2)} disabled={!hasCreditsForSelected} size="lg" className="px-8">
               Next Step <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
@@ -179,7 +198,9 @@ export default function BookLesson() {
                 <p className="text-muted-foreground">{selectedTypeDetails.durationMinutes} minutes</p>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-serif font-bold">${(selectedTypeDetails.priceCents / 100).toFixed(2)}</div>
+                <div className="text-2xl font-serif font-bold">
+                  {selectedTypeDetails.isTrial ? "Free" : `$${(selectedTypeDetails.priceCents / 100).toFixed(2)}`}
+                </div>
               </div>
             </div>
             
@@ -195,7 +216,7 @@ export default function BookLesson() {
             
             <div className="mt-8 pt-6 border-t border-border flex justify-between items-center">
               <span className="text-muted-foreground">Your Balance</span>
-              <span className="font-bold">{profile?.totalRemainingCredits || 0} credits</span>
+              <span className="font-bold">{remainingForSelected} credit{remainingForSelected === 1 ? "" : "s"} for this lesson</span>
             </div>
           </div>
           

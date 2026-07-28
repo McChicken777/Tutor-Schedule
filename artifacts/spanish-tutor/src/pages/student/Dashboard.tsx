@@ -1,12 +1,13 @@
-import { useGetStudentDashboard } from "@workspace/api-client-react";
+import { useGetStudentDashboard, useListLessonTypes } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { format, isBefore, addMinutes, differenceInMinutes } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Calendar, FileText, ArrowRight, Video, Clock } from "lucide-react";
+import { Calendar, FileText, ArrowRight, Video, Clock, Gift } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function StudentDashboard() {
   const { data: dashboard, isLoading } = useGetStudentDashboard();
+  const { data: lessonTypes } = useListLessonTypes();
 
   if (isLoading) {
     return (
@@ -24,6 +25,12 @@ export default function StudentDashboard() {
   if (!dashboard) return null;
 
   const nextBooking = dashboard.nextBooking;
+
+  const trialLessonType = lessonTypes?.find((lt) => lt.isTrial);
+  const trialPackage = trialLessonType
+    ? dashboard.packages?.find((p) => p.lessonTypeId === trialLessonType.id)
+    : undefined;
+  const hasUnusedTrial = !!trialPackage && trialPackage.remainingCredits > 0;
   
   // Logic for Join Class button
   let canJoin = false;
@@ -44,6 +51,25 @@ export default function StudentDashboard() {
   return (
     <div className="p-6 md:p-10 bg-background min-h-full">
       <h1 className="text-3xl font-serif font-bold text-foreground mb-8">Welcome back</h1>
+
+      {hasUnusedTrial && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-primary/10 border border-primary/20 rounded-2xl p-6 mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-11 h-11 rounded-xl bg-primary/15 flex items-center justify-center text-primary flex-shrink-0">
+              <Gift className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-bold text-foreground">You have a free trial lesson waiting</p>
+              <p className="text-sm text-muted-foreground">
+                {trialLessonType!.durationMinutes} minutes, on us — no credits needed.
+              </p>
+            </div>
+          </div>
+          <Button asChild>
+            <Link href="/book">Book it now</Link>
+          </Button>
+        </div>
+      )}
 
       {/* Hero / Next Class */}
       {nextBooking ? (

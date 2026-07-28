@@ -18,6 +18,8 @@ export default function Landing() {
   const contactEmail = settings?.contactEmail || "hola@elsol.com";
   const tutorName = settings?.tutorName || "your tutor";
   const activeLessonTypes = lessonTypes?.filter((lt) => lt.isActive) ?? [];
+  const trialLessonType = activeLessonTypes.find((lt) => lt.isTrial);
+  const trialAvailable = !!settings?.freeTrialEnabled && !!trialLessonType;
 
   return (
     <div className="min-h-screen bg-background">
@@ -33,7 +35,7 @@ export default function Landing() {
               Log in
             </Link>
             <Button asChild size="sm">
-              <Link href="/sign-up">Book a lesson</Link>
+              <Link href="/sign-up">{trialAvailable ? "Start free trial" : "Book a lesson"}</Link>
             </Button>
           </nav>
         </div>
@@ -60,7 +62,7 @@ export default function Landing() {
               <div className="flex items-center gap-6">
                 <Button asChild size="lg">
                   <Link href="/sign-up">
-                    Book your first lesson
+                    {trialAvailable ? "Book a free trial lesson" : "Book your first lesson"}
                     <ArrowRight className="ml-1" />
                   </Link>
                 </Button>
@@ -68,6 +70,11 @@ export default function Landing() {
                   See lesson formats
                 </a>
               </div>
+              {trialAvailable && (
+                <p className="text-sm text-muted-foreground mt-4">
+                  Your first {trialLessonType!.durationMinutes}-minute lesson is free — no card required.
+                </p>
+              )}
             </div>
 
             <div className="relative">
@@ -150,13 +157,20 @@ export default function Landing() {
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-foreground mb-1">{lt.name}</h3>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-xl font-bold text-foreground">{lt.name}</h3>
+                      {lt.isTrial && settings?.freeTrialEnabled && (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-primary/10 text-primary">
+                          Free first lesson
+                        </span>
+                      )}
+                    </div>
                     <p className="text-muted-foreground">{lt.description}</p>
                   </div>
                   <div className="flex items-center gap-6 shrink-0">
                     <div className="text-right">
                       <div className="text-2xl font-serif font-bold text-foreground">
-                        ${(lt.priceCents / 100).toFixed(2)}
+                        {lt.isTrial && settings?.freeTrialEnabled ? "Free" : `$${(lt.priceCents / 100).toFixed(2)}`}
                       </div>
                       <div className="text-sm text-muted-foreground">{lt.durationMinutes} min</div>
                     </div>

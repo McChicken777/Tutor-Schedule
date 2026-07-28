@@ -18,12 +18,22 @@ export default function AdminLessonTypes() {
   const { toast } = useToast();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const [newLesson, setNewLesson] = useState({ name: "", durationMinutes: 60, priceCents: 5000, description: "" });
+  const [newLesson, setNewLesson] = useState({ name: "", durationMinutes: 30, priceCents: 0, description: "", isTrial: false });
 
   const handleToggleActive = (id: number, isActive: boolean) => {
     updateMutation.mutate({ id, data: { isActive } }, {
       onSuccess: () => {
         toast({ title: isActive ? "Lesson activated" : "Lesson deactivated" });
+        qc.invalidateQueries({ queryKey: getListAdminLessonTypesQueryKey() });
+        qc.invalidateQueries({ queryKey: getListLessonTypesQueryKey() });
+      }
+    });
+  };
+
+  const handleToggleTrial = (id: number, isTrial: boolean) => {
+    updateMutation.mutate({ id, data: { isTrial } }, {
+      onSuccess: () => {
+        toast({ title: isTrial ? "Set as the free trial lesson" : "No longer the free trial lesson" });
         qc.invalidateQueries({ queryKey: getListAdminLessonTypesQueryKey() });
         qc.invalidateQueries({ queryKey: getListLessonTypesQueryKey() });
       }
@@ -36,7 +46,7 @@ export default function AdminLessonTypes() {
         toast({ title: "Lesson created" });
         qc.invalidateQueries({ queryKey: getListAdminLessonTypesQueryKey() });
         setIsCreateOpen(false);
-        setNewLesson({ name: "", durationMinutes: 60, priceCents: 5000, description: "" });
+        setNewLesson({ name: "", durationMinutes: 30, priceCents: 0, description: "", isTrial: false });
       }
     });
   };
@@ -72,6 +82,13 @@ export default function AdminLessonTypes() {
                 <label className="text-sm font-medium mb-1 block">Description</label>
                 <Textarea value={newLesson.description} onChange={e => setNewLesson({...newLesson, description: e.target.value})} />
               </div>
+              <div className="flex items-center justify-between p-3 bg-accent/50 rounded-xl border border-border">
+                <div>
+                  <p className="font-medium text-sm">Free trial lesson</p>
+                  <p className="text-xs text-muted-foreground">New students automatically get 1 free credit for this lesson.</p>
+                </div>
+                <Switch checked={newLesson.isTrial} onCheckedChange={(v) => setNewLesson({ ...newLesson, isTrial: v })} />
+              </div>
               <Button onClick={handleCreate} disabled={createMutation.isPending || !newLesson.name} className="w-full">Create</Button>
             </div>
           </DialogContent>
@@ -88,11 +105,20 @@ export default function AdminLessonTypes() {
           {lessonTypes?.map(lt => (
             <div key={lt.id} className={`bg-card border border-border p-6 rounded-3xl transition ${!lt.isActive ? "opacity-60" : ""}`}>
               <div className="flex justify-between items-start mb-4">
-                <h3 className="text-xl font-bold text-foreground">{lt.name}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl font-bold text-foreground">{lt.name}</h3>
+                  {lt.isTrial && (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-primary/10 text-primary">Free Trial</span>
+                  )}
+                </div>
                 <Switch checked={lt.isActive} onCheckedChange={(v) => handleToggleActive(lt.id, v)} />
               </div>
               <p className="text-primary font-medium mb-2">{lt.durationMinutes} minutes • ${(lt.priceCents/100).toFixed(2)}</p>
               <p className="text-muted-foreground text-sm mb-4">{lt.description}</p>
+              <div className="flex items-center justify-between pt-4 border-t border-border">
+                <span className="text-sm text-muted-foreground">Free trial lesson</span>
+                <Switch checked={lt.isTrial} onCheckedChange={(v) => handleToggleTrial(lt.id, v)} />
+              </div>
             </div>
           ))}
         </div>
