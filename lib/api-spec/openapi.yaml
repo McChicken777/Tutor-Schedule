@@ -3,20 +3,26 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Spanish Tutor Booking Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: public
+    description: Public endpoints (no auth required)
+  - name: student
+    description: Student endpoints (Clerk auth required)
+  - name: admin
+    description: Admin endpoints (password session required)
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +30,818 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── PUBLIC ───────────────────────────────────────────────────────────────
+  /lesson-types:
+    get:
+      operationId: listLessonTypes
+      tags: [public]
+      summary: List active lesson types
+      responses:
+        "200":
+          description: List of lesson types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LessonType"
+
+  /available-slots:
+    get:
+      operationId: getAvailableSlots
+      tags: [public]
+      summary: Get available booking slots
+      parameters:
+        - name: lessonTypeId
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Available time slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimeSlot"
+
+  /testimonials:
+    get:
+      operationId: listTestimonials
+      tags: [public]
+      summary: List visible testimonials
+      responses:
+        "200":
+          description: List of testimonials
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Testimonial"
+
+  /faqs:
+    get:
+      operationId: listFaqs
+      tags: [public]
+      summary: List visible FAQ entries
+      responses:
+        "200":
+          description: List of FAQ entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FaqEntry"
+
+  /site-settings:
+    get:
+      operationId: getSiteSettings
+      tags: [public]
+      summary: Get public site settings
+      responses:
+        "200":
+          description: Site settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteSettings"
+
+  # ─── STUDENT ──────────────────────────────────────────────────────────────
+  /student/me:
+    get:
+      operationId: getStudentProfile
+      tags: [student]
+      summary: Get current student profile and credit summary
+      responses:
+        "200":
+          description: Student profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentProfile"
+        "401":
+          description: Unauthorized
+
+  /student/dashboard:
+    get:
+      operationId: getStudentDashboard
+      tags: [student]
+      summary: Get student dashboard summary
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentDashboard"
+        "401":
+          description: Unauthorized
+
+  /student/bookings:
+    get:
+      operationId: listStudentBookings
+      tags: [student]
+      summary: List student's bookings
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [upcoming, past, cancelled]
+      responses:
+        "200":
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+        "401":
+          description: Unauthorized
+    post:
+      operationId: createBooking
+      tags: [student]
+      summary: Book a lesson
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingInput"
+      responses:
+        "201":
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "400":
+          description: Invalid input or no credits
+        "401":
+          description: Unauthorized
+
+  /student/bookings/{id}:
+    get:
+      operationId: getStudentBooking
+      tags: [student]
+      summary: Get booking details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Booking details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingDetail"
+        "404":
+          description: Not found
+
+  /student/bookings/{id}/cancel:
+    patch:
+      operationId: cancelBooking
+      tags: [student]
+      summary: Cancel a booking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancellationInput"
+      responses:
+        "200":
+          description: Booking cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "400":
+          description: Cannot cancel
+        "404":
+          description: Not found
+
+  /student/bookings/{id}/reschedule:
+    patch:
+      operationId: rescheduleBooking
+      tags: [student]
+      summary: Reschedule a booking to a new time
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RescheduleInput"
+      responses:
+        "200":
+          description: Booking rescheduled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "400":
+          description: Cannot reschedule
+        "404":
+          description: Not found
+
+  /student/bookings/{id}/homework:
+    get:
+      operationId: getHomework
+      tags: [student]
+      summary: Get homework for a booking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Homework entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Homework"
+        "404":
+          description: Not found
+    post:
+      operationId: submitHomework
+      tags: [student]
+      summary: Submit homework for a booking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HomeworkInput"
+      responses:
+        "201":
+          description: Homework submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Homework"
+        "400":
+          description: Invalid input
+        "404":
+          description: Not found
+
+  /student/bookings/{id}/review:
+    post:
+      operationId: submitReview
+      tags: [student]
+      summary: Submit a review for a completed lesson
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewInput"
+      responses:
+        "201":
+          description: Review submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+        "400":
+          description: Invalid input
+        "404":
+          description: Not found
+
+  /student/packages:
+    get:
+      operationId: listStudentPackages
+      tags: [student]
+      summary: List student's lesson packages and credits
+      responses:
+        "200":
+          description: Lesson packages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LessonPackage"
+        "401":
+          description: Unauthorized
+
+  # ─── ADMIN ────────────────────────────────────────────────────────────────
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      summary: Admin login with password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAuthResult"
+        "401":
+          description: Invalid password
+
+  /admin/logout:
+    post:
+      operationId: adminLogout
+      tags: [admin]
+      summary: Admin logout
+      responses:
+        "200":
+          description: Logged out
+
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      tags: [admin]
+      summary: Get admin dashboard summary
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+        "401":
+          description: Unauthorized
+
+  /admin/bookings:
+    get:
+      operationId: listAdminBookings
+      tags: [admin]
+      summary: List all bookings
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: All bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminBooking"
+        "401":
+          description: Unauthorized
+
+  /admin/bookings/{id}:
+    patch:
+      operationId: updateAdminBooking
+      tags: [admin]
+      summary: Update a booking status or notes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminBookingUpdate"
+      responses:
+        "200":
+          description: Updated booking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminBooking"
+        "404":
+          description: Not found
+
+  /admin/lesson-types:
+    get:
+      operationId: listAdminLessonTypes
+      tags: [admin]
+      summary: List all lesson types (including inactive)
+      responses:
+        "200":
+          description: All lesson types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LessonType"
+    post:
+      operationId: createLessonType
+      tags: [admin]
+      summary: Create a new lesson type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LessonTypeInput"
+      responses:
+        "201":
+          description: Created lesson type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonType"
+
+  /admin/lesson-types/{id}:
+    patch:
+      operationId: updateLessonType
+      tags: [admin]
+      summary: Update a lesson type
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LessonTypeUpdate"
+      responses:
+        "200":
+          description: Updated lesson type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonType"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteLessonType
+      tags: [admin]
+      summary: Delete a lesson type
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  /admin/homework:
+    get:
+      operationId: listAdminHomework
+      tags: [admin]
+      summary: List all homework submissions
+      parameters:
+        - name: reviewed
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: All homework
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminHomework"
+        "401":
+          description: Unauthorized
+
+  /admin/homework/{id}:
+    patch:
+      operationId: updateHomework
+      tags: [admin]
+      summary: Add tutor feedback and grade to homework
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HomeworkFeedbackInput"
+      responses:
+        "200":
+          description: Updated homework
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminHomework"
+        "404":
+          description: Not found
+
+  /admin/students:
+    get:
+      operationId: listAdminStudents
+      tags: [admin]
+      summary: List all students
+      responses:
+        "200":
+          description: All students
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminStudent"
+        "401":
+          description: Unauthorized
+
+  /admin/students/{id}:
+    get:
+      operationId: getAdminStudent
+      tags: [admin]
+      summary: Get student details with history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Student detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStudentDetail"
+        "404":
+          description: Not found
+
+  /admin/packages:
+    post:
+      operationId: grantPackage
+      tags: [admin]
+      summary: Grant a lesson package to a student
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PackageGrantInput"
+      responses:
+        "201":
+          description: Package granted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonPackage"
+        "400":
+          description: Invalid input
+
+  /admin/testimonials:
+    get:
+      operationId: listAdminTestimonials
+      tags: [admin]
+      summary: List all testimonials
+      responses:
+        "200":
+          description: All testimonials
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Testimonial"
+    post:
+      operationId: createTestimonial
+      tags: [admin]
+      summary: Create a testimonial
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestimonialInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Testimonial"
+
+  /admin/testimonials/{id}:
+    patch:
+      operationId: updateTestimonial
+      tags: [admin]
+      summary: Update testimonial visibility or content
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestimonialUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Testimonial"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteTestimonial
+      tags: [admin]
+      summary: Delete a testimonial
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  /admin/faqs:
+    get:
+      operationId: listAdminFaqs
+      tags: [admin]
+      summary: List all FAQ entries
+      responses:
+        "200":
+          description: All FAQs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FaqEntry"
+    post:
+      operationId: createFaq
+      tags: [admin]
+      summary: Create a FAQ entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FaqInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FaqEntry"
+
+  /admin/faqs/{id}:
+    patch:
+      operationId: updateFaq
+      tags: [admin]
+      summary: Update a FAQ entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FaqUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FaqEntry"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteFaq
+      tags: [admin]
+      summary: Delete a FAQ entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  /admin/site-settings:
+    get:
+      operationId: getAdminSiteSettings
+      tags: [admin]
+      summary: Get full site settings
+      responses:
+        "200":
+          description: Site settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteSettings"
+    patch:
+      operationId: updateSiteSettings
+      tags: [admin]
+      summary: Update site settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SiteSettingsUpdate"
+      responses:
+        "200":
+          description: Updated site settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteSettings"
+
+  /admin/calendar/status:
+    get:
+      operationId: getCalendarStatus
+      tags: [admin]
+      summary: Check Google Calendar connection status
+      responses:
+        "200":
+          description: Calendar status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarStatus"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +852,708 @@ components:
       required:
         - status
 
+    LessonType:
+      type: object
+      properties:
+        id:
+          type: number
+        name:
+          type: string
+        durationMinutes:
+          type: number
+        priceCents:
+          type: number
+        description:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - durationMinutes
+        - priceCents
+        - description
+        - isActive
+        - createdAt
+
+    LessonTypeInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        durationMinutes:
+          type: number
+          minimum: 15
+        priceCents:
+          type: number
+          minimum: 0
+        description:
+          type: string
+        isActive:
+          type: boolean
+      required:
+        - name
+        - durationMinutes
+        - priceCents
+        - description
+
+    LessonTypeUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        durationMinutes:
+          type: number
+          minimum: 15
+        priceCents:
+          type: number
+          minimum: 0
+        description:
+          type: string
+        isActive:
+          type: boolean
+
+    TimeSlot:
+      type: object
+      properties:
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+      required:
+        - startTime
+        - endTime
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: number
+        lessonTypeId:
+          type: number
+        lessonTypeName:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [upcoming, completed, cancelled]
+        meetLink:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - lessonTypeId
+        - lessonTypeName
+        - startTime
+        - endTime
+        - status
+        - meetLink
+        - createdAt
+
+    BookingDetail:
+      type: object
+      properties:
+        id:
+          type: number
+        lessonTypeId:
+          type: number
+        lessonTypeName:
+          type: string
+        durationMinutes:
+          type: number
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [upcoming, completed, cancelled]
+        meetLink:
+          type: ["string", "null"]
+        homework:
+          $ref: "#/components/schemas/Homework"
+        review:
+          $ref: "#/components/schemas/Review"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - lessonTypeId
+        - lessonTypeName
+        - durationMinutes
+        - startTime
+        - endTime
+        - status
+        - meetLink
+        - createdAt
+
+    BookingInput:
+      type: object
+      properties:
+        lessonTypeId:
+          type: number
+        startTime:
+          type: string
+          format: date-time
+      required:
+        - lessonTypeId
+        - startTime
+
+    CancellationInput:
+      type: object
+      properties:
+        reason:
+          type: string
+
+    RescheduleInput:
+      type: object
+      properties:
+        newStartTime:
+          type: string
+          format: date-time
+      required:
+        - newStartTime
+
+    Homework:
+      type: object
+      properties:
+        id:
+          type: number
+        bookingId:
+          type: number
+        submittedText:
+          type: ["string", "null"]
+        fileUrl:
+          type: ["string", "null"]
+        tutorFeedback:
+          type: ["string", "null"]
+        grade:
+          type: ["string", "null"]
+        submittedAt:
+          type: ["string", "null"]
+          format: date-time
+        reviewedAt:
+          type: ["string", "null"]
+          format: date-time
+      required:
+        - id
+        - bookingId
+        - submittedText
+        - fileUrl
+        - tutorFeedback
+        - grade
+        - submittedAt
+        - reviewedAt
+
+    HomeworkInput:
+      type: object
+      properties:
+        submittedText:
+          type: string
+        fileUrl:
+          type: string
+
+    HomeworkFeedbackInput:
+      type: object
+      properties:
+        tutorFeedback:
+          type: string
+        grade:
+          type: string
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: number
+        bookingId:
+          type: number
+        rating:
+          type: number
+          minimum: 1
+          maximum: 5
+        comment:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - bookingId
+        - rating
+        - comment
+        - createdAt
+
+    ReviewInput:
+      type: object
+      properties:
+        rating:
+          type: number
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+      required:
+        - rating
+
+    LessonPackage:
+      type: object
+      properties:
+        id:
+          type: number
+        lessonTypeId:
+          type: number
+        lessonTypeName:
+          type: string
+        totalCredits:
+          type: number
+        usedCredits:
+          type: number
+        remainingCredits:
+          type: number
+        purchasedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - lessonTypeId
+        - lessonTypeName
+        - totalCredits
+        - usedCredits
+        - remainingCredits
+        - purchasedAt
+
+    StudentProfile:
+      type: object
+      properties:
+        id:
+          type: number
+        clerkUserId:
+          type: string
+        email:
+          type: string
+        displayName:
+          type: string
+        totalRemainingCredits:
+          type: number
+        upcomingLessonsCount:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - clerkUserId
+        - email
+        - displayName
+        - totalRemainingCredits
+        - upcomingLessonsCount
+        - createdAt
+
+    StudentDashboard:
+      type: object
+      properties:
+        nextBooking:
+          $ref: "#/components/schemas/Booking"
+        upcomingBookings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Booking"
+        totalRemainingCredits:
+          type: number
+        pendingHomeworkCount:
+          type: number
+        packages:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonPackage"
+        recentHomework:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminHomework"
+      required:
+        - upcomingBookings
+        - totalRemainingCredits
+        - pendingHomeworkCount
+        - packages
+        - recentHomework
+
+    Testimonial:
+      type: object
+      properties:
+        id:
+          type: number
+        studentName:
+          type: string
+        text:
+          type: string
+        rating:
+          type: number
+          minimum: 1
+          maximum: 5
+        isVisible:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - studentName
+        - text
+        - rating
+        - isVisible
+        - createdAt
+
+    TestimonialInput:
+      type: object
+      properties:
+        studentName:
+          type: string
+          minLength: 1
+        text:
+          type: string
+          minLength: 1
+        rating:
+          type: number
+          minimum: 1
+          maximum: 5
+        isVisible:
+          type: boolean
+      required:
+        - studentName
+        - text
+        - rating
+
+    TestimonialUpdate:
+      type: object
+      properties:
+        studentName:
+          type: string
+        text:
+          type: string
+        rating:
+          type: number
+          minimum: 1
+          maximum: 5
+        isVisible:
+          type: boolean
+
+    FaqEntry:
+      type: object
+      properties:
+        id:
+          type: number
+        question:
+          type: string
+        answer:
+          type: string
+        displayOrder:
+          type: number
+        isVisible:
+          type: boolean
+      required:
+        - id
+        - question
+        - answer
+        - displayOrder
+        - isVisible
+
+    FaqInput:
+      type: object
+      properties:
+        question:
+          type: string
+          minLength: 1
+        answer:
+          type: string
+          minLength: 1
+        displayOrder:
+          type: number
+        isVisible:
+          type: boolean
+      required:
+        - question
+        - answer
+
+    FaqUpdate:
+      type: object
+      properties:
+        question:
+          type: string
+        answer:
+          type: string
+        displayOrder:
+          type: number
+        isVisible:
+          type: boolean
+
+    SiteSettings:
+      type: object
+      properties:
+        id:
+          type: number
+        tutorName:
+          type: string
+        tutorBio:
+          type: string
+        contactEmail:
+          type: string
+        freeTrialEnabled:
+          type: boolean
+        tutorPhotoUrl:
+          type: ["string", "null"]
+      required:
+        - id
+        - tutorName
+        - tutorBio
+        - contactEmail
+        - freeTrialEnabled
+        - tutorPhotoUrl
+
+    SiteSettingsUpdate:
+      type: object
+      properties:
+        tutorName:
+          type: string
+        tutorBio:
+          type: string
+        contactEmail:
+          type: string
+        freeTrialEnabled:
+          type: boolean
+        tutorPhotoUrl:
+          type: string
+
+    AdminLoginInput:
+      type: object
+      properties:
+        password:
+          type: string
+      required:
+        - password
+
+    AdminAuthResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    AdminDashboard:
+      type: object
+      properties:
+        todayBookings:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminBooking"
+        upcomingBookingsCount:
+          type: number
+        totalStudents:
+          type: number
+        pendingHomeworkCount:
+          type: number
+        pendingTestimonialsCount:
+          type: number
+        thisWeekBookings:
+          type: number
+      required:
+        - todayBookings
+        - upcomingBookingsCount
+        - totalStudents
+        - pendingHomeworkCount
+        - pendingTestimonialsCount
+        - thisWeekBookings
+
+    AdminBooking:
+      type: object
+      properties:
+        id:
+          type: number
+        studentId:
+          type: number
+        studentName:
+          type: string
+        studentEmail:
+          type: string
+        lessonTypeId:
+          type: number
+        lessonTypeName:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [upcoming, completed, cancelled]
+        meetLink:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - studentId
+        - studentName
+        - studentEmail
+        - lessonTypeId
+        - lessonTypeName
+        - startTime
+        - endTime
+        - status
+        - meetLink
+        - notes
+        - createdAt
+
+    AdminBookingUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [upcoming, completed, cancelled]
+        notes:
+          type: string
+
+    AdminHomework:
+      type: object
+      properties:
+        id:
+          type: number
+        bookingId:
+          type: number
+        studentName:
+          type: string
+        lessonTypeName:
+          type: string
+        lessonDate:
+          type: string
+          format: date-time
+        submittedText:
+          type: ["string", "null"]
+        fileUrl:
+          type: ["string", "null"]
+        tutorFeedback:
+          type: ["string", "null"]
+        grade:
+          type: ["string", "null"]
+        submittedAt:
+          type: ["string", "null"]
+          format: date-time
+        reviewedAt:
+          type: ["string", "null"]
+          format: date-time
+      required:
+        - id
+        - bookingId
+        - studentName
+        - lessonTypeName
+        - lessonDate
+        - submittedText
+        - fileUrl
+        - tutorFeedback
+        - grade
+        - submittedAt
+        - reviewedAt
+
+    AdminStudent:
+      type: object
+      properties:
+        id:
+          type: number
+        email:
+          type: string
+        displayName:
+          type: string
+        totalCredits:
+          type: number
+        usedCredits:
+          type: number
+        totalBookings:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - displayName
+        - totalCredits
+        - usedCredits
+        - totalBookings
+        - createdAt
+
+    AdminStudentDetail:
+      type: object
+      properties:
+        id:
+          type: number
+        email:
+          type: string
+        displayName:
+          type: string
+        packages:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonPackage"
+        bookings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Booking"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - displayName
+        - packages
+        - bookings
+        - createdAt
+
+    PackageGrantInput:
+      type: object
+      properties:
+        studentId:
+          type: number
+        lessonTypeId:
+          type: number
+        totalCredits:
+          type: number
+          minimum: 1
+      required:
+        - studentId
+        - lessonTypeId
+        - totalCredits
+
+    CalendarStatus:
+      type: object
+      properties:
+        connected:
+          type: boolean
+        calendarEmail:
+          type: ["string", "null"]
+      required:
+        - connected
+        - calendarEmail

@@ -1,0 +1,214 @@
+import { useState } from "react";
+import { Link, useLocation } from "wouter";
+import { format, addDays, startOfDay, endOfDay, isBefore } from "date-fns";
+import { 
+  useListLessonTypes, 
+  useGetAvailableSlots, 
+  useCreateBooking,
+  useGetStudentProfile,
+  getGetAvailableSlotsQueryKey,
+} from "@workspace/api-client-react";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { useToast } from "@/hooks/use-toast";
+import { CheckCircle2, ArrowLeft, ArrowRight, Clock } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+
+export default function BookLesson() {
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  
+  const [step, setStep] = useState(1);
+  const [selectedLessonType, setSelectedLessonType] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+
+  const { data: profile } = useGetStudentProfile();
+  const { data: lessonTypes, isLoading: loadingTypes } = useListLessonTypes();
+  
+  const startDate = selectedDate ? startOfDay(selectedDate).toISOString() : new Date().toISOString();
+  const endDate = selectedDate ? endOfDay(addDays(selectedDate, 14)).toISOString() : addDays(new Date(), 14).toISOString();
+  
+  const slotsParams = { lessonTypeId: selectedLessonType || 0, startDate, endDate };
+  const { data: slots, isLoading: loadingSlots } = useGetAvailableSlots(
+    slotsParams,
+    { query: { enabled: !!selectedLessonType && !!selectedDate, queryKey: getGetAvailableSlotsQueryKey(slotsParams) } }
+  );
+
+  const createMutation = useCreateBooking();
+
+  const activeLessonTypes = lessonTypes?.filter(lt => lt.isActive) || [];
+  const selectedTypeDetails = activeLessonTypes.find(lt => lt.id === selectedLessonType);
+
+  const handleBook = () => {
+    if (!selectedLessonType || !selectedSlot) return;
+    createMutation.mutate({ data: { lessonTypeId: selectedLessonType, startTime: selectedSlot } }, {
+      onSuccess: (data) => {
+        toast({ title: "Lesson booked successfully!" });
+        setLocation(`/bookings/${data.id}`);
+      },
+      onError: (err: any) => {
+        toast({ title: "Booking failed", description: err.message || "Unknown error", variant: "destructive" });
+      }
+    });
+  };
+
+  return (
+    <div className="p-6 md:p-10 bg-background min-h-full max-w-5xl mx-auto w-full">
+      <h1 className="text-3xl font-serif font-bold text-foreground mb-8">Book a Lesson</h1>
+
+      {/* Progress Steps */}
+      <div className="flex items-center gap-4 mb-10">
+        {[1, 2, 3].map((s) => (
+          <div key={s} className="flex items-center gap-4">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+              step >= s ? "bg-primary text-primary-foreground" : "bg-accent text-muted-foreground"
+            }`}>
+              {step > s ? <CheckCircle2 className="w-5 h-5" /> : s}
+            </div>
+            {s < 3 && <div className={`h-1 w-12 sm:w-24 rounded ${step > s ? "bg-primary" : "bg-accent"}`} />}
+          </div>
+        ))}
+      </div>
+
+      {step === 1 && (
+        <div>
+          <h2 className="text-2xl font-bold mb-6">Select a Lesson Type</h2>
+          {loadingTypes ? (
+            <div className="grid md:grid-cols-2 gap-6">
+              <Skeleton className="h-40 rounded-3xl" />
+              <Skeleton className="h-40 rounded-3xl" />
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-6">
+              {activeLessonTypes.map(lt => (
+                <button
+                  key={lt.id}
+                  onClick={() => setSelectedLessonType(lt.id)}
+                  className={`text-left p-6 rounded-3xl border-2 transition-all ${
+                    selectedLessonType === lt.id 
+                      ? "border-primary bg-primary/5 shadow-md" 
+                      : "border-border bg-card hover:border-primary/50"
+                  }`}
+                >
+                  <h3 className="text-xl font-bold text-foreground mb-2">{lt.name}</h3>
+                  <p className="text-primary font-medium mb-4">{lt.durationMinutes} minutes • ${(lt.priceCents/100).toFixed(2)}</p>
+                  <p className="text-muted-foreground text-sm">{lt.description}</p>
+                </button>
+              ))}
+            </div>
+          )}
+          
+          <div className="mt-8 flex justify-end">
+            <Button onClick={() => setStep(2)} disabled={!selectedLessonType} size="lg" className="rounded-full px-8">
+              Next Step <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {step === 2 && (
+        <div>
+          <h2 className="text-2xl font-bold mb-6">Choose Date & Time</h2>
+          <div className="grid md:grid-cols-2 gap-10">
+            <div className="bg-card p-4 rounded-3xl border border-border inline-block self-start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => { setSelectedDate(date); setSelectedSlot(null); }}
+                disabled={(date) => isBefore(date, startOfDay(new Date()))}
+                className="bg-transparent"
+              />
+            </div>
+            
+            <div>
+              <h3 className="font-bold mb-4">
+                Available times for {selectedDate ? format(selectedDate, "MMM d, yyyy") : "selected date"}
+              </h3>
+              {loadingSlots ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <Skeleton className="h-12 rounded-xl" />
+                  <Skeleton className="h-12 rounded-xl" />
+                </div>
+              ) : slots && slots.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {slots.map(slot => {
+                    const isSelected = selectedSlot === slot.startTime;
+                    return (
+                      <button
+                        key={slot.startTime}
+                        onClick={() => setSelectedSlot(slot.startTime)}
+                        className={`py-3 px-4 rounded-xl text-sm font-medium transition ${
+                          isSelected 
+                            ? "bg-primary text-primary-foreground shadow-md" 
+                            : "bg-accent text-foreground hover:bg-primary/20"
+                        }`}
+                      >
+                        {format(new Date(slot.startTime), "h:mm a")}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-8 bg-accent rounded-2xl text-center text-muted-foreground">
+                  No slots available on this date.
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="mt-8 flex justify-between">
+            <Button onClick={() => setStep(1)} variant="outline" size="lg" className="rounded-full">
+              <ArrowLeft className="w-4 h-4 mr-2" /> Back
+            </Button>
+            <Button onClick={() => setStep(3)} disabled={!selectedSlot} size="lg" className="rounded-full px-8">
+              Review <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {step === 3 && selectedTypeDetails && selectedSlot && (
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-2xl font-bold mb-6 text-center">Confirm Booking</h2>
+          
+          <div className="bg-card border border-border rounded-3xl p-8 mb-8">
+            <div className="flex items-start justify-between border-b border-border pb-6 mb-6">
+              <div>
+                <h3 className="text-xl font-bold mb-2">{selectedTypeDetails.name}</h3>
+                <p className="text-muted-foreground">{selectedTypeDetails.durationMinutes} minutes</p>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-serif font-bold">${(selectedTypeDetails.priceCents / 100).toFixed(2)}</div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4 text-lg">
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                <Clock className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="font-bold">{format(new Date(selectedSlot), "EEEE, MMMM d, yyyy")}</p>
+                <p className="text-muted-foreground">{format(new Date(selectedSlot), "h:mm a")}</p>
+              </div>
+            </div>
+            
+            <div className="mt-8 pt-6 border-t border-border flex justify-between items-center">
+              <span className="text-muted-foreground">Your Balance</span>
+              <span className="font-bold">{profile?.totalRemainingCredits || 0} credits</span>
+            </div>
+          </div>
+          
+          <div className="flex justify-between">
+            <Button onClick={() => setStep(2)} variant="outline" size="lg" className="rounded-full">
+              <ArrowLeft className="w-4 h-4 mr-2" /> Back
+            </Button>
+            <Button onClick={handleBook} disabled={createMutation.isPending} size="lg" className="rounded-full px-8">
+              {createMutation.isPending ? "Confirming..." : "Confirm Booking"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

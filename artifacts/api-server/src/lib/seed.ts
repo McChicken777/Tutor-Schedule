@@ -1,0 +1,133 @@
+import { db } from "@workspace/db";
+import {
+  lessonTypesTable,
+  testimonialsTable,
+  faqsTable,
+  siteSettingsTable,
+} from "@workspace/db";
+
+export async function seed() {
+  // Lesson types
+  const existingTypes = await db.select().from(lessonTypesTable);
+  if (existingTypes.length === 0) {
+    await db.insert(lessonTypesTable).values([
+      {
+        name: "Trial Lesson",
+        durationMinutes: 30,
+        priceCents: 0,
+        description: "A free 30-minute introductory session to see if we are the right fit.",
+        isActive: true,
+      },
+      {
+        name: "Standard Lesson",
+        durationMinutes: 60,
+        priceCents: 4500,
+        description: "A focused 60-minute lesson tailored to your level and goals.",
+        isActive: true,
+      },
+      {
+        name: "Intensive Lesson",
+        durationMinutes: 90,
+        priceCents: 6500,
+        description: "A deep-dive 90-minute session for rapid progress on specific skills.",
+        isActive: true,
+      },
+      {
+        name: "Conversation Practice",
+        durationMinutes: 45,
+        priceCents: 3000,
+        description: "45 minutes of relaxed, guided conversation practice to build fluency.",
+        isActive: true,
+      },
+    ]);
+    console.log("Seeded lesson types");
+  }
+
+  // Testimonials
+  const existingTestimonials = await db.select().from(testimonialsTable);
+  if (existingTestimonials.length === 0) {
+    await db.insert(testimonialsTable).values([
+      {
+        studentName: "Sarah M.",
+        text: "I went from zero Spanish to holding full conversations in just six months. The personalized approach made all the difference — every lesson felt tailored to exactly what I needed.",
+        rating: 5,
+        isVisible: true,
+      },
+      {
+        studentName: "James T.",
+        text: "Finally found a tutor who makes grammar fun instead of painful. The sessions are engaging, patient, and I always leave feeling like I've genuinely made progress.",
+        rating: 5,
+        isVisible: true,
+      },
+      {
+        studentName: "Priya K.",
+        text: "The flexibility of scheduling and the quality of teaching are both top-notch. I fit lessons around my busy schedule and the progress has been remarkable.",
+        rating: 5,
+        isVisible: true,
+      },
+      {
+        studentName: "Carlos R.",
+        text: "As a heritage speaker wanting to improve my formal Spanish, this was exactly what I needed. Nuanced, thoughtful, and incredibly effective.",
+        rating: 5,
+        isVisible: true,
+      },
+    ]);
+    console.log("Seeded testimonials");
+  }
+
+  // FAQs
+  const existingFaqs = await db.select().from(faqsTable);
+  if (existingFaqs.length === 0) {
+    await db.insert(faqsTable).values([
+      {
+        question: "What level of Spanish do I need to get started?",
+        answer: "Absolutely none! Lessons are tailored to all levels, from complete beginners to advanced speakers looking to refine their fluency.",
+        displayOrder: 1,
+        isVisible: true,
+      },
+      {
+        question: "How do classes work online?",
+        answer: "Each lesson takes place over Google Meet. Once you book, a unique meeting link is automatically generated and sent to you. All you need is a stable internet connection.",
+        displayOrder: 2,
+        isVisible: true,
+      },
+      {
+        question: "Can I cancel or reschedule a lesson?",
+        answer: "Yes, you can cancel or reschedule from your dashboard up to 24 hours before your lesson. Credits are automatically returned for cancelled lessons.",
+        displayOrder: 3,
+        isVisible: true,
+      },
+      {
+        question: "How do lesson credits work?",
+        answer: "Credits are packages of lessons purchased in advance. Each booking uses one credit from your package. Your tutor can grant credits as part of a package deal.",
+        displayOrder: 4,
+        isVisible: true,
+      },
+      {
+        question: "Is there a free trial?",
+        answer: "Yes! A free 30-minute trial lesson is available so you can experience the teaching style before committing. Just book the 'Trial Lesson' type.",
+        displayOrder: 5,
+        isVisible: true,
+      },
+      {
+        question: "What materials do I need?",
+        answer: "Just yourself and curiosity! Materials and exercises are provided during lessons. A notebook for vocabulary is always a good idea.",
+        displayOrder: 6,
+        isVisible: true,
+      },
+    ]);
+    console.log("Seeded FAQs");
+  }
+
+  // Site settings
+  const existingSettings = await db.select().from(siteSettingsTable);
+  if (existingSettings.length === 0) {
+    await db.insert(siteSettingsTable).values({
+      tutorName: "Your Spanish Tutor",
+      tutorBio: "Native speaker with a passion for helping learners find their voice in Spanish. With years of teaching experience spanning all levels, I create personalized lessons that make language learning feel natural — and actually fun.",
+      contactEmail: "hello@example.com",
+      freeTrialEnabled: true,
+    });
+    console.log("Seeded site settings");
+  }
+}

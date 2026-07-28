@@ -1,0 +1,102 @@
+import { useListAdminLessonTypes, useUpdateLessonType, useCreateLessonType } from "@workspace/api-client-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
+import { getListAdminLessonTypesQueryKey, getListLessonTypesQueryKey } from "@workspace/api-client-react";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+
+export default function AdminLessonTypes() {
+  const { data: lessonTypes, isLoading } = useListAdminLessonTypes();
+  const updateMutation = useUpdateLessonType();
+  const createMutation = useCreateLessonType();
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  const [newLesson, setNewLesson] = useState({ name: "", durationMinutes: 60, priceCents: 5000, description: "" });
+
+  const handleToggleActive = (id: number, isActive: boolean) => {
+    updateMutation.mutate({ id, data: { isActive } }, {
+      onSuccess: () => {
+        toast({ title: isActive ? "Lesson activated" : "Lesson deactivated" });
+        qc.invalidateQueries({ queryKey: getListAdminLessonTypesQueryKey() });
+        qc.invalidateQueries({ queryKey: getListLessonTypesQueryKey() });
+      }
+    });
+  };
+
+  const handleCreate = () => {
+    createMutation.mutate({ data: { ...newLesson, isActive: true } }, {
+      onSuccess: () => {
+        toast({ title: "Lesson created" });
+        qc.invalidateQueries({ queryKey: getListAdminLessonTypesQueryKey() });
+        setIsCreateOpen(false);
+        setNewLesson({ name: "", durationMinutes: 60, priceCents: 5000, description: "" });
+      }
+    });
+  };
+
+  return (
+    <div className="p-6 md:p-10 bg-background min-h-full">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <h1 className="text-3xl font-serif font-bold text-foreground">Lesson Types</h1>
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <DialogTrigger asChild>
+            <Button>Create Lesson</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Lesson Type</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Name</label>
+                <Input value={newLesson.name} onChange={e => setNewLesson({...newLesson, name: e.target.value})} placeholder="e.g. Conversational Spanish" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Duration (min)</label>
+                  <Input type="number" value={newLesson.durationMinutes} onChange={e => setNewLesson({...newLesson, durationMinutes: Number(e.target.value)})} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Price ($)</label>
+                  <Input type="number" value={newLesson.priceCents / 100} onChange={e => setNewLesson({...newLesson, priceCents: Math.round(Number(e.target.value) * 100)})} />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Description</label>
+                <Textarea value={newLesson.description} onChange={e => setNewLesson({...newLesson, description: e.target.value})} />
+              </div>
+              <Button onClick={handleCreate} disabled={createMutation.isPending || !newLesson.name} className="w-full">Create</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {isLoading ? (
+        <div className="grid md:grid-cols-2 gap-6">
+          <Skeleton className="h-48 rounded-2xl" />
+          <Skeleton className="h-48 rounded-2xl" />
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-6">
+          {lessonTypes?.map(lt => (
+            <div key={lt.id} className={`bg-card border border-border p-6 rounded-3xl transition ${!lt.isActive ? "opacity-60" : ""}`}>
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-xl font-bold text-foreground">{lt.name}</h3>
+                <Switch checked={lt.isActive} onCheckedChange={(v) => handleToggleActive(lt.id, v)} />
+              </div>
+              <p className="text-primary font-medium mb-2">{lt.durationMinutes} minutes • ${(lt.priceCents/100).toFixed(2)}</p>
+              <p className="text-muted-foreground text-sm mb-4">{lt.description}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
