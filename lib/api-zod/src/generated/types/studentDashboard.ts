@@ -13,6 +13,8 @@ export interface StudentDashboard {
   nextBooking?: Booking;
   upcomingBookings: Booking[];
   totalRemainingCredits: number;
+  /** Whether this student can still book the free trial lesson (never booked it before, and one is configured/enabled). */
+  trialAvailable: boolean;
   pendingHomeworkCount: number;
   packages: LessonPackage[];
   recentHomework: AdminHomework[];

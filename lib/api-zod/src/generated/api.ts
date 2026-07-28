@@ -168,6 +168,7 @@ export const GetStudentDashboardResponse = zod.object({
   "createdAt": zod.coerce.date()
 })),
   "totalRemainingCredits": zod.number(),
+  "trialAvailable": zod.boolean().describe('Whether this student can still book the free trial lesson (never booked it before, and one is configured\/enabled).'),
   "pendingHomeworkCount": zod.number(),
   "packages": zod.array(zod.object({
   "id": zod.number(),

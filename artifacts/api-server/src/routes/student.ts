@@ -50,33 +50,31 @@ async function getOrCreateUser(clerkUserId: string, email?: string, displayName?
         displayName: displayName ?? "Student",
       })
       .returning();
-
-    await grantFreeTrialIfEligible(user.id);
   }
   return user;
 }
 
-// Runs once, right after a brand-new user row is created — freeTrialGrantedAt
-// being set is what makes this a one-time-ever grant, independent of whether
-// the admin later removes/adjusts their packages.
-async function grantFreeTrialIfEligible(userId: number) {
+// The trial lesson type needs no credits to book, but a student can only ever
+// book it once — checked directly against booking history (any status) rather
+// than a credit balance, so it can't be re-triggered by cancelling and rebooking.
+async function hasUsedTrial(studentId: number): Promise<boolean> {
+  const [existing] = await db
+    .select({ id: bookingsTable.id })
+    .from(bookingsTable)
+    .innerJoin(lessonTypesTable, eq(bookingsTable.lessonTypeId, lessonTypesTable.id))
+    .where(and(eq(bookingsTable.studentId, studentId), eq(lessonTypesTable.isTrial, true)));
+  return !!existing;
+}
+
+async function getTrialLessonType() {
   const [settings] = await db.select().from(siteSettingsTable).limit(1);
-  if (!settings?.freeTrialEnabled) return;
+  if (!settings?.freeTrialEnabled) return null;
 
   const [trialLessonType] = await db
     .select()
     .from(lessonTypesTable)
     .where(and(eq(lessonTypesTable.isTrial, true), eq(lessonTypesTable.isActive, true)));
-  if (!trialLessonType) return;
-
-  await db.insert(lessonPackagesTable).values({
-    studentId: userId,
-    lessonTypeId: trialLessonType.id,
-    totalCredits: 1,
-    usedCredits: 0,
-  });
-
-  await db.update(usersTable).set({ freeTrialGrantedAt: new Date() }).where(eq(usersTable.id, userId));
+  return trialLessonType ?? null;
 }
 
 router.get("/student/me", requireAuth, async (req, res): Promise<void> => {
@@ -185,10 +183,14 @@ router.get("/student/dashboard", requireAuth, async (req, res): Promise<void> =>
     createdAt: r.booking.createdAt,
   }));
 
+  const trialLessonType = await getTrialLessonType();
+  const trialAvailable = trialLessonType ? !(await hasUsedTrial(user.id)) : false;
+
   res.json({
     nextBooking: mappedUpcoming[0] ?? null,
     upcomingBookings: mappedUpcoming,
     totalRemainingCredits: totalRemaining,
+    trialAvailable,
     pendingHomeworkCount,
     packages: packages.map((p) => ({
       id: p.pkg.id,
@@ -278,25 +280,33 @@ router.post("/student/bookings", requireAuth, async (req, res): Promise<void> =>
     return;
   }
 
-  // Check credits
-  const packages = await db
-    .select()
-    .from(lessonPackagesTable)
-    .where(
-      and(
-        eq(lessonPackagesTable.studentId, user.id),
-        eq(lessonPackagesTable.lessonTypeId, lessonTypeId),
-      ),
+  // The trial lesson type needs no credits, but only once ever, per student
+  let packages: (typeof lessonPackagesTable.$inferSelect)[] = [];
+  if (lessonType.isTrial) {
+    if (await hasUsedTrial(user.id)) {
+      res.status(400).json({ error: "You've already used your free trial lesson" });
+      return;
+    }
+  } else {
+    packages = await db
+      .select()
+      .from(lessonPackagesTable)
+      .where(
+        and(
+          eq(lessonPackagesTable.studentId, user.id),
+          eq(lessonPackagesTable.lessonTypeId, lessonTypeId),
+        ),
+      );
+
+    const totalRemaining = packages.reduce(
+      (sum, p) => sum + (p.totalCredits - p.usedCredits),
+      0,
     );
 
-  const totalRemaining = packages.reduce(
-    (sum, p) => sum + (p.totalCredits - p.usedCredits),
-    0,
-  );
-
-  if (totalRemaining <= 0) {
-    res.status(400).json({ error: "No remaining credits for this lesson type" });
-    return;
+    if (totalRemaining <= 0) {
+      res.status(400).json({ error: "No remaining credits for this lesson type" });
+      return;
+    }
   }
 
   const start = new Date(startTime as unknown as string);
@@ -325,14 +335,16 @@ router.post("/student/bookings", requireAuth, async (req, res): Promise<void> =>
     })
     .returning();
 
-  // Deduct one credit from the package with most credits remaining
-  const pkg = packages.sort(
-    (a, b) => (b.totalCredits - b.usedCredits) - (a.totalCredits - a.usedCredits),
-  )[0];
-  await db
-    .update(lessonPackagesTable)
-    .set({ usedCredits: pkg.usedCredits + 1 })
-    .where(eq(lessonPackagesTable.id, pkg.id));
+  if (!lessonType.isTrial) {
+    // Deduct one credit from the package with most credits remaining
+    const pkg = packages.sort(
+      (a, b) => (b.totalCredits - b.usedCredits) - (a.totalCredits - a.usedCredits),
+    )[0];
+    await db
+      .update(lessonPackagesTable)
+      .set({ usedCredits: pkg.usedCredits + 1 })
+      .where(eq(lessonPackagesTable.id, pkg.id));
+  }
 
   // Create empty homework record
   await db.insert(homeworkTable).values({ bookingId: booking.id });

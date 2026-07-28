@@ -1308,6 +1308,9 @@ components:
             $ref: "#/components/schemas/Booking"
         totalRemainingCredits:
           type: number
+        trialAvailable:
+          type: boolean
+          description: Whether this student can still book the free trial lesson (never booked it before, and one is configured/enabled).
         pendingHomeworkCount:
           type: number
         packages:
@@ -1321,6 +1324,7 @@ components:
       required:
         - upcomingBookings
         - totalRemainingCredits
+        - trialAvailable
         - pendingHomeworkCount
         - packages
         - recentHomework

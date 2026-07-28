@@ -27,10 +27,7 @@ export default function StudentDashboard() {
   const nextBooking = dashboard.nextBooking;
 
   const trialLessonType = lessonTypes?.find((lt) => lt.isTrial);
-  const trialPackage = trialLessonType
-    ? dashboard.packages?.find((p) => p.lessonTypeId === trialLessonType.id)
-    : undefined;
-  const hasUnusedTrial = !!trialPackage && trialPackage.remainingCredits > 0;
+  const hasUnusedTrial = dashboard.trialAvailable && !!trialLessonType;
   
   // Logic for Join Class button
   let canJoin = false;

@@ -40,7 +40,11 @@ export default function BookLesson() {
   const activeLessonTypes = lessonTypes?.filter(lt => lt.isActive) || [];
   const selectedTypeDetails = activeLessonTypes.find(lt => lt.id === selectedLessonType);
   const remainingForSelected = dashboard?.packages?.find(p => p.lessonTypeId === selectedLessonType)?.remainingCredits ?? 0;
-  const hasCreditsForSelected = selectedLessonType != null && remainingForSelected > 0;
+  const canBookSelected = selectedLessonType == null
+    ? false
+    : selectedTypeDetails?.isTrial
+      ? !!dashboard?.trialAvailable
+      : remainingForSelected > 0;
 
   const handleBook = () => {
     if (!selectedLessonType || !selectedSlot) return;
@@ -108,18 +112,24 @@ export default function BookLesson() {
             </div>
           )}
 
-          {selectedLessonType != null && !hasCreditsForSelected && (
+          {selectedLessonType != null && !canBookSelected && (
             <div className="mt-6 p-4 bg-accent rounded-xl text-sm text-muted-foreground">
-              You don't have any credits for this lesson yet.{" "}
-              <Link href="/messages" className="text-primary font-medium hover:underline">
-                Message your teacher
-              </Link>{" "}
-              to arrange one.
+              {selectedTypeDetails?.isTrial ? (
+                "You've already used your free trial lesson."
+              ) : (
+                <>
+                  You don't have any credits for this lesson yet.{" "}
+                  <Link href="/messages" className="text-primary font-medium hover:underline">
+                    Message your teacher
+                  </Link>{" "}
+                  to arrange one.
+                </>
+              )}
             </div>
           )}
 
           <div className="mt-8 flex justify-end">
-            <Button onClick={() => setStep(2)} disabled={!hasCreditsForSelected} size="lg" className="px-8">
+            <Button onClick={() => setStep(2)} disabled={!canBookSelected} size="lg" className="px-8">
               Next Step <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
@@ -216,7 +226,11 @@ export default function BookLesson() {
             
             <div className="mt-8 pt-6 border-t border-border flex justify-between items-center">
               <span className="text-muted-foreground">Your Balance</span>
-              <span className="font-bold">{remainingForSelected} credit{remainingForSelected === 1 ? "" : "s"} for this lesson</span>
+              <span className="font-bold">
+                {selectedTypeDetails?.isTrial
+                  ? "Free — your one-time trial"
+                  : `${remainingForSelected} credit${remainingForSelected === 1 ? "" : "s"} for this lesson`}
+              </span>
             </div>
           </div>
           
