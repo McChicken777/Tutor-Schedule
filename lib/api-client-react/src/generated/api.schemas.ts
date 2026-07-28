@@ -398,3 +398,7 @@ export type ListAdminHomeworkParams = {
 reviewed?: boolean;
 };
 
+export type DisconnectCalendar200 = {
+  success: boolean;
+};
+

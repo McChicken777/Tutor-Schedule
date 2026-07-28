@@ -33,6 +33,7 @@ import type {
   BookingInput,
   CalendarStatus,
   CancellationInput,
+  DisconnectCalendar200,
   FaqEntry,
   FaqInput,
   FaqUpdate,
@@ -3239,4 +3240,75 @@ export function useGetCalendarStatus<TData = Awaited<ReturnType<typeof getCalend
 
 
 
+
+export const getDisconnectCalendarUrl = () => {
+
+
+
+
+  return `/api/admin/calendar/disconnect`
+}
+
+/**
+ * @summary Disconnect Google Calendar
+ */
+export const disconnectCalendar = async ( options?: Parameters<typeof customFetch>[1]): Promise<DisconnectCalendar200> => {
+
+  return customFetch<DisconnectCalendar200>(getDisconnectCalendarUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDisconnectCalendarMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disconnectCalendar>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof disconnectCalendar>>, TError,void, TContext> => {
+
+const mutationKey = ['disconnectCalendar'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof disconnectCalendar>>, void> = () => {
+
+
+          return  disconnectCalendar(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DisconnectCalendarMutationResult = NonNullable<Awaited<ReturnType<typeof disconnectCalendar>>>
+
+    export type DisconnectCalendarMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Disconnect Google Calendar
+ */
+export const useDisconnectCalendar = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disconnectCalendar>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof disconnectCalendar>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getDisconnectCalendarMutationOptions(options));
+    }
 

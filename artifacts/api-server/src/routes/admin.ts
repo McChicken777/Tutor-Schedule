@@ -34,8 +34,11 @@ import {
   DeleteFaqParams,
   UpdateSiteSettingsBody,
 } from "@workspace/api-zod";
+import { randomBytes } from "crypto";
 import { requireAdmin } from "../middlewares/requireAdmin";
-import { isCalendarConnected, getCalendarEmail, deleteCalendarEvent } from "../lib/calendar";
+import { isCalendarConnected, getCalendarEmail, deleteCalendarEvent, createOAuth2Client } from "../lib/calendar";
+import { google } from "googleapis";
+import { calendarTokensTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -700,6 +703,91 @@ router.get("/admin/calendar/status", requireAdmin, async (_req, res): Promise<vo
   const connected = await isCalendarConnected();
   const email = connected ? await getCalendarEmail() : null;
   res.json({ connected, calendarEmail: email ?? null });
+});
+
+// Initiates Google OAuth — generates a one-time state nonce stored in the
+// admin session to prevent CSRF / account-linking attacks.
+router.get("/calendar/auth", requireAdmin, async (req, res): Promise<void> => {
+  const state = randomBytes(32).toString("hex");
+  (req.session as any).oauthState = state;
+
+  const auth = createOAuth2Client();
+  const url = auth.generateAuthUrl({
+    access_type: "offline",
+    prompt: "consent",
+    state,
+    scope: [
+      "https://www.googleapis.com/auth/calendar",
+      "https://www.googleapis.com/auth/calendar.events",
+      "openid",
+      "email",
+    ],
+  });
+  res.redirect(url);
+});
+
+router.get("/admin/calendar/callback", requireAdmin, async (req, res): Promise<void> => {
+  const { code, error, state } = req.query;
+
+  // Validate state to prevent CSRF attacks
+  const expectedState = (req.session as any).oauthState;
+  delete (req.session as any).oauthState; // Consume nonce immediately (prevents replay)
+
+  if (!expectedState || typeof state !== "string" || state !== expectedState) {
+    res.redirect("/?admin=1#/settings?calendarError=invalid_state");
+    return;
+  }
+
+  if (error || !code || typeof code !== "string") {
+    res.redirect("/?admin=1#/settings?calendarError=1");
+    return;
+  }
+
+  try {
+    const auth = createOAuth2Client();
+    const { tokens } = await auth.getToken(code);
+
+    if (!tokens.refresh_token) {
+      res.redirect("/?admin=1#/settings?calendarError=missing_refresh_token");
+      return;
+    }
+
+    // Get the connected calendar email
+    auth.setCredentials(tokens);
+    const oauth2 = google.oauth2({ version: "v2", auth });
+    const userInfo = await oauth2.userinfo.get();
+    const calendarEmail = userInfo.data.email ?? null;
+
+    // Upsert token row
+    const existing = await db.select().from(calendarTokensTable).limit(1);
+
+    if (existing.length > 0) {
+      await db
+        .update(calendarTokensTable)
+        .set({
+          accessToken: tokens.access_token!,
+          refreshToken: tokens.refresh_token,
+          tokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
+          calendarEmail,
+        });
+    } else {
+      await db.insert(calendarTokensTable).values({
+        accessToken: tokens.access_token!,
+        refreshToken: tokens.refresh_token,
+        tokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
+        calendarEmail,
+      });
+    }
+
+    res.redirect("/?admin=1#/settings?calendarConnected=1");
+  } catch (err) {
+    res.redirect("/?admin=1#/settings?calendarError=1");
+  }
+});
+
+router.delete("/admin/calendar/disconnect", requireAdmin, async (_req, res): Promise<void> => {
+  await db.delete(calendarTokensTable);
+  res.json({ success: true });
 });
 
 export default router;

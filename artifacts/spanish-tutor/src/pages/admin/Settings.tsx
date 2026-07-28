@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useGetAdminSiteSettings, useUpdateSiteSettings, useGetCalendarStatus } from "@workspace/api-client-react";
+import { useGetAdminSiteSettings, useUpdateSiteSettings, useGetCalendarStatus, useDisconnectCalendar } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,13 +7,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { getGetAdminSiteSettingsQueryKey, getGetSiteSettingsQueryKey } from "@workspace/api-client-react";
-import { Calendar as CalendarIcon, CheckCircle2, AlertCircle } from "lucide-react";
+import { getGetAdminSiteSettingsQueryKey, getGetSiteSettingsQueryKey, getGetCalendarStatusQueryKey } from "@workspace/api-client-react";
+import { Calendar as CalendarIcon, CheckCircle2, AlertCircle, Unlink } from "lucide-react";
 
 export default function AdminSettings() {
   const { data: settings, isLoading } = useGetAdminSiteSettings();
-  const { data: calendarStatus } = useGetCalendarStatus();
+  const { data: calendarStatus, refetch: refetchCalendarStatus } = useGetCalendarStatus();
   const updateMutation = useUpdateSiteSettings();
+  const disconnectMutation = useDisconnectCalendar();
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -24,6 +25,25 @@ export default function AdminSettings() {
     tutorPhotoUrl: "",
     freeTrialEnabled: false,
   });
+
+  // Handle OAuth callback params in the hash
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.split("?")[1] ?? "");
+    if (params.get("calendarConnected") === "1") {
+      toast({ title: "Google Calendar connected!" });
+      refetchCalendarStatus();
+      // Clean up URL
+      window.history.replaceState(null, "", window.location.pathname + window.location.search + "#/settings");
+    } else if (params.get("calendarError")) {
+      const reason = params.get("calendarError");
+      toast({
+        title: "Failed to connect Google Calendar",
+        description: reason === "missing_refresh_token" ? "No refresh token returned. Try revoking access in Google and reconnecting." : "An error occurred during authorization.",
+        variant: "destructive",
+      });
+      window.history.replaceState(null, "", window.location.pathname + window.location.search + "#/settings");
+    }
+  }, []);
 
   useEffect(() => {
     if (settings) {
@@ -36,6 +56,18 @@ export default function AdminSettings() {
       });
     }
   }, [settings]);
+
+  const handleDisconnect = () => {
+    disconnectMutation.mutate(undefined, {
+      onSuccess: () => {
+        toast({ title: "Google Calendar disconnected" });
+        qc.invalidateQueries({ queryKey: getGetCalendarStatusQueryKey() });
+      },
+      onError: () => {
+        toast({ title: "Failed to disconnect", variant: "destructive" });
+      },
+    });
+  };
 
   const handleSave = () => {
     updateMutation.mutate({ data: formData }, {
@@ -58,12 +90,24 @@ export default function AdminSettings() {
             <CalendarIcon className="w-5 h-5 text-primary" /> Google Calendar Integration
           </h2>
           {calendarStatus?.connected ? (
-            <div className="flex items-center gap-3 p-4 bg-secondary/10 text-secondary rounded-xl border border-secondary/20">
-              <CheckCircle2 className="w-5 h-5" />
-              <div>
-                <p className="font-bold">Connected</p>
-                <p className="text-sm opacity-90">{calendarStatus.calendarEmail}</p>
+            <div className="flex items-center justify-between p-4 bg-secondary/10 rounded-xl border border-secondary/20">
+              <div className="flex items-center gap-3 text-secondary">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                <div>
+                  <p className="font-bold">Connected</p>
+                  <p className="text-sm opacity-90">{calendarStatus.calendarEmail}</p>
+                </div>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDisconnect}
+                disabled={disconnectMutation.isPending}
+                className="flex items-center gap-2 text-destructive border-destructive/40 hover:bg-destructive/10"
+              >
+                <Unlink className="w-4 h-4" />
+                Disconnect
+              </Button>
             </div>
           ) : (
             <div className="flex items-center justify-between p-4 bg-accent rounded-xl border border-border">

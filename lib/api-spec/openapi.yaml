@@ -842,6 +842,24 @@ paths:
               schema:
                 $ref: "#/components/schemas/CalendarStatus"
 
+  /admin/calendar/disconnect:
+    delete:
+      operationId: disconnectCalendar
+      tags: [admin]
+      summary: Disconnect Google Calendar
+      responses:
+        "200":
+          description: Disconnected successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
+
 components:
   schemas:
     HealthStatus:

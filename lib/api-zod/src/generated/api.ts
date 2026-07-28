@@ -878,3 +878,11 @@ export const GetCalendarStatusResponse = zod.object({
 })
 
 
+/**
+ * @summary Disconnect Google Calendar
+ */
+export const DisconnectCalendarResponse = zod.object({
+  "success": zod.boolean()
+})
+
+

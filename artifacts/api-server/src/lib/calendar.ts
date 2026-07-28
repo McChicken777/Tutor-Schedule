@@ -2,7 +2,7 @@ import { google } from "googleapis";
 import { db } from "@workspace/db";
 import { calendarTokensTable } from "@workspace/db";
 
-function createOAuth2Client() {
+export function createOAuth2Client() {
   return new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,

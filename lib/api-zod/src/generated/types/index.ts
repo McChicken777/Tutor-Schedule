@@ -23,6 +23,7 @@ export * from './bookingInput';
 export * from './bookingStatus';
 export * from './calendarStatus';
 export * from './cancellationInput';
+export * from './disconnectCalendar200';
 export * from './faqEntry';
 export * from './faqInput';
 export * from './faqUpdate';
