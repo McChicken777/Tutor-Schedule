@@ -769,7 +769,8 @@ router.get("/admin/calendar/callback", requireAdmin, async (req, res): Promise<v
           refreshToken: tokens.refresh_token,
           tokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
           calendarEmail,
-        });
+        })
+        .where(eq(calendarTokensTable.id, existing[0].id));
     } else {
       await db.insert(calendarTokensTable).values({
         accessToken: tokens.access_token!,

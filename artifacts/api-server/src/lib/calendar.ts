@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { calendarTokensTable } from "@workspace/db";
 
@@ -30,7 +31,7 @@ export async function getAuthenticatedCalendar() {
           accessToken: tokens.access_token,
           tokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : undefined,
         })
-        .where(undefined as any);
+        .where(eq(calendarTokensTable.id, token.id));
     }
   });
 
