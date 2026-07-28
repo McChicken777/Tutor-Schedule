@@ -1,8 +1,8 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useGetSiteSettings, useListLessonTypes, useListTestimonials, useListFaqs } from "@workspace/api-client-react";
-import { format } from "date-fns";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 
 export default function Landing() {
   const { data: settings, isLoading: loadingSettings } = useGetSiteSettings();
@@ -16,115 +16,152 @@ export default function Landing() {
   }
 
   const contactEmail = settings?.contactEmail || "hola@elsol.com";
+  const tutorName = settings?.tutorName || "your tutor";
+  const activeLessonTypes = lessonTypes?.filter((lt) => lt.isActive) ?? [];
 
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <header className="fixed top-0 inset-x-0 bg-background/80 backdrop-blur-md z-50 border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src={`${basePath}/logo.svg`} alt="Logo" className="w-8 h-8 rounded" />
-            <span className="font-serif text-xl font-bold">El Sol</span>
+      <header className="fixed top-0 inset-x-0 bg-background/85 backdrop-blur-md z-50 border-b border-border">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <img src={`${basePath}/logo.svg`} alt="Logo" className="w-8 h-8 rounded-lg" />
+            <span className="font-serif text-xl font-bold tracking-tight">El Sol</span>
           </div>
-          <div className="flex items-center gap-4">
-            <Link href="/sign-in" className="text-sm font-medium text-foreground hover:text-primary">Log in</Link>
-            <Link href="/sign-up" className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium hover:bg-primary/90 transition">
-              Book a Lesson
+          <nav className="flex items-center gap-6">
+            <Link href="/sign-in" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              Log in
             </Link>
-          </div>
+            <Button asChild size="sm">
+              <Link href="/sign-up">Book a lesson</Link>
+            </Button>
+          </nav>
         </div>
       </header>
 
       <main>
-        {/* Hero Section */}
-        <section className="pt-32 pb-20 px-6 max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <span className="inline-block py-1 px-3 rounded-full bg-accent text-primary text-sm font-medium mb-6">
-              Learn Spanish naturally.
+        {/* Hero */}
+        <section className="pt-40 pb-24 px-6 max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-[1.1fr_0.9fr] gap-16 items-end">
+            <div>
+              <p className="flex items-center gap-3 text-sm font-medium text-primary mb-6">
+                <span className="w-8 h-px bg-primary" />
+                Spanish, one conversation at a time
+              </p>
+              <h1 className="text-5xl md:text-6xl font-serif font-bold text-foreground leading-[1.05] tracking-tight mb-8">
+                Fluency isn't a course.
+                <br />
+                It's a habit we build together.
+              </h1>
+              <p className="text-lg text-muted-foreground leading-relaxed max-w-md mb-10">
+                Live, 1-on-1 lessons with {tutorName} — shaped around your goals, your pace,
+                and the mistakes you need to make out loud to actually learn from them.
+              </p>
+              <div className="flex items-center gap-6">
+                <Button asChild size="lg">
+                  <Link href="/sign-up">
+                    Book your first lesson
+                    <ArrowRight className="ml-1" />
+                  </Link>
+                </Button>
+                <a href="#packages" className="text-sm font-medium text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground">
+                  See lesson formats
+                </a>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="absolute -bottom-5 -right-5 w-full h-full bg-secondary rounded-2xl -z-10" />
+              <div className="aspect-[4/5] rounded-2xl overflow-hidden border-4 border-background shadow-xl -rotate-1">
+                {settings?.tutorPhotoUrl ? (
+                  <img src={settings.tutorPhotoUrl} alt={tutorName} className="w-full h-full object-cover" />
+                ) : (
+                  <img src={`${basePath}/hero.jpg`} alt="Tutor" className="w-full h-full object-cover" />
+                )}
+              </div>
+              <p className="mt-4 text-sm text-muted-foreground italic font-serif -rotate-1">
+                {tutorName}, live from the first "hola"
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Bio — editorial pull-quote layout */}
+        <section className="py-20 px-6 border-y border-border bg-accent/40">
+          <div className="max-w-6xl mx-auto grid md:grid-cols-[auto_1fr] gap-8 md:gap-14">
+            <span className="font-serif text-8xl md:text-9xl leading-none text-primary/25 select-none">
+              "
             </span>
-            <h1 className="text-5xl md:text-7xl font-serif font-bold text-foreground leading-tight mb-6">
-              Speak Spanish with confidence.
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed max-w-lg">
-              Personalized 1-on-1 tutoring tailored to your goals. Whether you're a beginner or looking to perfect your fluency, I'm here to help.
+            <div className="max-w-2xl">
+              <p className="text-2xl md:text-3xl font-serif text-foreground leading-snug mb-6 whitespace-pre-wrap">
+                {settings?.tutorBio ||
+                  "I'm a native Spanish speaker who's taught students from a dozen countries to stop translating in their heads and start thinking in Spanish. Lessons are conversational, a little messy, and built entirely around you."}
+              </p>
+              <p className="text-sm font-medium text-foreground">
+                — {tutorName}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Lesson formats — menu style, not cards */}
+        <section id="packages" className="py-24 px-6 max-w-6xl mx-auto scroll-mt-20">
+          <div className="flex items-end justify-between gap-6 mb-12 flex-wrap">
+            <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground">Lesson formats</h2>
+            <p className="text-muted-foreground max-w-sm">Pick the cadence that fits your week — switch anytime.</p>
+          </div>
+
+          {activeLessonTypes.length === 0 ? (
+            <p className="text-muted-foreground border-t border-border pt-8">
+              No lesson types available right now.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/sign-up" className="bg-primary text-primary-foreground px-8 py-4 rounded-full text-center font-medium hover:bg-primary/90 transition text-lg">
-                Start Your Journey
-              </Link>
-            </div>
-          </div>
-          <div className="relative">
-            <div className="aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl">
-              {settings?.tutorPhotoUrl ? (
-                <img src={settings.tutorPhotoUrl} alt={settings.tutorName} className="w-full h-full object-cover" />
-              ) : (
-                <img src={`${basePath}/hero.jpg`} alt="Tutor" className="w-full h-full object-cover" />
-              )}
-            </div>
-            {/* Decorative element */}
-            <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-accent rounded-full -z-10" />
-            <div className="absolute -top-6 -right-6 w-24 h-24 bg-secondary rounded-full -z-10 opacity-20" />
-          </div>
-        </section>
-
-        {/* About Section */}
-        <section className="py-20 bg-accent px-6">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-6">
-              Hola! I'm {settings?.tutorName || "your tutor"}.
-            </h2>
-            <div className="prose prose-lg mx-auto text-muted-foreground whitespace-pre-wrap">
-              {settings?.tutorBio || "I am a native Spanish speaker with years of experience teaching students from all over the world. My approach is conversational, warm, and focused on making you feel comfortable making mistakes—because that's how we learn."}
-            </div>
-          </div>
-        </section>
-
-        {/* Pricing / Packages */}
-        <section className="py-24 px-6 max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-serif font-bold text-foreground mb-4">Lesson Packages</h2>
-            <p className="text-lg text-muted-foreground">Choose the format that fits your learning style.</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {lessonTypes?.filter(lt => lt.isActive).map(lt => (
-              <div key={lt.id} className="bg-card border border-border p-8 rounded-3xl shadow-sm hover:shadow-md transition">
-                <h3 className="text-2xl font-bold text-foreground mb-2">{lt.name}</h3>
-                <div className="flex items-baseline gap-1 mb-4">
-                  <span className="text-4xl font-serif font-bold">${(lt.priceCents / 100).toFixed(2)}</span>
-                  <span className="text-muted-foreground">/ {lt.durationMinutes} min</span>
-                </div>
-                <p className="text-muted-foreground mb-8">{lt.description}</p>
-                <Link href="/sign-up" className="block w-full text-center py-3 rounded-xl bg-accent text-foreground font-medium hover:bg-primary hover:text-primary-foreground transition">
-                  Book this lesson
+          ) : (
+            <div className="border-t border-border">
+              {activeLessonTypes.map((lt, i) => (
+                <Link
+                  key={lt.id}
+                  href="/sign-up"
+                  className="group flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-8 py-7 border-b border-border hover:bg-accent/50 transition-colors px-2 -mx-2 rounded-lg"
+                >
+                  <span className="font-serif text-2xl text-muted-foreground/60 w-10 shrink-0">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-foreground mb-1">{lt.name}</h3>
+                    <p className="text-muted-foreground">{lt.description}</p>
+                  </div>
+                  <div className="flex items-center gap-6 shrink-0">
+                    <div className="text-right">
+                      <div className="text-2xl font-serif font-bold text-foreground">
+                        ${(lt.priceCents / 100).toFixed(2)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">{lt.durationMinutes} min</div>
+                    </div>
+                    <ArrowUpRight className="text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                  </div>
                 </Link>
-              </div>
-            ))}
-            {lessonTypes?.length === 0 && (
-              <div className="col-span-3 text-center text-muted-foreground">
-                No lesson types available right now.
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
 
-        {/* Testimonials */}
+        {/* Testimonials — plain quotes, alternating rhythm */}
         {testimonials && testimonials.length > 0 && (
           <section className="py-24 bg-secondary text-secondary-foreground px-6">
-            <div className="max-w-7xl mx-auto">
-              <h2 className="text-4xl font-serif font-bold mb-16 text-center">What my students say</h2>
-              <div className="grid md:grid-cols-3 gap-8">
-                {testimonials.slice(0, 3).map(t => (
-                  <div key={t.id} className="bg-white/10 p-8 rounded-3xl backdrop-blur-sm border border-white/20">
-                    <div className="flex gap-1 mb-4">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <svg key={i} className={`w-5 h-5 ${i < t.rating ? "text-[#f59e0b]" : "text-white/30"}`} fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                      ))}
-                    </div>
-                    <p className="text-lg italic mb-6 leading-relaxed">"{t.text}"</p>
-                    <p className="font-bold">— {t.studentName}</p>
+            <div className="max-w-6xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-serif font-bold mb-16">What students say</h2>
+              <div className="space-y-14">
+                {testimonials.slice(0, 3).map((t, i) => (
+                  <div
+                    key={t.id}
+                    className={`max-w-2xl ${i % 2 === 1 ? "ml-auto text-right" : ""}`}
+                  >
+                    <p className="text-xl md:text-2xl font-serif leading-snug mb-4">
+                      "{t.text}"
+                    </p>
+                    <p className="text-sm text-secondary-foreground/70">
+                      {t.studentName} · rated {t.rating}/5
+                    </p>
                   </div>
                 ))}
               </div>
@@ -135,12 +172,17 @@ export default function Landing() {
         {/* FAQs */}
         {faqs && faqs.length > 0 && (
           <section className="py-24 px-6 max-w-3xl mx-auto">
-            <h2 className="text-4xl font-serif font-bold text-center mb-12">Frequently Asked Questions</h2>
+            <h2 className="text-3xl md:text-4xl font-serif font-bold mb-12">Questions, answered</h2>
             <Accordion type="single" collapsible className="w-full">
-              {faqs.map((faq) => (
+              {faqs.map((faq, i) => (
                 <AccordionItem key={faq.id} value={`item-${faq.id}`}>
-                  <AccordionTrigger className="text-left text-lg font-medium">{faq.question}</AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground text-base leading-relaxed">
+                  <AccordionTrigger className="text-left text-lg font-medium gap-4">
+                    <span className="font-serif text-muted-foreground/50 mr-1">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    {faq.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground text-base leading-relaxed pl-9">
                     {faq.answer}
                   </AccordionContent>
                 </AccordionItem>
@@ -149,25 +191,39 @@ export default function Landing() {
           </section>
         )}
 
-        {/* CTA */}
-        <section className="py-24 bg-primary text-primary-foreground px-6 text-center">
-          <h2 className="text-4xl font-serif font-bold mb-6">Ready to start?</h2>
-          <p className="text-xl opacity-90 mb-10 max-w-2xl mx-auto">
-            Book your first lesson today and let's start your journey to fluency together.
-          </p>
-          <Link href="/sign-up" className="bg-background text-primary px-8 py-4 rounded-full font-bold text-lg hover:bg-accent transition shadow-lg">
-            Create an Account
-          </Link>
+        {/* Closing CTA */}
+        <section className="py-24 px-6 border-t border-border">
+          <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-10 items-center">
+            <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground leading-[1.05]">
+              Your first lesson could be this week.
+            </h2>
+            <div className="flex flex-col items-start md:items-end gap-4">
+              <p className="text-muted-foreground max-w-sm md:text-right">
+                No packages to commit to upfront — just book a lesson and see how it feels.
+              </p>
+              <Button asChild size="lg">
+                <Link href="/sign-up">
+                  Create your account
+                  <ArrowRight className="ml-1" />
+                </Link>
+              </Button>
+            </div>
+          </div>
         </section>
-
       </main>
 
       {/* Footer */}
-      <footer className="bg-card py-12 px-6 border-t border-border text-center text-muted-foreground">
-        <div className="max-w-7xl mx-auto flex flex-col items-center">
-          <img src={`${basePath}/logo.svg`} alt="Logo" className="w-8 h-8 rounded mb-6 grayscale opacity-50" />
-          <p className="mb-4">Contact: <a href={`mailto:${contactEmail}`} className="text-foreground hover:underline">{contactEmail}</a></p>
-          <p>© {new Date().getFullYear()} El Sol Spanish Tutoring. All rights reserved.</p>
+      <footer className="bg-accent/40 py-12 px-6 border-t border-border">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-2.5">
+            <img src={`${basePath}/logo.svg`} alt="Logo" className="w-6 h-6 rounded-md opacity-70" />
+            <span className="font-serif font-bold text-foreground">El Sol</span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            <a href={`mailto:${contactEmail}`} className="hover:text-foreground hover:underline">{contactEmail}</a>
+            <span className="mx-2">·</span>
+            © {new Date().getFullYear()} El Sol Spanish Tutoring
+          </p>
         </div>
       </footer>
     </div>
