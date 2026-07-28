@@ -990,6 +990,8 @@ components:
           type: string
         isActive:
           type: boolean
+        isTrial:
+          type: boolean
         createdAt:
           type: string
           format: date-time
@@ -1000,6 +1002,7 @@ components:
         - priceCents
         - description
         - isActive
+        - isTrial
         - createdAt
 
     LessonTypeInput:
@@ -1017,6 +1020,8 @@ components:
         description:
           type: string
         isActive:
+          type: boolean
+        isTrial:
           type: boolean
       required:
         - name
@@ -1039,6 +1044,8 @@ components:
         description:
           type: string
         isActive:
+          type: boolean
+        isTrial:
           type: boolean
 
     TimeSlot:

@@ -15,4 +15,5 @@ export interface LessonTypeInput {
   priceCents: number;
   description: string;
   isActive?: boolean;
+  isTrial?: boolean;
 }

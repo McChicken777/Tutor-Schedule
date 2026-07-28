@@ -26,6 +26,7 @@ export const ListLessonTypesResponseItem = zod.object({
   "priceCents": zod.number(),
   "description": zod.string(),
   "isActive": zod.boolean(),
+  "isTrial": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 export const ListLessonTypesResponse = zod.array(ListLessonTypesResponseItem)
@@ -548,6 +549,7 @@ export const ListAdminLessonTypesResponseItem = zod.object({
   "priceCents": zod.number(),
   "description": zod.string(),
   "isActive": zod.boolean(),
+  "isTrial": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 export const ListAdminLessonTypesResponse = zod.array(ListAdminLessonTypesResponseItem)
@@ -568,7 +570,8 @@ export const CreateLessonTypeBody = zod.object({
   "durationMinutes": zod.number().min(createLessonTypeBodyDurationMinutesMin),
   "priceCents": zod.number().min(createLessonTypeBodyPriceCentsMin),
   "description": zod.string(),
-  "isActive": zod.boolean().optional()
+  "isActive": zod.boolean().optional(),
+  "isTrial": zod.boolean().optional()
 })
 
 export const CreateLessonTypeResponse = zod.object({
@@ -578,6 +581,7 @@ export const CreateLessonTypeResponse = zod.object({
   "priceCents": zod.number(),
   "description": zod.string(),
   "isActive": zod.boolean(),
+  "isTrial": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 
@@ -601,7 +605,8 @@ export const UpdateLessonTypeBody = zod.object({
   "durationMinutes": zod.number().min(updateLessonTypeBodyDurationMinutesMin).optional(),
   "priceCents": zod.number().min(updateLessonTypeBodyPriceCentsMin).optional(),
   "description": zod.string().optional(),
-  "isActive": zod.boolean().optional()
+  "isActive": zod.boolean().optional(),
+  "isTrial": zod.boolean().optional()
 })
 
 export const UpdateLessonTypeResponse = zod.object({
@@ -611,6 +616,7 @@ export const UpdateLessonTypeResponse = zod.object({
   "priceCents": zod.number(),
   "description": zod.string(),
   "isActive": zod.boolean(),
+  "isTrial": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 

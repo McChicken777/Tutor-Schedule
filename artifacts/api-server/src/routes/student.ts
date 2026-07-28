@@ -9,6 +9,7 @@ import {
   homeworkTable,
   reviewsTable,
   messagesTable,
+  siteSettingsTable,
 } from "@workspace/db";
 import {
   CreateBookingBody,
@@ -49,8 +50,33 @@ async function getOrCreateUser(clerkUserId: string, email?: string, displayName?
         displayName: displayName ?? "Student",
       })
       .returning();
+
+    await grantFreeTrialIfEligible(user.id);
   }
   return user;
+}
+
+// Runs once, right after a brand-new user row is created — freeTrialGrantedAt
+// being set is what makes this a one-time-ever grant, independent of whether
+// the admin later removes/adjusts their packages.
+async function grantFreeTrialIfEligible(userId: number) {
+  const [settings] = await db.select().from(siteSettingsTable).limit(1);
+  if (!settings?.freeTrialEnabled) return;
+
+  const [trialLessonType] = await db
+    .select()
+    .from(lessonTypesTable)
+    .where(and(eq(lessonTypesTable.isTrial, true), eq(lessonTypesTable.isActive, true)));
+  if (!trialLessonType) return;
+
+  await db.insert(lessonPackagesTable).values({
+    studentId: userId,
+    lessonTypeId: trialLessonType.id,
+    totalCredits: 1,
+    usedCredits: 0,
+  });
+
+  await db.update(usersTable).set({ freeTrialGrantedAt: new Date() }).where(eq(usersTable.id, userId));
 }
 
 router.get("/student/me", requireAuth, async (req, res): Promise<void> => {

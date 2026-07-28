@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, desc, asc, gte, lt, sql } from "drizzle-orm";
+import { eq, ne, and, desc, asc, gte, lt, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   usersTable,
@@ -261,6 +261,11 @@ router.post("/admin/lesson-types", requireAdmin, async (req, res): Promise<void>
     return;
   }
 
+  // Only one lesson type can be "the" free trial at a time
+  if (parsed.data.isTrial) {
+    await db.update(lessonTypesTable).set({ isTrial: false }).where(eq(lessonTypesTable.isTrial, true));
+  }
+
   const [type] = await db
     .insert(lessonTypesTable)
     .values({
@@ -269,6 +274,7 @@ router.post("/admin/lesson-types", requireAdmin, async (req, res): Promise<void>
       priceCents: parsed.data.priceCents,
       description: parsed.data.description,
       isActive: parsed.data.isActive ?? true,
+      isTrial: parsed.data.isTrial ?? false,
     })
     .returning();
 
@@ -291,12 +297,21 @@ router.patch("/admin/lesson-types/:id", requireAdmin, async (req, res): Promise<
     return;
   }
 
+  // Only one lesson type can be "the" free trial at a time
+  if (parsed.data.isTrial) {
+    await db
+      .update(lessonTypesTable)
+      .set({ isTrial: false })
+      .where(and(eq(lessonTypesTable.isTrial, true), ne(lessonTypesTable.id, id)));
+  }
+
   const updateData: any = {};
   if (parsed.data.name != null) updateData.name = parsed.data.name;
   if (parsed.data.durationMinutes != null) updateData.durationMinutes = parsed.data.durationMinutes;
   if (parsed.data.priceCents != null) updateData.priceCents = parsed.data.priceCents;
   if (parsed.data.description != null) updateData.description = parsed.data.description;
   if (parsed.data.isActive != null) updateData.isActive = parsed.data.isActive;
+  if (parsed.data.isTrial != null) updateData.isTrial = parsed.data.isTrial;
 
   const [updated] = await db
     .update(lessonTypesTable)

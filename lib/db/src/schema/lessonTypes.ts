@@ -9,6 +9,7 @@ export const lessonTypesTable = pgTable("lesson_types", {
   priceCents: integer("price_cents").notNull(),
   description: text("description").notNull(),
   isActive: boolean("is_active").notNull().default(true),
+  isTrial: boolean("is_trial").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -13,5 +13,6 @@ export interface LessonType {
   priceCents: number;
   description: string;
   isActive: boolean;
+  isTrial: boolean;
   createdAt: Date;
 }

@@ -16,6 +16,7 @@ export interface LessonType {
   priceCents: number;
   description: string;
   isActive: boolean;
+  isTrial: boolean;
   createdAt: string;
 }
 
@@ -28,6 +29,7 @@ export interface LessonTypeInput {
   priceCents: number;
   description: string;
   isActive?: boolean;
+  isTrial?: boolean;
 }
 
 export interface LessonTypeUpdate {
@@ -39,6 +41,7 @@ export interface LessonTypeUpdate {
   priceCents?: number;
   description?: string;
   isActive?: boolean;
+  isTrial?: boolean;
 }
 
 export interface TimeSlot {
