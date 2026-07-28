@@ -28,6 +28,7 @@ router.get("/lesson-types", async (_req, res): Promise<void> => {
       priceCents: t.priceCents,
       description: t.description,
       isActive: t.isActive,
+      isTrial: t.isTrial,
       createdAt: t.createdAt,
     })),
   );
