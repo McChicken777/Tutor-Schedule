@@ -10,6 +10,10 @@ export interface Homework {
   id: number;
   bookingId: number;
   /** @nullable */
+  assignedText: string | null;
+  /** @nullable */
+  assignedFileUrl: string | null;
+  /** @nullable */
   submittedText: string | null;
   /** @nullable */
   fileUrl: string | null;

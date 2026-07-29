@@ -11,6 +11,5 @@ export type AdminBookingUpdateStatus = typeof AdminBookingUpdateStatus[keyof typ
 
 export const AdminBookingUpdateStatus = {
   upcoming: 'upcoming',
-  completed: 'completed',
   cancelled: 'cancelled',
 } as const;

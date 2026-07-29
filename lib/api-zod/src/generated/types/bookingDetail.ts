@@ -19,6 +19,11 @@ export interface BookingDetail {
   status: BookingDetailStatus;
   /** @nullable */
   meetLink: string | null;
+  /**
+     * The teacher's recap of the lesson, set when the booking is completed.
+     * @nullable
+     */
+  notes: string | null;
   homework?: Homework;
   review?: Review;
   createdAt: Date;

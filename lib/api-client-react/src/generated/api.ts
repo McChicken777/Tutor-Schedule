@@ -33,6 +33,7 @@ import type {
   BookingInput,
   CalendarStatus,
   CancellationInput,
+  CompleteBookingInput,
   CompleteTour200,
   DisconnectCalendar200,
   FaqEntry,
@@ -1983,6 +1984,78 @@ export const useUpdateAdminBooking = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUpdateAdminBookingMutationOptions(options));
+    }
+
+export const getCompleteBookingUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/bookings/${id}/complete`
+}
+
+/**
+ * @summary Complete a lesson with a recap and optional homework assignment
+ */
+export const completeBooking = async (id: number,
+    completeBookingInput: CompleteBookingInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminBooking> => {
+
+  return customFetch<AdminBooking>(getCompleteBookingUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(completeBookingInput)
+  }
+);}
+
+
+
+
+
+export const getCompleteBookingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeBooking>>, TError,{id: number;data: BodyType<CompleteBookingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof completeBooking>>, TError,{id: number;data: BodyType<CompleteBookingInput>}, TContext> => {
+
+const mutationKey = ['completeBooking'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeBooking>>, {id: number;data: BodyType<CompleteBookingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  completeBooking(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompleteBookingMutationResult = NonNullable<Awaited<ReturnType<typeof completeBooking>>>
+    export type CompleteBookingMutationBody = BodyType<CompleteBookingInput>
+    export type CompleteBookingMutationError = ErrorType<void>
+
+    /**
+ * @summary Complete a lesson with a recap and optional homework assignment
+ */
+export const useCompleteBooking = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeBooking>>, TError,{id: number;data: BodyType<CompleteBookingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof completeBooking>>,
+        TError,
+        {id: number;data: BodyType<CompleteBookingInput>},
+        TContext
+      > => {
+      return useMutation(getCompleteBookingMutationOptions(options));
     }
 
 export const getListAdminLessonTypesUrl = () => {

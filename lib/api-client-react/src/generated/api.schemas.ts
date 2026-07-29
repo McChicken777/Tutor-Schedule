@@ -83,6 +83,10 @@ export interface Homework {
   id: number;
   bookingId: number;
   /** @nullable */
+  assignedText: string | null;
+  /** @nullable */
+  assignedFileUrl: string | null;
+  /** @nullable */
   submittedText: string | null;
   /** @nullable */
   fileUrl: string | null;
@@ -119,6 +123,11 @@ export interface BookingDetail {
   status: BookingDetailStatus;
   /** @nullable */
   meetLink: string | null;
+  /**
+     * The teacher's recap of the lesson, set when the booking is completed.
+     * @nullable
+     */
+  notes: string | null;
   homework?: Homework;
   review?: Review;
   createdAt: string;
@@ -356,13 +365,22 @@ export type AdminBookingUpdateStatus = typeof AdminBookingUpdateStatus[keyof typ
 
 export const AdminBookingUpdateStatus = {
   upcoming: 'upcoming',
-  completed: 'completed',
   cancelled: 'cancelled',
 } as const;
 
 export interface AdminBookingUpdate {
   status?: AdminBookingUpdateStatus;
   notes?: string;
+}
+
+export interface CompleteBookingInput {
+  /**
+     * The teacher's recap of the lesson.
+     * @minLength 1
+     */
+  notes: string;
+  homeworkAssignedText?: string;
+  homeworkAssignedFileUrl?: string;
 }
 
 export interface AdminStudent {

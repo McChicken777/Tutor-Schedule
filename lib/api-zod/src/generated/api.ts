@@ -256,9 +256,12 @@ export const GetStudentBookingResponse = zod.object({
   "endTime": zod.coerce.date(),
   "status": zod.enum(['upcoming', 'completed', 'cancelled']),
   "meetLink": zod.string().nullable(),
+  "notes": zod.string().nullable().describe('The teacher\'s recap of the lesson, set when the booking is completed.'),
   "homework": zod.object({
   "id": zod.number(),
   "bookingId": zod.number(),
+  "assignedText": zod.string().nullable(),
+  "assignedFileUrl": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
   "fileUrl": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
@@ -333,6 +336,8 @@ export const GetHomeworkParams = zod.object({
 export const GetHomeworkResponse = zod.object({
   "id": zod.number(),
   "bookingId": zod.number(),
+  "assignedText": zod.string().nullable(),
+  "assignedFileUrl": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
   "fileUrl": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
@@ -357,6 +362,8 @@ export const SubmitHomeworkBody = zod.object({
 export const SubmitHomeworkResponse = zod.object({
   "id": zod.number(),
   "bookingId": zod.number(),
+  "assignedText": zod.string().nullable(),
+  "assignedFileUrl": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
   "fileUrl": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
@@ -529,11 +536,43 @@ export const UpdateAdminBookingParams = zod.object({
 })
 
 export const UpdateAdminBookingBody = zod.object({
-  "status": zod.enum(['upcoming', 'completed', 'cancelled']).optional(),
+  "status": zod.enum(['upcoming', 'cancelled']).optional(),
   "notes": zod.string().optional()
 })
 
 export const UpdateAdminBookingResponse = zod.object({
+  "id": zod.number(),
+  "studentId": zod.number(),
+  "studentName": zod.string(),
+  "studentEmail": zod.string(),
+  "lessonTypeId": zod.number(),
+  "lessonTypeName": zod.string(),
+  "startTime": zod.coerce.date(),
+  "endTime": zod.coerce.date(),
+  "status": zod.enum(['upcoming', 'completed', 'cancelled']),
+  "meetLink": zod.string().nullable(),
+  "notes": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Complete a lesson with a recap and optional homework assignment
+ */
+export const CompleteBookingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const CompleteBookingBody = zod.object({
+  "notes": zod.string().min(1).describe('The teacher\'s recap of the lesson.'),
+  "homeworkAssignedText": zod.string().optional(),
+  "homeworkAssignedFileUrl": zod.string().optional()
+})
+
+export const CompleteBookingResponse = zod.object({
   "id": zod.number(),
   "studentId": zod.number(),
   "studentName": zod.string(),

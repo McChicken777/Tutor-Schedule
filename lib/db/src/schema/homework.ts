@@ -6,6 +6,8 @@ import { bookingsTable } from "./bookings";
 export const homeworkTable = pgTable("homework", {
   id: serial("id").primaryKey(),
   bookingId: integer("booking_id").notNull().references(() => bookingsTable.id).unique(),
+  assignedText: text("assigned_text"),
+  assignedFileUrl: text("assigned_file_url"),
   submittedText: text("submitted_text"),
   fileUrl: text("file_url"),
   tutorFeedback: text("tutor_feedback"),

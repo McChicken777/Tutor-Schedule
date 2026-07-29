@@ -530,6 +530,35 @@ paths:
         "404":
           description: Not found
 
+  /admin/bookings/{id}/complete:
+    patch:
+      operationId: completeBooking
+      tags: [admin]
+      summary: Complete a lesson with a recap and optional homework assignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteBookingInput"
+      responses:
+        "200":
+          description: Booking marked completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminBooking"
+        "400":
+          description: Invalid input
+        "404":
+          description: Not found
+
   /admin/lesson-types:
     get:
       operationId: listAdminLessonTypes
@@ -1136,6 +1165,9 @@ components:
           enum: [upcoming, completed, cancelled]
         meetLink:
           type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+          description: The teacher's recap of the lesson, set when the booking is completed.
         homework:
           $ref: "#/components/schemas/Homework"
         review:
@@ -1152,6 +1184,7 @@ components:
         - endTime
         - status
         - meetLink
+        - notes
         - createdAt
 
     BookingInput:
@@ -1188,6 +1221,10 @@ components:
           type: number
         bookingId:
           type: number
+        assignedText:
+          type: ["string", "null"]
+        assignedFileUrl:
+          type: ["string", "null"]
         submittedText:
           type: ["string", "null"]
         fileUrl:
@@ -1205,6 +1242,8 @@ components:
       required:
         - id
         - bookingId
+        - assignedText
+        - assignedFileUrl
         - submittedText
         - fileUrl
         - tutorFeedback
@@ -1637,9 +1676,23 @@ components:
       properties:
         status:
           type: string
-          enum: [upcoming, completed, cancelled]
+          enum: [upcoming, cancelled]
         notes:
           type: string
+
+    CompleteBookingInput:
+      type: object
+      properties:
+        notes:
+          type: string
+          minLength: 1
+          description: The teacher's recap of the lesson.
+        homeworkAssignedText:
+          type: string
+        homeworkAssignedFileUrl:
+          type: string
+      required:
+        - notes
 
     AdminHomework:
       type: object
