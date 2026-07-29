@@ -87,15 +87,31 @@ async function getOrCreateUser(clerkUserId: string) {
 }
 
 // The trial lesson type needs no credits to book, but a student can only ever
-// book it once — checked directly against booking history (any status) rather
-// than a credit balance, so it can't be re-triggered by cancelling and rebooking.
+// use it once. Only "upcoming" (already holding a trial slot) or "completed"
+// (the lesson actually happened) count as used — a cancelled trial that never
+// happened doesn't burn the one-time trial, so a genuine cancellation lets a
+// student try again.
 async function hasUsedTrial(studentId: number): Promise<boolean> {
   const [existing] = await db
     .select({ id: bookingsTable.id })
     .from(bookingsTable)
     .innerJoin(lessonTypesTable, eq(bookingsTable.lessonTypeId, lessonTypesTable.id))
-    .where(and(eq(bookingsTable.studentId, studentId), eq(lessonTypesTable.isTrial, true)));
+    .where(
+      and(
+        eq(bookingsTable.studentId, studentId),
+        eq(lessonTypesTable.isTrial, true),
+        sql`${bookingsTable.status} IN ('upcoming', 'completed')`,
+      ),
+    );
   return !!existing;
+}
+
+// A single account (set via TEST_STUDENT_EMAIL) that always looks first-time —
+// tour and free trial always available — regardless of real history, so it
+// can be used to repeatedly test both flows without touching real data.
+function isTestStudent(email: string): boolean {
+  const testEmail = process.env.TEST_STUDENT_EMAIL;
+  return !!testEmail && email.toLowerCase() === testEmail.toLowerCase();
 }
 
 async function getTrialLessonType() {
@@ -242,15 +258,16 @@ router.get("/student/dashboard", requireAuth, async (req, res): Promise<void> =>
     createdAt: r.booking.createdAt,
   }));
 
+  const isTestAccount = isTestStudent(user.email);
   const trialLessonType = await getTrialLessonType();
-  const trialAvailable = trialLessonType ? !(await hasUsedTrial(user.id)) : false;
+  const trialAvailable = isTestAccount || (trialLessonType ? !(await hasUsedTrial(user.id)) : false);
 
   res.json({
     nextBooking: mappedUpcoming[0] ?? null,
     upcomingBookings: mappedUpcoming,
     totalRemainingCredits: totalRemaining,
     trialAvailable,
-    hasSeenTour: user.hasSeenTour,
+    hasSeenTour: isTestAccount ? false : user.hasSeenTour,
     pendingHomeworkCount,
     packages: packages.map((p) => ({
       id: p.pkg.id,
@@ -343,7 +360,7 @@ router.post("/student/bookings", requireAuth, async (req, res): Promise<void> =>
   // The trial lesson type needs no credits, but only once ever, per student
   let packages: (typeof lessonPackagesTable.$inferSelect)[] = [];
   if (lessonType.isTrial) {
-    if (await hasUsedTrial(user.id)) {
+    if (!isTestStudent(user.email) && (await hasUsedTrial(user.id))) {
       res.status(400).json({ error: "You've already used your free trial lesson" });
       return;
     }
@@ -460,10 +477,13 @@ router.get("/student/bookings/:id", requireAuth, async (req, res): Promise<void>
     endTime: row.booking.endTime,
     status: row.booking.status,
     meetLink: row.booking.meetLink ?? null,
+    notes: row.booking.notes ?? null,
     homework: hw
       ? {
           id: hw.id,
           bookingId: hw.bookingId,
+          assignedText: hw.assignedText ?? null,
+          assignedFileUrl: hw.assignedFileUrl ?? null,
           submittedText: hw.submittedText ?? null,
           fileUrl: hw.fileUrl ?? null,
           tutorFeedback: hw.tutorFeedback ?? null,
@@ -524,23 +544,26 @@ router.patch("/student/bookings/:id/cancel", requireAuth, async (req, res): Prom
     .where(eq(bookingsTable.id, id))
     .returning();
 
-  // Refund credit
-  const packages = await db
-    .select()
-    .from(lessonPackagesTable)
-    .where(
-      and(
-        eq(lessonPackagesTable.studentId, user.id),
-        eq(lessonPackagesTable.lessonTypeId, row.booking.lessonTypeId),
-      ),
-    )
-    .orderBy(desc(lessonPackagesTable.purchasedAt));
+  // Refund credit — but not if cancelling less than 24 hours before the lesson
+  const hoursUntilLesson = (row.booking.startTime.getTime() - Date.now()) / (1000 * 60 * 60);
+  if (hoursUntilLesson >= 24) {
+    const packages = await db
+      .select()
+      .from(lessonPackagesTable)
+      .where(
+        and(
+          eq(lessonPackagesTable.studentId, user.id),
+          eq(lessonPackagesTable.lessonTypeId, row.booking.lessonTypeId),
+        ),
+      )
+      .orderBy(desc(lessonPackagesTable.purchasedAt));
 
-  if (packages.length > 0 && packages[0].usedCredits > 0) {
-    await db
-      .update(lessonPackagesTable)
-      .set({ usedCredits: packages[0].usedCredits - 1 })
-      .where(eq(lessonPackagesTable.id, packages[0].id));
+    if (packages.length > 0 && packages[0].usedCredits > 0) {
+      await db
+        .update(lessonPackagesTable)
+        .set({ usedCredits: packages[0].usedCredits - 1 })
+        .where(eq(lessonPackagesTable.id, packages[0].id));
+    }
   }
 
   res.json({

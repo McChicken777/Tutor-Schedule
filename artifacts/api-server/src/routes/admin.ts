@@ -17,6 +17,7 @@ import {
   AdminLoginBody,
   UpdateAdminBookingBody,
   UpdateAdminBookingParams,
+  CompleteBookingBody,
   CreateLessonTypeBody,
   UpdateLessonTypeBody,
   UpdateLessonTypeParams,
@@ -230,6 +231,63 @@ router.patch("/admin/bookings/:id", requireAdmin, async (req, res): Promise<void
     .set(updateData)
     .where(eq(bookingsTable.id, id))
     .returning();
+
+  res.json({
+    id: updated.id,
+    studentId: updated.studentId,
+    studentName: row.user.displayName,
+    studentEmail: row.user.email,
+    lessonTypeId: updated.lessonTypeId,
+    lessonTypeName: row.lessonType.name,
+    startTime: updated.startTime,
+    endTime: updated.endTime,
+    status: updated.status,
+    meetLink: updated.meetLink ?? null,
+    notes: updated.notes ?? null,
+    createdAt: updated.createdAt,
+  });
+});
+
+// A booking can only ever reach "completed" through here — the generic update
+// above no longer accepts that status — so it always carries a recap, and
+// optionally an assigned-homework note, rather than being a bare status flip.
+router.patch("/admin/bookings/:id/complete", requireAdmin, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+
+  const parsed = CompleteBookingBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [row] = await db
+    .select({ booking: bookingsTable, user: usersTable, lessonType: lessonTypesTable })
+    .from(bookingsTable)
+    .innerJoin(usersTable, eq(bookingsTable.studentId, usersTable.id))
+    .innerJoin(lessonTypesTable, eq(bookingsTable.lessonTypeId, lessonTypesTable.id))
+    .where(eq(bookingsTable.id, id));
+
+  if (!row) {
+    res.status(404).json({ error: "Booking not found" });
+    return;
+  }
+
+  const [updated] = await db
+    .update(bookingsTable)
+    .set({ status: "completed", notes: parsed.data.notes })
+    .where(eq(bookingsTable.id, id))
+    .returning();
+
+  if (parsed.data.homeworkAssignedText != null || parsed.data.homeworkAssignedFileUrl != null) {
+    await db
+      .update(homeworkTable)
+      .set({
+        assignedText: parsed.data.homeworkAssignedText ?? null,
+        assignedFileUrl: parsed.data.homeworkAssignedFileUrl ?? null,
+      })
+      .where(eq(homeworkTable.bookingId, id));
+  }
 
   res.json({
     id: updated.id,
