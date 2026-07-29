@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, and, asc, desc, sql } from "drizzle-orm";
+import { clerkClient } from "@clerk/express";
+import { eq, ne, lt, gt, and, asc, desc, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   usersTable,
@@ -30,26 +31,57 @@ import { requireAuth } from "../middlewares/requireAuth";
 import {
   createCalendarEventWithMeet,
   deleteCalendarEvent,
+  getFreeBusySlots,
 } from "../lib/calendar";
 
 const router: IRouter = Router();
 
-// JIT provision: get or create user from Clerk ID
-async function getOrCreateUser(clerkUserId: string, email?: string, displayName?: string) {
+// Looks up real email/name from Clerk directly, rather than relying on session
+// claims (which need a custom JWT template configured in the Clerk dashboard
+// to include them at all). Never throws — a Clerk hiccup falls back to the
+// placeholder values rather than breaking booking/dashboard access.
+async function fetchClerkIdentity(clerkUserId: string): Promise<{ email: string; displayName: string }> {
+  try {
+    const clerkUser = await clerkClient.users.getUser(clerkUserId);
+    const email =
+      clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ??
+      clerkUser.emailAddresses[0]?.emailAddress ??
+      "";
+    const displayName = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || "Student";
+    return { email, displayName };
+  } catch {
+    return { email: "", displayName: "Student" };
+  }
+}
+
+// JIT provision: get or create user from Clerk ID. Also self-heals legacy
+// rows that were created before this function looked up real identity data —
+// any row still holding the placeholder gets re-synced from Clerk here.
+async function getOrCreateUser(clerkUserId: string) {
   let [user] = await db
     .select()
     .from(usersTable)
     .where(eq(usersTable.clerkUserId, clerkUserId));
 
   if (!user) {
+    const identity = await fetchClerkIdentity(clerkUserId);
     [user] = await db
       .insert(usersTable)
       .values({
         clerkUserId,
-        email: email ?? "",
-        displayName: displayName ?? "Student",
+        email: identity.email,
+        displayName: identity.displayName,
       })
       .returning();
+  } else if (user.email === "" || user.displayName === "Student") {
+    const identity = await fetchClerkIdentity(clerkUserId);
+    if (identity.email !== "" || identity.displayName !== "Student") {
+      [user] = await db
+        .update(usersTable)
+        .set({ email: identity.email || user.email, displayName: identity.displayName })
+        .where(eq(usersTable.id, user.id))
+        .returning();
+    }
   }
   return user;
 }
@@ -77,17 +109,44 @@ async function getTrialLessonType() {
   return trialLessonType ?? null;
 }
 
+// Re-validates a time window is actually still free right before committing a
+// booking — the client-side slot list can go stale (another student books it
+// first) or be bypassed entirely, so this is the real guarantee against
+// double-booking, not the availability list.
+async function isTimeSlotTaken(
+  start: Date,
+  end: Date,
+  options?: { excludeBookingId?: number; excludeCalendarRange?: { start: Date; end: Date } },
+): Promise<boolean> {
+  const conditions = [
+    eq(bookingsTable.status, "upcoming"),
+    lt(bookingsTable.startTime, end),
+    gt(bookingsTable.endTime, start),
+  ];
+  if (options?.excludeBookingId != null) {
+    conditions.push(ne(bookingsTable.id, options.excludeBookingId));
+  }
+
+  const [conflictingBooking] = await db
+    .select({ id: bookingsTable.id })
+    .from(bookingsTable)
+    .where(and(...conditions));
+  if (conflictingBooking) return true;
+
+  const busySlots = await getFreeBusySlots(start, end);
+  const exclude = options?.excludeCalendarRange;
+  const relevantBusy = exclude
+    ? busySlots.filter(
+        (b) => b.start.getTime() !== exclude.start.getTime() || b.end.getTime() !== exclude.end.getTime(),
+      )
+    : busySlots;
+
+  return relevantBusy.some((busy) => start < busy.end && end > busy.start);
+}
+
 router.get("/student/me", requireAuth, async (req, res): Promise<void> => {
   const clerkUserId = (req as any).clerkUserId;
-  const { getAuth } = await import("@clerk/express");
-  const auth = getAuth(req);
-  const clerkUser = (auth as any)?.sessionClaims;
-
-  const user = await getOrCreateUser(
-    clerkUserId,
-    (auth as any)?.sessionClaims?.email as string | undefined,
-    (auth as any)?.sessionClaims?.name as string | undefined,
-  );
+  const user = await getOrCreateUser(clerkUserId);
 
   const packages = await db
     .select()
@@ -312,6 +371,11 @@ router.post("/student/bookings", requireAuth, async (req, res): Promise<void> =>
   const start = new Date(startTime as unknown as string);
   const end = new Date(start.getTime() + lessonType.durationMinutes * 60 * 1000);
 
+  if (await isTimeSlotTaken(start, end)) {
+    res.status(409).json({ error: "This time slot is no longer available. Please choose another." });
+    return;
+  }
+
   // Create Google Meet event
   const calendarResult = await createCalendarEventWithMeet(
     `Spanish Lesson with ${user.displayName}`,
@@ -518,13 +582,22 @@ router.patch("/student/bookings/:id/reschedule", requireAuth, async (req, res): 
     return;
   }
 
-  // Delete old calendar event
+  const newStart = new Date(parsed.data.newStartTime as unknown as string);
+  const newEnd = new Date(newStart.getTime() + row.lessonType.durationMinutes * 60 * 1000);
+
+  const taken = await isTimeSlotTaken(newStart, newEnd, {
+    excludeBookingId: id,
+    excludeCalendarRange: { start: row.booking.startTime, end: row.booking.endTime },
+  });
+  if (taken) {
+    res.status(409).json({ error: "This time slot is no longer available. Please choose another." });
+    return;
+  }
+
+  // Delete old calendar event (only now that we know the new time is free)
   if (row.booking.calendarEventId) {
     await deleteCalendarEvent(row.booking.calendarEventId);
   }
-
-  const newStart = new Date(parsed.data.newStartTime as unknown as string);
-  const newEnd = new Date(newStart.getTime() + row.lessonType.durationMinutes * 60 * 1000);
 
   const calendarResult = await createCalendarEventWithMeet(
     `Spanish Lesson with ${user.displayName}`,
