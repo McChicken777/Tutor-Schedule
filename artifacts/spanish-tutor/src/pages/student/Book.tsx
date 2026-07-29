@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { format, addDays, startOfDay, endOfDay, isBefore } from "date-fns";
+import { format, startOfDay, endOfDay, isBefore } from "date-fns";
 import {
   useListLessonTypes,
   useGetAvailableSlots,
@@ -26,8 +26,8 @@ export default function BookLesson() {
   const { data: dashboard } = useGetStudentDashboard();
   const { data: lessonTypes, isLoading: loadingTypes } = useListLessonTypes();
 
-  const startDate = selectedDate ? startOfDay(selectedDate).toISOString() : new Date().toISOString();
-  const endDate = selectedDate ? endOfDay(addDays(selectedDate, 14)).toISOString() : addDays(new Date(), 14).toISOString();
+  const startDate = selectedDate ? startOfDay(selectedDate).toISOString() : startOfDay(new Date()).toISOString();
+  const endDate = selectedDate ? endOfDay(selectedDate).toISOString() : endOfDay(new Date()).toISOString();
 
   const slotsParams = { lessonTypeId: selectedLessonType || 0, startDate, endDate };
   const { data: slots, isLoading: loadingSlots } = useGetAvailableSlots(

@@ -138,7 +138,7 @@ export function generateAvailableSlots(
   endDate: Date,
   durationMinutes: number,
   weeklyHours: WeeklyHours = DEFAULT_WEEKLY_HOURS,
-  slotIntervalMinutes = 60,
+  slotIntervalMinutes = 30,
 ): Array<{ startTime: Date; endTime: Date }> {
   const slots: Array<{ startTime: Date; endTime: Date }> = [];
   const current = new Date(startDate);

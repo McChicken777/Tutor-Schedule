@@ -17,8 +17,10 @@ export default function AdminLessonTypes() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const [newLesson, setNewLesson] = useState({ name: "", durationMinutes: 30, priceCents: 0, description: "", isTrial: false });
+  const [editForm, setEditForm] = useState({ name: "", durationMinutes: 30, priceCents: 0, description: "" });
 
   const handleToggleActive = (id: number, isActive: boolean) => {
     updateMutation.mutate({ id, data: { isActive } }, {
@@ -36,6 +38,23 @@ export default function AdminLessonTypes() {
         toast({ title: isTrial ? "Set as the free trial lesson" : "No longer the free trial lesson" });
         qc.invalidateQueries({ queryKey: getListAdminLessonTypesQueryKey() });
         qc.invalidateQueries({ queryKey: getListLessonTypesQueryKey() });
+      }
+    });
+  };
+
+  const openEdit = (lt: { id: number; name: string; durationMinutes: number; priceCents: number; description: string }) => {
+    setEditForm({ name: lt.name, durationMinutes: lt.durationMinutes, priceCents: lt.priceCents, description: lt.description });
+    setEditingId(lt.id);
+  };
+
+  const handleEditSave = () => {
+    if (editingId == null) return;
+    updateMutation.mutate({ id: editingId, data: editForm }, {
+      onSuccess: () => {
+        toast({ title: "Lesson updated" });
+        qc.invalidateQueries({ queryKey: getListAdminLessonTypesQueryKey() });
+        qc.invalidateQueries({ queryKey: getListLessonTypesQueryKey() });
+        setEditingId(null);
       }
     });
   };
@@ -95,6 +114,35 @@ export default function AdminLessonTypes() {
         </Dialog>
       </div>
 
+      <Dialog open={editingId != null} onOpenChange={(open) => { if (!open) setEditingId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Lesson Type</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Name</label>
+              <Input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Duration (min)</label>
+                <Input type="number" value={editForm.durationMinutes} onChange={e => setEditForm({...editForm, durationMinutes: Number(e.target.value)})} />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Price ($)</label>
+                <Input type="number" value={editForm.priceCents / 100} onChange={e => setEditForm({...editForm, priceCents: Math.round(Number(e.target.value) * 100)})} />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Description</label>
+              <Textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} />
+            </div>
+            <Button onClick={handleEditSave} disabled={updateMutation.isPending || !editForm.name} className="w-full">Save Changes</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {isLoading ? (
         <div className="grid md:grid-cols-2 gap-6">
           <Skeleton className="h-48 rounded-2xl" />
@@ -119,6 +167,9 @@ export default function AdminLessonTypes() {
                 <span className="text-sm text-muted-foreground">Free trial lesson</span>
                 <Switch checked={lt.isTrial} onCheckedChange={(v) => handleToggleTrial(lt.id, v)} />
               </div>
+              <Button variant="outline" size="sm" className="w-full mt-4" onClick={() => openEdit(lt)}>
+                Edit
+              </Button>
             </div>
           ))}
         </div>
