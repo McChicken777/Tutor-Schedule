@@ -59,24 +59,22 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
             const active = location === item.href || (item.href !== "/dashboard" && location.startsWith(item.href));
             const isTourStep = tourActive && index === tourStep;
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isTourStep ? "z-50 ring-2 ring-primary ring-offset-2 ring-offset-card" : ""
-                } ${
-                  active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                }`}
-              >
-                <item.icon className="w-5 h-5" />
-                {item.label}
+              <div key={item.href} className="relative">
+                <Link
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    isTourStep ? "relative z-50 ring-2 ring-primary ring-offset-2 ring-offset-card" : ""
+                  } ${
+                    active
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  }`}
+                >
+                  <item.icon className="w-5 h-5" />
+                  {item.label}
+                </Link>
                 {isTourStep && (
-                  <div
-                    className="absolute z-50 top-full left-0 mt-2 md:top-0 md:left-full md:ml-3 md:mt-0 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-card p-5 shadow-xl text-left normal-case font-normal"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <div className="absolute z-50 top-full left-0 mt-2 md:top-0 md:left-full md:ml-3 md:mt-0 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-card p-5 shadow-xl text-left">
                     <div className="flex items-center gap-1.5 mb-3">
                       {TOUR_STEPS.map((_, i) => (
                         <span
@@ -113,7 +111,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
                     </div>
                   </div>
                 )}
-              </Link>
+              </div>
             );
           })}
         </nav>
