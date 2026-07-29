@@ -15,6 +15,7 @@ _Replace the heading above with the project's name, and this line with one sente
   - `SESSION_SECRET` — express-session signing secret
   - `CLERK_PUBLISHABLE_KEY` / `VITE_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` — student auth (Clerk)
   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` — Google Calendar OAuth (tutor's calendar sync + Meet links). Client ID/secret come from a Google Cloud OAuth client with the Calendar API enabled; redirect URI must be `<host>/api/admin/calendar/callback` and match what's registered in Google Cloud Console exactly.
+  - `TEST_STUDENT_EMAIL` (optional) — a student account matching this email always sees `trialAvailable: true` and `hasSeenTour: false`, regardless of real booking/tour history. For repeatedly testing the trial flow and onboarding tour without touching real data.
 
 ## Stack
 

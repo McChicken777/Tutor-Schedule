@@ -15,7 +15,7 @@ import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetStudentBookingQueryKey } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { Video, ArrowLeft, Star, Upload, MessageSquare, FileText } from "lucide-react";
+import { Video, ArrowLeft, Star, Upload, Download, MessageSquare, FileText } from "lucide-react";
 import { Link } from "wouter";
 
 export default function BookingDetail() {
@@ -52,6 +52,9 @@ export default function BookingDetail() {
   let isEnded = false;
   if (differenceInMinutes(startTime, now) <= 15 && isBefore(now, endTime)) canJoin = true;
   if (isBefore(endTime, now)) isEnded = true;
+
+  const hoursUntilLesson = (startTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+  const withinNoRefundWindow = hoursUntilLesson < 24;
 
   const handleCancel = () => {
     cancelMutation.mutate({ id, data: {} }, {
@@ -130,7 +133,14 @@ export default function BookingDetail() {
                   <DialogHeader>
                     <DialogTitle>Cancel Lesson?</DialogTitle>
                   </DialogHeader>
-                  <p className="text-muted-foreground my-4">Are you sure you want to cancel this lesson? This action cannot be undone.</p>
+                  <p className="text-muted-foreground my-4">
+                    Are you sure you want to cancel this lesson? This action cannot be undone.
+                    {withinNoRefundWindow && (
+                      <span className="block mt-2 font-medium text-destructive">
+                        You're cancelling less than 24 hours before your lesson — your credit will not be refunded.
+                      </span>
+                    )}
+                  </p>
                   <div className="flex justify-end gap-3">
                     <Button variant="destructive" onClick={handleCancel} disabled={cancelMutation.isPending}>Yes, cancel</Button>
                   </div>
@@ -141,6 +151,15 @@ export default function BookingDetail() {
         </div>
       </div>
 
+      {booking.notes && (
+        <div className="bg-card border border-border rounded-3xl p-8 mb-8">
+          <h2 className="text-2xl font-serif font-bold text-foreground mb-4 flex items-center gap-2">
+            <MessageSquare className="w-6 h-6 text-primary" /> Class Recap
+          </h2>
+          <p className="text-muted-foreground whitespace-pre-wrap">{booking.notes}</p>
+        </div>
+      )}
+
       <div className="grid md:grid-cols-2 gap-8">
         {/* Homework Section */}
         <div className="bg-card border border-border rounded-3xl p-8">
@@ -148,6 +167,20 @@ export default function BookingDetail() {
             <FileText className="w-6 h-6 text-primary" /> Homework
           </h2>
           
+          {booking.homework?.assignedText || booking.homework?.assignedFileUrl ? (
+            <div className="mb-6 pb-6 border-b border-border">
+              <h3 className="font-bold text-foreground mb-2">Assigned by your teacher</h3>
+              {booking.homework.assignedText && (
+                <p className="bg-primary/5 p-4 rounded-xl text-foreground whitespace-pre-wrap">{booking.homework.assignedText}</p>
+              )}
+              {booking.homework.assignedFileUrl && (
+                <a href={booking.homework.assignedFileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-primary mt-2 hover:underline">
+                  <Download className="w-4 h-4 mr-1" /> View attachment
+                </a>
+              )}
+            </div>
+          ) : null}
+
           {booking.homework ? (
             <div className="space-y-6">
               <div>

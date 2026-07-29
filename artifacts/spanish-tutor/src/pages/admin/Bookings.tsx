@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { useListAdminBookings, useUpdateAdminBooking } from "@workspace/api-client-react";
+import { useListAdminBookings, useUpdateAdminBooking, useCompleteBooking } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListAdminBookingsQueryKey } from "@workspace/api-client-react";
@@ -15,11 +18,42 @@ export default function AdminBookings() {
   const qc = useQueryClient();
   const { toast } = useToast();
 
+  const [completingId, setCompletingId] = useState<number | null>(null);
+  const [recap, setRecap] = useState("");
+  const [homeworkText, setHomeworkText] = useState("");
+  const [homeworkFileUrl, setHomeworkFileUrl] = useState("");
+  const completeMutation = useCompleteBooking();
+
   const handleStatusChange = (id: number, newStatus: string) => {
     updateMutation.mutate({ id, data: { status: newStatus as any } }, {
       onSuccess: () => {
         toast({ title: "Status updated" });
         qc.invalidateQueries({ queryKey: getListAdminBookingsQueryKey() });
+      }
+    });
+  };
+
+  const openComplete = (id: number) => {
+    setRecap("");
+    setHomeworkText("");
+    setHomeworkFileUrl("");
+    setCompletingId(id);
+  };
+
+  const handleComplete = () => {
+    if (completingId == null || !recap.trim()) return;
+    completeMutation.mutate({
+      id: completingId,
+      data: {
+        notes: recap,
+        homeworkAssignedText: homeworkText || undefined,
+        homeworkAssignedFileUrl: homeworkFileUrl || undefined,
+      },
+    }, {
+      onSuccess: () => {
+        toast({ title: "Lesson completed" });
+        qc.invalidateQueries({ queryKey: getListAdminBookingsQueryKey() });
+        setCompletingId(null);
       }
     });
   };
@@ -69,20 +103,32 @@ export default function AdminBookings() {
               </div>
 
               <div className="flex items-center gap-3">
-                <Select 
-                  value={booking.status} 
-                  onValueChange={(v) => handleStatusChange(booking.id, v)}
-                  disabled={updateMutation.isPending}
-                >
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="upcoming">Upcoming</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
+                {booking.status === "upcoming" ? (
+                  <Select
+                    value={booking.status}
+                    onValueChange={(v) => handleStatusChange(booking.id, v)}
+                    disabled={updateMutation.isPending}
+                  >
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="upcoming">Upcoming</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <span className={`px-3 py-1.5 rounded-md text-sm font-medium ${
+                    booking.status === "completed" ? "bg-secondary/10 text-secondary" : "bg-destructive/10 text-destructive"
+                  }`}>
+                    {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                  </span>
+                )}
+                {booking.status === "upcoming" && (
+                  <Button variant="outline" onClick={() => openComplete(booking.id)}>
+                    Complete Lesson
+                  </Button>
+                )}
                 {booking.status === "upcoming" && booking.meetLink && (
                   <Button asChild variant="secondary">
                     <a href={booking.meetLink} target="_blank" rel="noreferrer">Join</a>
@@ -93,6 +139,32 @@ export default function AdminBookings() {
           ))}
         </div>
       )}
+
+      <Dialog open={completingId != null} onOpenChange={(open) => { if (!open) setCompletingId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Complete Lesson</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Recap</label>
+              <p className="text-xs text-muted-foreground mb-2">A quick summary of what you covered — the student will see this.</p>
+              <Textarea value={recap} onChange={e => setRecap(e.target.value)} placeholder="What did you work on today?" className="h-28" />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Homework (optional)</label>
+              <Textarea value={homeworkText} onChange={e => setHomeworkText(e.target.value)} placeholder="What should they do before next class?" className="h-24" />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Homework link (optional)</label>
+              <Input value={homeworkFileUrl} onChange={e => setHomeworkFileUrl(e.target.value)} placeholder="Link to a worksheet, doc, etc." />
+            </div>
+            <Button onClick={handleComplete} disabled={completeMutation.isPending || !recap.trim()} className="w-full">
+              {completeMutation.isPending ? "Completing..." : "Complete Lesson"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
