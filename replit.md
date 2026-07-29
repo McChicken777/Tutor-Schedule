@@ -4,7 +4,7 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `PORT=5000 pnpm --filter @workspace/api-server run dev` — builds the frontend, bundles the API server, and starts a single process on port 5000 that serves both (frontend static files + `/api/*`). This is the only command you need to run the whole app — there is no separate frontend dev server to start.
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
@@ -48,6 +48,7 @@ _Populate as you build — explicit user instructions worth remembering across s
 - Messaging (`messages` table) is one thread per student, single-teacher: rows are keyed only by `studentId`, there's no `teacherId`/conversation concept. If this ever becomes multi-teacher, this table needs a teacher/conversation dimension before it'll work correctly — don't just add teachers without revisiting it.
 - Availability = weekly working hours (`site_settings.weekly_hours`, per-weekday enabled/start/end) intersected with the tutor's Google Calendar free/busy. One-off days off (vacation, appointments) are handled by adding an event to her Google Calendar, not through the app — there's no separate "block this date" UI, since Calendar already covers it.
 - After pulling schema changes (new columns/tables), always run `pnpm --filter @workspace/db run push` before starting the server — the app will error on missing columns otherwise.
+- The API server (`artifacts/api-server`) serves the frontend's built static files directly (`app.ts`, `express.static` + SPA fallback to `index.html` for any non-`/api` route) — this is a deliberate single-process setup so the whole app is one port/one command to run, instead of relying on Replit's multi-service `router = "application"` routing (declared in `.replit`/`artifact.toml` files, which are now stale relative to how the app actually runs). Its `build` script builds the frontend first (`BASE_PATH=/`) before bundling the backend. If you ever click Replit's "Publish"/Deploy button, check whether it's still trying to deploy the old two-service split — it may need `.replit`'s `[deployment]` section updated to match this single-process model.
 
 ## Pointers
 

@@ -1,3 +1,4 @@
+import path from "node:path";
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
@@ -11,6 +12,10 @@ import {
 } from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
 import { logger } from "./lib/logger";
+
+// The frontend's built static assets — served by this same process so the
+// whole app is a single port/process (no separate frontend server to route to).
+const FRONTEND_DIST = path.join(import.meta.dirname, "../../spanish-tutor/dist/public");
 
 const app: Express = express();
 
@@ -66,5 +71,16 @@ app.use(
 );
 
 app.use("/api", router);
+
+// Serve the built frontend for everything else, falling through to index.html
+// for client-side routes (wouter) that don't correspond to a real file.
+app.use(express.static(FRONTEND_DIST));
+app.use((req, res, next) => {
+  if (req.method !== "GET" || req.path.startsWith("/api")) {
+    next();
+    return;
+  }
+  res.sendFile(path.join(FRONTEND_DIST, "index.html"));
+});
 
 export default app;
