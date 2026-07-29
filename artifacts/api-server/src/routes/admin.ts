@@ -907,10 +907,15 @@ router.get("/calendar/auth", requireAdmin, async (req, res): Promise<void> => {
   res.redirect(url);
 });
 
-router.get("/admin/calendar/callback", requireAdmin, async (req, res): Promise<void> => {
+// NOTE: requireAdmin is intentionally NOT on this route.
+// Google's redirect lands here as a top-level browser navigation after OAuth.
+// The session cookie is present (SameSite=Lax allows it on GET redirects), but
+// we rely solely on the state nonce for CSRF protection — not the session admin
+// flag — since an OAuth callback can't assume the normal authenticated context.
+router.get("/admin/calendar/callback", async (req, res): Promise<void> => {
   const { code, error, state } = req.query;
 
-  // Validate state to prevent CSRF attacks
+  // Validate state nonce to prevent CSRF attacks
   const expectedState = (req.session as any).oauthState;
   delete (req.session as any).oauthState; // Consume nonce immediately (prevents replay)
 
