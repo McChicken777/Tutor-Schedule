@@ -169,6 +169,7 @@ export const GetStudentDashboardResponse = zod.object({
 })),
   "totalRemainingCredits": zod.number(),
   "trialAvailable": zod.boolean().describe('Whether this student can still book the free trial lesson (never booked it before, and one is configured\/enabled).'),
+  "hasSeenTour": zod.boolean().describe('Whether this student has already seen (or skipped) the first-login onboarding tour.'),
   "pendingHomeworkCount": zod.number(),
   "packages": zod.array(zod.object({
   "id": zod.number(),
@@ -407,6 +408,14 @@ export const ListStudentPackagesResponseItem = zod.object({
   "purchasedAt": zod.coerce.date()
 })
 export const ListStudentPackagesResponse = zod.array(ListStudentPackagesResponseItem)
+
+
+/**
+ * @summary Mark the onboarding tour as seen for the current student
+ */
+export const CompleteTourResponse = zod.object({
+  "hasSeenTour": zod.boolean()
+})
 
 
 /**

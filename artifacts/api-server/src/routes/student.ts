@@ -250,6 +250,7 @@ router.get("/student/dashboard", requireAuth, async (req, res): Promise<void> =>
     upcomingBookings: mappedUpcoming,
     totalRemainingCredits: totalRemaining,
     trialAvailable,
+    hasSeenTour: user.hasSeenTour,
     pendingHomeworkCount,
     packages: packages.map((p) => ({
       id: p.pkg.id,
@@ -794,6 +795,15 @@ router.get("/student/packages", requireAuth, async (req, res): Promise<void> => 
       purchasedAt: r.pkg.purchasedAt,
     })),
   );
+});
+
+router.patch("/student/tour-complete", requireAuth, async (req, res): Promise<void> => {
+  const clerkUserId = (req as any).clerkUserId;
+  const user = await getOrCreateUser(clerkUserId);
+
+  await db.update(usersTable).set({ hasSeenTour: true }).where(eq(usersTable.id, user.id));
+
+  res.json({ hasSeenTour: true });
 });
 
 // ─── Messages ─────────────────────────────────────────────────────────────────

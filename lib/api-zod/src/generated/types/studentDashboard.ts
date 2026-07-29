@@ -15,6 +15,8 @@ export interface StudentDashboard {
   totalRemainingCredits: number;
   /** Whether this student can still book the free trial lesson (never booked it before, and one is configured/enabled). */
   trialAvailable: boolean;
+  /** Whether this student has already seen (or skipped) the first-login onboarding tour. */
+  hasSeenTour: boolean;
   pendingHomeworkCount: number;
   packages: LessonPackage[];
   recentHomework: AdminHomework[];

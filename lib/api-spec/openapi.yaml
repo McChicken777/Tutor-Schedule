@@ -372,6 +372,26 @@ paths:
         "401":
           description: Unauthorized
 
+  /student/tour-complete:
+    patch:
+      operationId: completeTour
+      tags: [student]
+      summary: Mark the onboarding tour as seen for the current student
+      responses:
+        "200":
+          description: Tour marked complete
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hasSeenTour:
+                    type: boolean
+                required:
+                  - hasSeenTour
+        "401":
+          description: Unauthorized
+
   /student/messages:
     get:
       operationId: listStudentMessages
@@ -1311,6 +1331,9 @@ components:
         trialAvailable:
           type: boolean
           description: Whether this student can still book the free trial lesson (never booked it before, and one is configured/enabled).
+        hasSeenTour:
+          type: boolean
+          description: Whether this student has already seen (or skipped) the first-login onboarding tour.
         pendingHomeworkCount:
           type: number
         packages:
@@ -1325,6 +1348,7 @@ components:
         - upcomingBookings
         - totalRemainingCredits
         - trialAvailable
+        - hasSeenTour
         - pendingHomeworkCount
         - packages
         - recentHomework

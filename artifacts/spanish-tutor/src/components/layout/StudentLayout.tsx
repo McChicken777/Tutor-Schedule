@@ -1,14 +1,40 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { LogOut, LayoutDashboard, Calendar, BookOpen, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  useGetStudentDashboard,
+  useCompleteTour,
+  getGetStudentDashboardQueryKey,
+} from "@workspace/api-client-react";
+
+const TOUR_STEPS = [
+  { title: "Your dashboard", description: "See your next class and remaining credits at a glance." },
+  { title: "Bookings", description: "All your upcoming and past lessons live here." },
+  { title: "Book a lesson", description: "Book your free trial or a new lesson in a few clicks." },
+  { title: "Messages", description: "Message your teacher directly, anytime." },
+];
 
 export default function StudentLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { signOut } = useClerk();
   const { user } = useUser();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  const { data: dashboard } = useGetStudentDashboard();
+  const completeTourMutation = useCompleteTour();
+  const qc = useQueryClient();
+  const [tourStep, setTourStep] = useState(0);
+  const tourActive = !!dashboard && !dashboard.hasSeenTour;
+
+  const handleTourComplete = () => {
+    completeTourMutation.mutate(undefined, {
+      onSuccess: () => qc.invalidateQueries({ queryKey: getGetStudentDashboardQueryKey() }),
+    });
+  };
 
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -29,24 +55,71 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
         </div>
 
         <nav className="flex-1 px-4 space-y-1">
-          {navItems.map((item) => {
+          {navItems.map((item, index) => {
             const active = location === item.href || (item.href !== "/dashboard" && location.startsWith(item.href));
+            const isTourStep = tourActive && index === tourStep;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  active 
-                    ? "bg-primary text-primary-foreground" 
+                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isTourStep ? "z-50 ring-2 ring-primary ring-offset-2 ring-offset-card" : ""
+                } ${
+                  active
+                    ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 }`}
               >
                 <item.icon className="w-5 h-5" />
                 {item.label}
+                {isTourStep && (
+                  <div
+                    className="absolute z-50 top-full left-0 mt-2 md:top-0 md:left-full md:ml-3 md:mt-0 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-card p-5 shadow-xl text-left normal-case font-normal"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center gap-1.5 mb-3">
+                      {TOUR_STEPS.map((_, i) => (
+                        <span
+                          key={i}
+                          className={`h-1.5 rounded-full transition-all ${i === tourStep ? "w-5 bg-primary" : "w-1.5 bg-border"}`}
+                        />
+                      ))}
+                    </div>
+                    <h3 className="font-bold text-foreground mb-1">{TOUR_STEPS[tourStep].title}</h3>
+                    <p className="text-sm text-muted-foreground mb-4">{TOUR_STEPS[tourStep].description}</p>
+                    <div className="flex items-center justify-between">
+                      <button
+                        onClick={handleTourComplete}
+                        className="text-sm text-muted-foreground hover:text-foreground font-medium"
+                      >
+                        Skip
+                      </button>
+                      <div className="flex items-center gap-2">
+                        {tourStep > 0 && (
+                          <Button variant="outline" size="sm" onClick={() => setTourStep((s) => s - 1)}>
+                            Back
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            if (tourStep === TOUR_STEPS.length - 1) handleTourComplete();
+                            else setTourStep((s) => s + 1);
+                          }}
+                        >
+                          {tourStep === TOUR_STEPS.length - 1 ? "Got it" : "Next"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </Link>
             );
           })}
         </nav>
+
+        {tourActive &&
+          createPortal(<div className="fixed inset-0 z-40 bg-black/50" />, document.body)}
 
         <div className="p-4 border-t border-border mt-auto">
           <div className="flex items-center gap-3 mb-4 px-2">

@@ -33,6 +33,7 @@ import type {
   BookingInput,
   CalendarStatus,
   CancellationInput,
+  CompleteTour200,
   DisconnectCalendar200,
   FaqEntry,
   FaqInput,
@@ -1389,6 +1390,77 @@ export function useListStudentPackages<TData = Awaited<ReturnType<typeof listStu
 
 
 
+
+export const getCompleteTourUrl = () => {
+
+
+
+
+  return `/api/student/tour-complete`
+}
+
+/**
+ * @summary Mark the onboarding tour as seen for the current student
+ */
+export const completeTour = async ( options?: Parameters<typeof customFetch>[1]): Promise<CompleteTour200> => {
+
+  return customFetch<CompleteTour200>(getCompleteTourUrl(),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+
+export const getCompleteTourMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeTour>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof completeTour>>, TError,void, TContext> => {
+
+const mutationKey = ['completeTour'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeTour>>, void> = () => {
+
+
+          return  completeTour(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompleteTourMutationResult = NonNullable<Awaited<ReturnType<typeof completeTour>>>
+
+    export type CompleteTourMutationError = ErrorType<void>
+
+    /**
+ * @summary Mark the onboarding tour as seen for the current student
+ */
+export const useCompleteTour = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeTour>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof completeTour>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCompleteTourMutationOptions(options));
+    }
 
 export const getListStudentMessagesUrl = () => {
 
