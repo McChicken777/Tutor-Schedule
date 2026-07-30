@@ -19,6 +19,19 @@ import { Trash2, CalendarOff } from "lucide-react";
 
 const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 
+// Fallback so the chip editor still works if a settings row has no weeklyHours
+// saved yet (mirrors the default used on the Settings page).
+const DEFAULT_DAY_HOURS = { enabled: true, start: "09:00", end: "20:00" };
+const DEFAULT_WEEKLY_HOURS: WeeklyHours = {
+  mon: { ...DEFAULT_DAY_HOURS },
+  tue: { ...DEFAULT_DAY_HOURS },
+  wed: { ...DEFAULT_DAY_HOURS },
+  thu: { ...DEFAULT_DAY_HOURS },
+  fri: { ...DEFAULT_DAY_HOURS },
+  sat: { ...DEFAULT_DAY_HOURS },
+  sun: { ...DEFAULT_DAY_HOURS },
+};
+
 function parseHhMm(v: string) {
   const parts = v.split(":").map(Number);
   return { hour: parts[0] || 0, minute: parts[1] || 0 };
@@ -69,7 +82,7 @@ export default function AdminAvailability() {
   const setDayMutation = useSetDayAvailabilityOverrides();
   const deleteMutation = useDeleteAvailabilityOverride();
 
-  const weeklyHours: WeeklyHours | undefined = settings?.weeklyHours;
+  const weeklyHours: WeeklyHours = settings?.weeklyHours ?? DEFAULT_WEEKLY_HOURS;
 
   const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : null;
 
