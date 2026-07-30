@@ -42,7 +42,7 @@ import {
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
 import { requireAdmin } from "../middlewares/requireAdmin";
-import { isCalendarConnected, getCalendarEmail, deleteCalendarEvent, createOAuth2Client } from "../lib/calendar";
+import { isCalendarConnected, getCalendarEmail, deleteCalendarEvent, createOAuth2Client, getFreeBusySlots } from "../lib/calendar";
 import { google } from "googleapis";
 import { calendarTokensTable } from "@workspace/db";
 
@@ -937,6 +937,18 @@ router.delete("/admin/availability-overrides/:id", requireAdmin, async (req, res
 });
 
 // ─── Calendar ─────────────────────────────────────────────────────────────────
+
+router.get("/admin/calendar/busy", requireAdmin, async (req, res): Promise<void> => {
+  const date = typeof req.query.date === "string" ? req.query.date : null;
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    res.status(400).json({ error: "date query param required (YYYY-MM-DD)" });
+    return;
+  }
+  const dayStart = new Date(date + "T00:00:00Z");
+  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+  const busy = await getFreeBusySlots(dayStart, dayEnd);
+  res.json(busy.map((b) => ({ start: b.start.toISOString(), end: b.end.toISOString() })));
+});
 
 router.get("/admin/calendar/status", requireAdmin, async (_req, res): Promise<void> => {
   const connected = await isCalendarConnected();

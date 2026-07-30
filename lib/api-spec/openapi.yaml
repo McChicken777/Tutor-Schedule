@@ -1042,6 +1042,31 @@ paths:
         "401":
           description: Unauthorized
 
+  /admin/calendar/busy:
+    get:
+      operationId: getCalendarBusy
+      tags: [admin]
+      summary: Get Google Calendar busy blocks for a single date
+      parameters:
+        - in: query
+          name: date
+          required: true
+          schema:
+            type: string
+            format: date
+          description: The date to query in "YYYY-MM-DD" format
+      responses:
+        "200":
+          description: List of busy time ranges from Google Calendar
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CalendarBusyBlock"
+        "401":
+          description: Unauthorized
+
   /admin/calendar/status:
     get:
       operationId: getCalendarStatus
@@ -1172,6 +1197,17 @@ components:
         - startTime
         - endTime
         - available
+
+    CalendarBusyBlock:
+      type: object
+      required: [start, end]
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
 
     AvailabilityOverride:
       type: object

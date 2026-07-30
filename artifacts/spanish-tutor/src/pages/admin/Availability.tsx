@@ -5,7 +5,9 @@ import {
   useSetDayAvailabilityOverrides,
   useDeleteAvailabilityOverride,
   useGetAdminSiteSettings,
+  useGetCalendarBusy,
   getListAvailabilityOverridesQueryKey,
+  getGetCalendarBusyQueryKey,
 } from "@workspace/api-client-react";
 import type { WeeklyHours } from "@workspace/api-client-react";
 import { Calendar } from "@/components/ui/calendar";
@@ -70,6 +72,11 @@ export default function AdminAvailability() {
   const weeklyHours: WeeklyHours | undefined = settings?.weeklyHours;
 
   const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : null;
+
+  const gcalBusyParams = { date: dateStr ?? "" };
+  const { data: gcalBusy } = useGetCalendarBusy(gcalBusyParams, {
+    query: { enabled: !!dateStr, queryKey: getGetCalendarBusyQueryKey(gcalBusyParams) },
+  });
   const dayKey = selectedDate ? DAY_KEYS[selectedDate.getDay()] : null;
   const dayHours = dayKey && weeklyHours ? weeklyHours[dayKey] : null;
 
@@ -77,6 +84,20 @@ export default function AdminAvailability() {
     if (!dateStr || !dayHours?.enabled) return [];
     return generateChips(dateStr, dayHours.start, dayHours.end);
   }, [dateStr, dayHours]);
+
+  // Chip indices that are already occupied by a Google Calendar event — grey + non-interactive
+  const gcalBusySet = useMemo(() => {
+    const busy = new Set<number>();
+    if (!gcalBusy || chips.length === 0) return busy;
+    chips.forEach((chip, i) => {
+      const cs = chip.startTime.getTime();
+      const ce = chip.endTime.getTime();
+      if (gcalBusy.some((b) => cs < new Date(b.end).getTime() && ce > new Date(b.start).getTime())) {
+        busy.add(i);
+      }
+    });
+    return busy;
+  }, [chips, gcalBusy]);
 
   // Re-derive which chips are blocked whenever date or saved overrides change
   useEffect(() => {
@@ -102,6 +123,7 @@ export default function AdminAvailability() {
   }, [chips, overrides]);
 
   const toggleChip = (i: number) => {
+    if (gcalBusySet.has(i)) return;
     setBlockedChips((prev) => {
       const next = new Set(prev);
       if (next.has(i)) next.delete(i);
@@ -110,10 +132,11 @@ export default function AdminAvailability() {
     });
   };
 
-  const allBlocked = chips.length > 0 && blockedChips.size === chips.length;
+  const toggleableIndices = chips.map((_, i) => i).filter((i) => !gcalBusySet.has(i));
+  const allBlocked = toggleableIndices.length > 0 && toggleableIndices.every((i) => blockedChips.has(i));
 
   const toggleAll = () => {
-    setBlockedChips(allBlocked ? new Set() : new Set(chips.map((_, i) => i)));
+    setBlockedChips(allBlocked ? new Set() : new Set(toggleableIndices));
   };
 
   const handleSave = () => {
@@ -210,23 +233,43 @@ export default function AdminAvailability() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 mb-5">
+              <div className="grid grid-cols-3 gap-2 mb-3">
                 {chips.map((chip, i) => {
+                  const isGcalBusy = gcalBusySet.has(i);
                   const isBlocked = blockedChips.has(i);
                   return (
                     <button
                       key={i}
                       onClick={() => toggleChip(i)}
+                      disabled={isGcalBusy}
+                      title={isGcalBusy ? "Already in Google Calendar" : undefined}
                       className={`py-2.5 px-3 rounded-xl text-sm font-medium transition border ${
-                        isBlocked
-                          ? "bg-destructive/10 text-destructive border-destructive/25 hover:bg-destructive/20"
-                          : "bg-accent text-foreground border-transparent hover:border-primary/30 hover:bg-primary/5"
+                        isGcalBusy
+                          ? "bg-muted text-muted-foreground border-transparent cursor-not-allowed opacity-60"
+                          : isBlocked
+                            ? "bg-destructive/10 text-destructive border-destructive/25 hover:bg-destructive/20"
+                            : "bg-accent text-foreground border-transparent hover:border-primary/30 hover:bg-primary/5"
                       }`}
                     >
                       {format(chip.startTime, "h:mm a")}
                     </button>
                   );
                 })}
+              </div>
+
+              <div className="flex items-center gap-4 mb-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded bg-accent border border-border inline-block" />
+                  Free
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded bg-destructive/20 border border-destructive/25 inline-block" />
+                  Blocked by you
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded bg-muted opacity-60 inline-block" />
+                  Google Calendar
+                </span>
               </div>
 
               <div className="flex items-center justify-between">

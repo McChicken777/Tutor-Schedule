@@ -1204,6 +1204,20 @@ export const DeleteAvailabilityOverrideResponse = zod.void()
 
 
 /**
+ * @summary Get Google Calendar busy blocks for a single date
+ */
+export const GetCalendarBusyQueryParams = zod.object({
+  "date": zod.date().describe('The date to query in \"YYYY-MM-DD\" format')
+})
+
+export const GetCalendarBusyResponseItem = zod.object({
+  "start": zod.coerce.date(),
+  "end": zod.coerce.date()
+})
+export const GetCalendarBusyResponse = zod.array(GetCalendarBusyResponseItem)
+
+
+/**
  * @summary Check Google Calendar connection status
  */
 export const GetCalendarStatusResponse = zod.object({

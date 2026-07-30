@@ -51,6 +51,11 @@ export interface TimeSlot {
   available: boolean;
 }
 
+export interface CalendarBusyBlock {
+  start: string;
+  end: string;
+}
+
 export interface AvailabilityOverride {
   id: number;
   startTime: string;
@@ -496,6 +501,13 @@ date?: string;
 
 export type ListAdminHomeworkParams = {
 reviewed?: boolean;
+};
+
+export type GetCalendarBusyParams = {
+/**
+ * The date to query in "YYYY-MM-DD" format
+ */
+date: string;
 };
 
 export type DisconnectCalendar200 = {

@@ -32,6 +32,7 @@ import type {
   Booking,
   BookingDetail,
   BookingInput,
+  CalendarBusyBlock,
   CalendarStatus,
   CancellationInput,
   CompleteBookingInput,
@@ -41,6 +42,7 @@ import type {
   FaqInput,
   FaqUpdate,
   GetAvailableSlotsParams,
+  GetCalendarBusyParams,
   HealthStatus,
   Homework,
   HomeworkFeedbackInput,
@@ -3906,6 +3908,90 @@ export const useDeleteAvailabilityOverride = <TError = ErrorType<void>,
       > => {
       return useMutation(getDeleteAvailabilityOverrideMutationOptions(options));
     }
+
+export const getGetCalendarBusyUrl = (params: GetCalendarBusyParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/calendar/busy?${stringifiedParams}` : `/api/admin/calendar/busy`
+}
+
+/**
+ * @summary Get Google Calendar busy blocks for a single date
+ */
+export const getCalendarBusy = async (params: GetCalendarBusyParams, options?: Parameters<typeof customFetch>[1]): Promise<CalendarBusyBlock[]> => {
+
+  return customFetch<CalendarBusyBlock[]>(getGetCalendarBusyUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCalendarBusyQueryKey = (params?: GetCalendarBusyParams,) => {
+    return [
+    `/api/admin/calendar/busy`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetCalendarBusyQueryOptions = <TData = Awaited<ReturnType<typeof getCalendarBusy>>, TError = ErrorType<void>>(params: GetCalendarBusyParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCalendarBusy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCalendarBusyQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCalendarBusy>>> = ({ signal }) => getCalendarBusy(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCalendarBusy>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCalendarBusyQueryResult = NonNullable<Awaited<ReturnType<typeof getCalendarBusy>>>
+export type GetCalendarBusyQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get Google Calendar busy blocks for a single date
+ */
+
+export function useGetCalendarBusy<TData = Awaited<ReturnType<typeof getCalendarBusy>>, TError = ErrorType<void>>(
+ params: GetCalendarBusyParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCalendarBusy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCalendarBusyQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetCalendarStatusUrl = () => {
 
