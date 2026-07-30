@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, ne, and, desc, asc, gte, lt, sql } from "drizzle-orm";
+import { eq, ne, and, desc, asc, gte, lt, gt, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   usersTable,
@@ -12,6 +12,7 @@ import {
   faqsTable,
   siteSettingsTable,
   messagesTable,
+  availabilityOverridesTable,
 } from "@workspace/db";
 import {
   AdminLoginBody,
@@ -36,6 +37,8 @@ import {
   DeleteFaqParams,
   UpdateSiteSettingsBody,
   SendAdminMessageBody,
+  SetDayAvailabilityOverridesBody,
+  DeleteAvailabilityOverrideParams,
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
 import { requireAdmin } from "../middlewares/requireAdmin";
@@ -876,6 +879,61 @@ router.patch("/admin/site-settings", requireAdmin, async (req, res): Promise<voi
     .returning();
 
   res.json(updated);
+});
+
+// ─── Availability Overrides ───────────────────────────────────────────────────
+
+router.get("/admin/availability-overrides", requireAdmin, async (_req, res): Promise<void> => {
+  const now = new Date();
+  const items = await db
+    .select()
+    .from(availabilityOverridesTable)
+    .where(gte(availabilityOverridesTable.endTime, now))
+    .orderBy(asc(availabilityOverridesTable.startTime));
+  res.json(items);
+});
+
+router.put("/admin/availability-overrides/day", requireAdmin, async (req, res): Promise<void> => {
+  const parsed = SetDayAvailabilityOverridesBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  // Treat the date string as UTC midnight so it's unambiguous regardless of server TZ
+  const dayStart = new Date(parsed.data.date + "T00:00:00Z");
+  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+  await db
+    .delete(availabilityOverridesTable)
+    .where(
+      and(
+        gte(availabilityOverridesTable.startTime, dayStart),
+        lt(availabilityOverridesTable.startTime, dayEnd),
+      ),
+    );
+
+  if (parsed.data.blocks.length === 0) {
+    res.json([]);
+    return;
+  }
+
+  const rows = await db
+    .insert(availabilityOverridesTable)
+    .values(parsed.data.blocks.map((b) => ({ startTime: b.startTime, endTime: b.endTime })))
+    .returning();
+
+  res.json(rows);
+});
+
+router.delete("/admin/availability-overrides/:id", requireAdmin, async (req, res): Promise<void> => {
+  const parsed = DeleteAvailabilityOverrideParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  await db.delete(availabilityOverridesTable).where(eq(availabilityOverridesTable.id, parsed.data.id));
+  res.sendStatus(204);
 });
 
 // ─── Calendar ─────────────────────────────────────────────────────────────────

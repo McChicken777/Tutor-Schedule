@@ -172,25 +172,36 @@ export default function BookLesson() {
                 Available times for {selectedDate ? format(selectedDate, "MMM d, yyyy") : "selected date"}
               </h3>
               {loadingSlots ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <Skeleton className="h-12 rounded-xl" />
-                  <Skeleton className="h-12 rounded-xl" />
+                <div className="space-y-2">
+                  {[...Array(6)].map((_, i) => (
+                    <Skeleton key={i} className="h-14 w-full rounded-xl" />
+                  ))}
                 </div>
               ) : slots && slots.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
                   {slots.map(slot => {
                     const isSelected = selectedSlot === slot.startTime;
                     return (
                       <button
                         key={slot.startTime}
-                        onClick={() => setSelectedSlot(slot.startTime)}
-                        className={`py-3 px-4 rounded-xl text-sm font-medium transition ${
-                          isSelected 
-                            ? "bg-primary text-primary-foreground shadow-md" 
-                            : "bg-accent text-foreground hover:bg-primary/20"
+                        onClick={() => slot.available ? setSelectedSlot(slot.startTime) : undefined}
+                        disabled={!slot.available}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition ${
+                          !slot.available
+                            ? "bg-muted text-muted-foreground cursor-not-allowed opacity-60"
+                            : isSelected
+                              ? "bg-primary text-primary-foreground shadow-md"
+                              : "bg-accent text-foreground hover:bg-primary/10"
                         }`}
                       >
-                        {format(new Date(slot.startTime), "h:mm a")}
+                        <span className="font-semibold">{format(new Date(slot.startTime), "h:mm a")}</span>
+                        {!slot.available ? (
+                          <span className="text-xs">Taken</span>
+                        ) : (
+                          <span className={`text-xs ${isSelected ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                            until {format(new Date(slot.endTime), "h:mm a")}
+                          </span>
+                        )}
                       </button>
                     );
                   })}

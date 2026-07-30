@@ -9,4 +9,6 @@
 export interface TimeSlot {
   startTime: Date;
   endTime: Date;
+  /** False when this slot overlaps a busy block (Google Calendar, a teacher time-off block, or an existing booking); the UI greys it out. */
+  available: boolean;
 }

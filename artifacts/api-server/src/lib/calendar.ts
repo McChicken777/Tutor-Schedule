@@ -1,7 +1,15 @@
 import { google } from "googleapis";
-import { eq } from "drizzle-orm";
+import { eq, and, lt, gt } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { calendarTokensTable, DEFAULT_WEEKLY_HOURS, type WeeklyHours, type DayHours } from "@workspace/db";
+import {
+  calendarTokensTable,
+  availabilityOverridesTable,
+  bookingsTable,
+  DEFAULT_WEEKLY_HOURS,
+  type WeeklyHours,
+  type DayHours,
+} from "@workspace/db";
+import { logger } from "./logger";
 
 const DAY_KEYS: Array<keyof WeeklyHours> = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
@@ -60,24 +68,77 @@ export async function getFreeBusySlots(
   endDate: Date,
 ): Promise<Array<{ start: Date; end: Date }>> {
   const calendar = await getAuthenticatedCalendar();
-  if (!calendar) return [];
+  if (!calendar) {
+    // No token connected yet — nothing to report. (Not an error; just not set up.)
+    return [];
+  }
 
   try {
+    // Query every calendar the account can see, not just "primary" — manual and
+    // external-app events often live on secondary/shared/subscribed calendars.
+    const calendarList = await calendar.calendarList.list({ maxResults: 250 });
+    const calendarIds = (calendarList.data.items ?? [])
+      .map((c) => c.id)
+      .filter((id): id is string => !!id);
+    // Fall back to primary if the list came back empty for any reason.
+    const items = calendarIds.length > 0 ? calendarIds.map((id) => ({ id })) : [{ id: "primary" }];
+
     const res = await calendar.freebusy.query({
       requestBody: {
         timeMin: startDate.toISOString(),
         timeMax: endDate.toISOString(),
-        items: [{ id: "primary" }],
+        items,
       },
     });
-    const busy = res.data.calendars?.["primary"]?.busy ?? [];
-    return busy.map((b) => ({
-      start: new Date(b.start!),
-      end: new Date(b.end!),
-    }));
-  } catch {
+
+    const calendars = res.data.calendars ?? {};
+    const busy: Array<{ start: Date; end: Date }> = [];
+    for (const cal of Object.values(calendars)) {
+      for (const b of cal.busy ?? []) {
+        if (b.start && b.end) busy.push({ start: new Date(b.start), end: new Date(b.end) });
+      }
+    }
+    return busy;
+  } catch (err) {
+    // Previously this failed silently and returned [], making every slot look
+    // free (e.g. on a revoked/expired token). Log it so it's diagnosable.
+    logger.warn({ err }, "getFreeBusySlots failed — treating calendar as fully free");
     return [];
   }
+}
+
+// The single source of truth for "when is the tutor unavailable" over a window:
+// Google Calendar busy (all calendars) + in-app date overrides + existing
+// upcoming bookings. Everything that reads availability should use this so the
+// three sources stay in sync.
+export async function getBusyBlocks(
+  startDate: Date,
+  endDate: Date,
+): Promise<Array<{ start: Date; end: Date }>> {
+  const googleBusy = await getFreeBusySlots(startDate, endDate);
+
+  const overrides = await db
+    .select({ start: availabilityOverridesTable.startTime, end: availabilityOverridesTable.endTime })
+    .from(availabilityOverridesTable)
+    .where(
+      and(
+        lt(availabilityOverridesTable.startTime, endDate),
+        gt(availabilityOverridesTable.endTime, startDate),
+      ),
+    );
+
+  const bookings = await db
+    .select({ start: bookingsTable.startTime, end: bookingsTable.endTime })
+    .from(bookingsTable)
+    .where(
+      and(
+        eq(bookingsTable.status, "upcoming"),
+        lt(bookingsTable.startTime, endDate),
+        gt(bookingsTable.endTime, startDate),
+      ),
+    );
+
+  return [...googleBusy, ...overrides, ...bookings];
 }
 
 export async function createCalendarEventWithMeet(
@@ -139,8 +200,12 @@ export function generateAvailableSlots(
   durationMinutes: number,
   weeklyHours: WeeklyHours = DEFAULT_WEEKLY_HOURS,
   slotIntervalMinutes = 30,
-): Array<{ startTime: Date; endTime: Date }> {
-  const slots: Array<{ startTime: Date; endTime: Date }> = [];
+): Array<{ startTime: Date; endTime: Date; available: boolean }> {
+  // Returns EVERY candidate slot within working hours, flagged available/busy,
+  // so the UI can grey out taken times rather than hiding them. Past slots are
+  // still excluded entirely.
+  const slots: Array<{ startTime: Date; endTime: Date; available: boolean }> = [];
+  const now = new Date();
   const current = new Date(startDate);
   current.setHours(0, 0, 0, 0);
 
@@ -161,12 +226,11 @@ export function generateAvailableSlots(
         const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60 * 1000);
         if (slotEnd > dayEnd) break;
 
-        const isBusy = busySlots.some(
-          (busy) => slotStart < busy.end && slotEnd > busy.start,
-        );
-
-        if (!isBusy && slotStart > new Date()) {
-          slots.push({ startTime: new Date(slotStart), endTime: new Date(slotEnd) });
+        if (slotStart > now) {
+          const isBusy = busySlots.some(
+            (busy) => slotStart < busy.end && slotEnd > busy.start,
+          );
+          slots.push({ startTime: new Date(slotStart), endTime: new Date(slotEnd), available: !isBusy });
         }
 
         slotStart = new Date(slotStart.getTime() + slotIntervalMinutes * 60 * 1000);

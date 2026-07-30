@@ -47,6 +47,25 @@ export interface LessonTypeUpdate {
 export interface TimeSlot {
   startTime: string;
   endTime: string;
+  /** False when this slot overlaps a busy block (Google Calendar, a teacher time-off block, or an existing booking); the UI greys it out. */
+  available: boolean;
+}
+
+export interface AvailabilityOverride {
+  id: number;
+  startTime: string;
+  endTime: string;
+}
+
+export type SetDayOverridesInputBlocksItem = {
+  startTime: string;
+  endTime: string;
+};
+
+export interface SetDayOverridesInput {
+  /** The date whose overrides are being replaced, as "YYYY-MM-DD". */
+  date: string;
+  blocks: SetDayOverridesInputBlocksItem[];
 }
 
 export type BookingStatus = typeof BookingStatus[keyof typeof BookingStatus];

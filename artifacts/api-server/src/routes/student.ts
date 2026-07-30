@@ -11,6 +11,7 @@ import {
   reviewsTable,
   messagesTable,
   siteSettingsTable,
+  availabilityOverridesTable,
 } from "@workspace/db";
 import {
   CreateBookingBody,
@@ -157,7 +158,19 @@ async function isTimeSlotTaken(
       )
     : busySlots;
 
-  return relevantBusy.some((busy) => start < busy.end && end > busy.start);
+  if (relevantBusy.some((busy) => start < busy.end && end > busy.start)) return true;
+
+  // In-app date-specific blocks (teacher time off) also make a slot unbookable.
+  const [override] = await db
+    .select({ id: availabilityOverridesTable.id })
+    .from(availabilityOverridesTable)
+    .where(
+      and(
+        lt(availabilityOverridesTable.startTime, end),
+        gt(availabilityOverridesTable.endTime, start),
+      ),
+    );
+  return !!override;
 }
 
 router.get("/student/me", requireAuth, async (req, res): Promise<void> => {

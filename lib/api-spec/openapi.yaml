@@ -983,6 +983,65 @@ paths:
               schema:
                 $ref: "#/components/schemas/SiteSettings"
 
+  /admin/availability-overrides:
+    get:
+      operationId: listAvailabilityOverrides
+      tags: [admin]
+      summary: List upcoming teacher time-off blocks
+      responses:
+        "200":
+          description: Upcoming availability overrides
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AvailabilityOverride"
+        "401":
+          description: Unauthorized
+
+  /admin/availability-overrides/day:
+    put:
+      operationId: setDayAvailabilityOverrides
+      tags: [admin]
+      summary: Replace all time-off blocks for a single date
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetDayOverridesInput"
+      responses:
+        "200":
+          description: The date's new set of overrides
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AvailabilityOverride"
+        "400":
+          description: Invalid input
+        "401":
+          description: Unauthorized
+
+  /admin/availability-overrides/{id}:
+    delete:
+      operationId: deleteAvailabilityOverride
+      tags: [admin]
+      summary: Delete a single time-off block
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Unauthorized
+
   /admin/calendar/status:
     get:
       operationId: getCalendarStatus
@@ -1106,9 +1165,53 @@ components:
         endTime:
           type: string
           format: date-time
+        available:
+          type: boolean
+          description: False when this slot overlaps a busy block (Google Calendar, a teacher time-off block, or an existing booking); the UI greys it out.
       required:
         - startTime
         - endTime
+        - available
+
+    AvailabilityOverride:
+      type: object
+      properties:
+        id:
+          type: number
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+      required:
+        - id
+        - startTime
+        - endTime
+
+    SetDayOverridesInput:
+      type: object
+      properties:
+        date:
+          type: string
+          description: The date whose overrides are being replaced, as "YYYY-MM-DD".
+        blocks:
+          type: array
+          items:
+            type: object
+            properties:
+              startTime:
+                type: string
+                format: date-time
+              endTime:
+                type: string
+                format: date-time
+            required:
+              - startTime
+              - endTime
+      required:
+        - date
+        - blocks
 
     Booking:
       type: object

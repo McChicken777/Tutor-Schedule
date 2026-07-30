@@ -8,7 +8,7 @@ import {
   siteSettingsTable,
 } from "@workspace/db";
 import {
-  getFreeBusySlots,
+  getBusyBlocks,
   generateAvailableSlots,
 } from "../lib/calendar";
 
@@ -64,7 +64,7 @@ router.get("/available-slots", async (req, res): Promise<void> => {
 
   const [settings] = await db.select().from(siteSettingsTable).limit(1);
 
-  const busySlots = await getFreeBusySlots(start, end);
+  const busySlots = await getBusyBlocks(start, end);
   const slots = generateAvailableSlots(
     busySlots,
     start,
@@ -74,7 +74,7 @@ router.get("/available-slots", async (req, res): Promise<void> => {
     30,
   );
 
-  res.json(slots.map((s) => ({ startTime: s.startTime, endTime: s.endTime })));
+  res.json(slots.map((s) => ({ startTime: s.startTime, endTime: s.endTime, available: s.available })));
 });
 
 router.get("/testimonials", async (_req, res): Promise<void> => {

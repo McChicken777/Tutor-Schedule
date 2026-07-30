@@ -43,7 +43,8 @@ export const GetAvailableSlotsQueryParams = zod.object({
 
 export const GetAvailableSlotsResponseItem = zod.object({
   "startTime": zod.coerce.date(),
-  "endTime": zod.coerce.date()
+  "endTime": zod.coerce.date(),
+  "available": zod.boolean().describe('False when this slot overlaps a busy block (Google Calendar, a teacher time-off block, or an existing booking); the UI greys it out.')
 })
 export const GetAvailableSlotsResponse = zod.array(GetAvailableSlotsResponseItem)
 
@@ -1160,6 +1161,46 @@ export const UpdateSiteSettingsResponse = zod.object({
 })
 })
 })
+
+
+/**
+ * @summary List upcoming teacher time-off blocks
+ */
+export const ListAvailabilityOverridesResponseItem = zod.object({
+  "id": zod.number(),
+  "startTime": zod.coerce.date(),
+  "endTime": zod.coerce.date()
+})
+export const ListAvailabilityOverridesResponse = zod.array(ListAvailabilityOverridesResponseItem)
+
+
+/**
+ * @summary Replace all time-off blocks for a single date
+ */
+export const SetDayAvailabilityOverridesBody = zod.object({
+  "date": zod.string().describe('The date whose overrides are being replaced, as \"YYYY-MM-DD\".'),
+  "blocks": zod.array(zod.object({
+  "startTime": zod.coerce.date(),
+  "endTime": zod.coerce.date()
+}))
+})
+
+export const SetDayAvailabilityOverridesResponseItem = zod.object({
+  "id": zod.number(),
+  "startTime": zod.coerce.date(),
+  "endTime": zod.coerce.date()
+})
+export const SetDayAvailabilityOverridesResponse = zod.array(SetDayAvailabilityOverridesResponseItem)
+
+
+/**
+ * @summary Delete a single time-off block
+ */
+export const DeleteAvailabilityOverrideParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteAvailabilityOverrideResponse = zod.void()
 
 
 /**

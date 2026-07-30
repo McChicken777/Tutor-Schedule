@@ -26,6 +26,7 @@ import AdminTestimonials from "@/pages/admin/Testimonials";
 import AdminFaqs from "@/pages/admin/Faqs";
 import AdminSettings from "@/pages/admin/Settings";
 import AdminMessages from "@/pages/admin/Messages";
+import AdminAvailability from "@/pages/admin/Availability";
 
 import NotFound from "@/pages/not-found";
 
@@ -198,6 +199,9 @@ function ClerkProviderWithRoutes() {
             </Route>
             <Route path="/admin/messages">
               <AdminLayout><AdminMessages /></AdminLayout>
+            </Route>
+            <Route path="/admin/availability">
+              <AdminLayout><AdminAvailability /></AdminLayout>
             </Route>
 
             {/* Student Portal */}

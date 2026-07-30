@@ -28,6 +28,7 @@ import type {
   AdminLoginInput,
   AdminStudent,
   AdminStudentDetail,
+  AvailabilityOverride,
   Booking,
   BookingDetail,
   BookingInput,
@@ -58,6 +59,7 @@ import type {
   RescheduleInput,
   Review,
   ReviewInput,
+  SetDayOverridesInput,
   SiteSettings,
   SiteSettingsUpdate,
   StudentDashboard,
@@ -3684,6 +3686,225 @@ export const useUpdateSiteSettings = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateSiteSettingsMutationOptions(options));
+    }
+
+export const getListAvailabilityOverridesUrl = () => {
+
+
+
+
+  return `/api/admin/availability-overrides`
+}
+
+/**
+ * @summary List upcoming teacher time-off blocks
+ */
+export const listAvailabilityOverrides = async ( options?: Parameters<typeof customFetch>[1]): Promise<AvailabilityOverride[]> => {
+
+  return customFetch<AvailabilityOverride[]>(getListAvailabilityOverridesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAvailabilityOverridesQueryKey = () => {
+    return [
+    `/api/admin/availability-overrides`
+    ] as const;
+    }
+
+
+export const getListAvailabilityOverridesQueryOptions = <TData = Awaited<ReturnType<typeof listAvailabilityOverrides>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAvailabilityOverrides>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAvailabilityOverridesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAvailabilityOverrides>>> = ({ signal }) => listAvailabilityOverrides({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAvailabilityOverrides>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAvailabilityOverridesQueryResult = NonNullable<Awaited<ReturnType<typeof listAvailabilityOverrides>>>
+export type ListAvailabilityOverridesQueryError = ErrorType<void>
+
+
+/**
+ * @summary List upcoming teacher time-off blocks
+ */
+
+export function useListAvailabilityOverrides<TData = Awaited<ReturnType<typeof listAvailabilityOverrides>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAvailabilityOverrides>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAvailabilityOverridesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSetDayAvailabilityOverridesUrl = () => {
+
+
+
+
+  return `/api/admin/availability-overrides/day`
+}
+
+/**
+ * @summary Replace all time-off blocks for a single date
+ */
+export const setDayAvailabilityOverrides = async (setDayOverridesInput: SetDayOverridesInput, options?: Parameters<typeof customFetch>[1]): Promise<AvailabilityOverride[]> => {
+
+  return customFetch<AvailabilityOverride[]>(getSetDayAvailabilityOverridesUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(setDayOverridesInput)
+  }
+);}
+
+
+
+
+
+export const getSetDayAvailabilityOverridesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setDayAvailabilityOverrides>>, TError,{data: BodyType<SetDayOverridesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setDayAvailabilityOverrides>>, TError,{data: BodyType<SetDayOverridesInput>}, TContext> => {
+
+const mutationKey = ['setDayAvailabilityOverrides'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setDayAvailabilityOverrides>>, {data: BodyType<SetDayOverridesInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  setDayAvailabilityOverrides(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetDayAvailabilityOverridesMutationResult = NonNullable<Awaited<ReturnType<typeof setDayAvailabilityOverrides>>>
+    export type SetDayAvailabilityOverridesMutationBody = BodyType<SetDayOverridesInput>
+    export type SetDayAvailabilityOverridesMutationError = ErrorType<void>
+
+    /**
+ * @summary Replace all time-off blocks for a single date
+ */
+export const useSetDayAvailabilityOverrides = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setDayAvailabilityOverrides>>, TError,{data: BodyType<SetDayOverridesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setDayAvailabilityOverrides>>,
+        TError,
+        {data: BodyType<SetDayOverridesInput>},
+        TContext
+      > => {
+      return useMutation(getSetDayAvailabilityOverridesMutationOptions(options));
+    }
+
+export const getDeleteAvailabilityOverrideUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/availability-overrides/${id}`
+}
+
+/**
+ * @summary Delete a single time-off block
+ */
+export const deleteAvailabilityOverride = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteAvailabilityOverrideUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteAvailabilityOverrideMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAvailabilityOverride>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAvailabilityOverride>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteAvailabilityOverride'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAvailabilityOverride>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteAvailabilityOverride(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAvailabilityOverrideMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAvailabilityOverride>>>
+
+    export type DeleteAvailabilityOverrideMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a single time-off block
+ */
+export const useDeleteAvailabilityOverride = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAvailabilityOverride>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAvailabilityOverride>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteAvailabilityOverrideMutationOptions(options));
     }
 
 export const getGetCalendarStatusUrl = () => {
