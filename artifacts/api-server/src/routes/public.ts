@@ -72,6 +72,7 @@ router.get("/available-slots", async (req, res): Promise<void> => {
     lessonType.durationMinutes,
     settings?.weeklyHours,
     30,
+    settings?.timezone ?? "UTC",
   );
 
   res.json(slots.map((s) => ({ startTime: s.startTime, endTime: s.endTime, available: s.available })));

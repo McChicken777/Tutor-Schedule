@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useGetAdminSiteSettings, useUpdateSiteSettings, useGetCalendarStatus, useDisconnectCalendar } from "@workspace/api-client-react";
 import type { WeeklyHours, DayHours } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,29 @@ export default function AdminSettings() {
   });
   const [weeklyHours, setWeeklyHours] = useState<WeeklyHours>(DEFAULT_WEEKLY_HOURS);
 
+  // Timezone the working hours are expressed in. Defaults to whatever the
+  // teacher's device reports; can be overridden here.
+  const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const [timezone, setTimezone] = useState<string>(detectedTz);
+  const tzOptions = useMemo(() => {
+    let zones: string[] = [];
+    try {
+      const sv = (Intl as unknown as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf;
+      if (sv) zones = sv("timeZone");
+    } catch {
+      zones = [];
+    }
+    if (zones.length === 0) {
+      zones = [
+        "UTC", "Europe/Madrid", "Europe/London", "Europe/Paris", "Europe/Berlin",
+        "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+        "America/Mexico_City", "America/Bogota", "America/Argentina/Buenos_Aires",
+      ];
+    }
+    if (!zones.includes(detectedTz)) zones = [detectedTz, ...zones];
+    return zones;
+  }, [detectedTz]);
+
   const updateDayHours = (day: keyof WeeklyHours, patch: Partial<DayHours>) => {
     setWeeklyHours((prev) => ({ ...prev, [day]: { ...prev[day], ...patch } }));
   };
@@ -84,6 +107,8 @@ export default function AdminSettings() {
       if (settings.weeklyHours) {
         setWeeklyHours(settings.weeklyHours);
       }
+      // Prefill with the saved zone, or the device's zone if it was never set.
+      setTimezone(settings.timezone && settings.timezone !== "UTC" ? settings.timezone : detectedTz);
     }
   }, [settings]);
 
@@ -100,7 +125,7 @@ export default function AdminSettings() {
   };
 
   const handleSave = () => {
-    updateMutation.mutate({ data: { ...formData, weeklyHours } }, {
+    updateMutation.mutate({ data: { ...formData, weeklyHours, timezone } }, {
       onSuccess: () => {
         toast({ title: "Settings saved" });
         qc.invalidateQueries({ queryKey: getGetAdminSiteSettingsQueryKey() });
@@ -164,6 +189,26 @@ export default function AdminSettings() {
             Students can only book within these hours. For a one-off day off or vacation, just add an event
             to your Google Calendar for that time — it's automatically blocked too.
           </p>
+
+          <div className="mb-6 pb-6 border-b border-border">
+            <label className="text-sm font-medium mb-2 block">Your timezone</label>
+            <select
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              className="w-full max-w-sm h-10 rounded-md border border-border bg-background px-3 text-sm"
+            >
+              {tzOptions.map((z) => (
+                <option key={z} value={z}>
+                  {z.replace(/_/g, " ")}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground mt-1.5">
+              The working hours below are in this timezone. Each student sees times converted to their own.
+              Detected from your device: {detectedTz.replace(/_/g, " ")}.
+            </p>
+          </div>
+
           <div className="space-y-2">
             {DAY_LABELS.map(({ key, label }) => {
               const day = weeklyHours[key];

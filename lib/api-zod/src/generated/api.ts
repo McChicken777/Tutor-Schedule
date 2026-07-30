@@ -126,7 +126,8 @@ export const GetSiteSettingsResponse = zod.object({
   "start": zod.string().describe('24h \"HH:mm\"'),
   "end": zod.string().describe('24h \"HH:mm\"')
 })
-})
+}),
+  "timezone": zod.string().describe('IANA timezone the tutor\'s weekly hours are expressed in (e.g. \"Europe\/Madrid\").')
 })
 
 
@@ -1064,7 +1065,8 @@ export const GetAdminSiteSettingsResponse = zod.object({
   "start": zod.string().describe('24h \"HH:mm\"'),
   "end": zod.string().describe('24h \"HH:mm\"')
 })
-})
+}),
+  "timezone": zod.string().describe('IANA timezone the tutor\'s weekly hours are expressed in (e.g. \"Europe\/Madrid\").')
 })
 
 
@@ -1113,7 +1115,8 @@ export const UpdateSiteSettingsBody = zod.object({
   "start": zod.string().describe('24h \"HH:mm\"'),
   "end": zod.string().describe('24h \"HH:mm\"')
 })
-}).optional()
+}).optional(),
+  "timezone": zod.string().optional()
 })
 
 export const UpdateSiteSettingsResponse = zod.object({
@@ -1159,7 +1162,8 @@ export const UpdateSiteSettingsResponse = zod.object({
   "start": zod.string().describe('24h \"HH:mm\"'),
   "end": zod.string().describe('24h \"HH:mm\"')
 })
-})
+}),
+  "timezone": zod.string().describe('IANA timezone the tutor\'s weekly hours are expressed in (e.g. \"Europe\/Madrid\").')
 })
 
 

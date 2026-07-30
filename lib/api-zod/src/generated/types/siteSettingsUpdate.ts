@@ -14,4 +14,5 @@ export interface SiteSettingsUpdate {
   freeTrialEnabled?: boolean;
   tutorPhotoUrl?: string;
   weeklyHours?: WeeklyHours;
+  timezone?: string;
 }

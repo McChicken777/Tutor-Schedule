@@ -16,4 +16,6 @@ export interface SiteSettings {
   /** @nullable */
   tutorPhotoUrl: string | null;
   weeklyHours: WeeklyHours;
+  /** IANA timezone the tutor's weekly hours are expressed in (e.g. "Europe/Madrid"). */
+  timezone: string;
 }

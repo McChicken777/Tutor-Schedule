@@ -37,18 +37,55 @@ function parseHhMm(v: string) {
   return { hour: parts[0] || 0, minute: parts[1] || 0 };
 }
 
-function generateChips(dateStr: string, start: string, end: string) {
+// How far ahead of UTC `timeZone` is (ms) at the given instant — DST aware.
+function tzOffsetMs(instant: Date, timeZone: string): number {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const m: Record<string, string> = {};
+  for (const p of dtf.formatToParts(instant)) if (p.type !== "literal") m[p.type] = p.value;
+  const asUTC = Date.UTC(+m.year, +m.month - 1, +m.day, +m.hour, +m.minute, +m.second);
+  return asUTC - instant.getTime();
+}
+
+// Wall-clock time in `timeZone` → absolute UTC instant. Mirrors the server so
+// chips map to exactly the same instants the booking engine generates.
+function zonedWallTimeToUtc(y: number, mo: number, d: number, h: number, mi: number, timeZone: string): Date {
+  const guess = Date.UTC(y, mo - 1, d, h, mi, 0);
+  const off = tzOffsetMs(new Date(guess), timeZone);
+  let result = guess - off;
+  const off2 = tzOffsetMs(new Date(result), timeZone);
+  if (off2 !== off) result = guess - off2;
+  return new Date(result);
+}
+
+// "h:mm a" label for an instant, rendered in the tutor's configured timezone.
+function formatInTz(instant: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(instant);
+}
+
+function generateChips(dateStr: string, start: string, end: string, timeZone: string) {
   const { hour: sh, minute: sm } = parseHhMm(start);
   const { hour: eh, minute: em } = parseHhMm(end);
   const [y, mo, d] = dateStr.split("-").map(Number);
-  // Build chip instants in the browser's LOCAL timezone (not UTC) so they line
-  // up with how the teacher reads their own working hours AND with the absolute
-  // instants Google Calendar events sit at. Using UTC midnight here shifted the
-  // whole grid by the teacher's UTC offset, so real morning events fell outside
-  // the chip range and nothing ever greyed out.
+  // Build chip instants at the tutor's configured wall-clock timezone so they
+  // line up with the server's slot engine AND with the absolute instants Google
+  // Calendar events sit at.
   const chips: { startTime: Date; endTime: Date }[] = [];
-  let cur = new Date(y, mo - 1, d, sh, sm, 0, 0).getTime();
-  const endMs = new Date(y, mo - 1, d, eh, em, 0, 0).getTime();
+  let cur = zonedWallTimeToUtc(y, mo, d, sh, sm, timeZone).getTime();
+  const endMs = zonedWallTimeToUtc(y, mo, d, eh, em, timeZone).getTime();
   while (cur + 30 * 60000 <= endMs) {
     chips.push({ startTime: new Date(cur), endTime: new Date(cur + 30 * 60000) });
     cur += 30 * 60000;
@@ -88,6 +125,7 @@ export default function AdminAvailability() {
   const deleteMutation = useDeleteAvailabilityOverride();
 
   const weeklyHours: WeeklyHours = settings?.weeklyHours ?? DEFAULT_WEEKLY_HOURS;
+  const tz = settings?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
   const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : null;
 
@@ -104,8 +142,8 @@ export default function AdminAvailability() {
 
   const chips = useMemo(() => {
     if (!dateStr || !dayHours?.enabled) return [];
-    return generateChips(dateStr, dayHours.start, dayHours.end);
-  }, [dateStr, dayHours]);
+    return generateChips(dateStr, dayHours.start, dayHours.end, tz);
+  }, [dateStr, dayHours, tz]);
 
   // Chip indices that are already occupied by a Google Calendar event — grey + non-interactive
   const gcalBusySet = useMemo(() => {
@@ -204,7 +242,8 @@ export default function AdminAvailability() {
     <div className="p-6 md:p-10 bg-background min-h-full max-w-5xl mx-auto w-full">
       <h1 className="text-3xl font-serif font-bold text-foreground mb-2">Availability</h1>
       <p className="text-muted-foreground mb-8">
-        Block specific times or full days on top of your weekly schedule.
+        Block specific times or full days on top of your weekly schedule. Times shown in your
+        timezone ({tz.replace(/_/g, " ")}) — change it in Settings.
       </p>
 
       <div className="grid md:grid-cols-2 gap-8">
@@ -265,7 +304,7 @@ export default function AdminAvailability() {
                     : (gcalBusy?.length ?? 0) === 0
                       ? "Google Calendar: no events on this day."
                       : `Google Calendar: ${gcalBusy!.length} event${gcalBusy!.length === 1 ? "" : "s"} on this day — ${gcalBusy!
-                          .map((b) => `${format(new Date(b.start), "h:mm a")}–${format(new Date(b.end), "h:mm a")}`)
+                          .map((b) => `${formatInTz(new Date(b.start), tz)}–${formatInTz(new Date(b.end), tz)}`)
                           .join(", ")}`}
               </div>
 
@@ -287,7 +326,7 @@ export default function AdminAvailability() {
                             : "bg-accent text-foreground border-transparent hover:border-primary/30 hover:bg-primary/5"
                       }`}
                     >
-                      {format(chip.startTime, "h:mm a")}
+                      {formatInTz(chip.startTime, tz)}
                     </button>
                   );
                 })}
@@ -337,8 +376,8 @@ export default function AdminAvailability() {
                   {rows.map((row) => (
                     <div key={row.id} className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">
-                        {format(new Date(row.startTime), "h:mm a")} –{" "}
-                        {format(new Date(row.endTime), "h:mm a")}
+                        {formatInTz(new Date(row.startTime), tz)} –{" "}
+                        {formatInTz(new Date(row.endTime), tz)}
                       </span>
                       <button
                         onClick={() => handleDelete(row.id)}

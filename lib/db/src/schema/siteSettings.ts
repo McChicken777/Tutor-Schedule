@@ -32,6 +32,10 @@ export const siteSettingsTable = pgTable("site_settings", {
   freeTrialEnabled: boolean("free_trial_enabled").notNull().default(false),
   tutorPhotoUrl: text("tutor_photo_url"),
   weeklyHours: jsonb("weekly_hours").$type<WeeklyHours>().notNull().default(DEFAULT_WEEKLY_HOURS),
+  // IANA timezone the tutor's weekly hours are expressed in (e.g. "Europe/Madrid").
+  // All availability is generated in this zone, then stored/served as absolute
+  // UTC instants so each student sees times in their own browser timezone.
+  timezone: text("timezone").notNull().default("UTC"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 

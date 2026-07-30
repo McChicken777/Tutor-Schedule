@@ -871,6 +871,7 @@ router.patch("/admin/site-settings", requireAdmin, async (req, res): Promise<voi
   if (parsed.data.freeTrialEnabled != null) updateData.freeTrialEnabled = parsed.data.freeTrialEnabled;
   if (parsed.data.tutorPhotoUrl != null) updateData.tutorPhotoUrl = parsed.data.tutorPhotoUrl;
   if (parsed.data.weeklyHours != null) updateData.weeklyHours = parsed.data.weeklyHours;
+  if (parsed.data.timezone != null) updateData.timezone = parsed.data.timezone;
 
   const [updated] = await db
     .update(siteSettingsTable)
@@ -1037,6 +1038,23 @@ router.get("/admin/calendar/callback", async (req, res): Promise<void> => {
         tokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
         calendarEmail,
       });
+    }
+
+    // Seed the tutor's timezone from Google (authoritative source) if she hasn't
+    // set one yet, so her working hours are interpreted in the right zone.
+    try {
+      const cal = google.calendar({ version: "v3", auth });
+      const tz = (await cal.settings.get({ setting: "timezone" })).data.value;
+      if (tz) {
+        const [s] = await db.select().from(siteSettingsTable).limit(1);
+        if (!s) {
+          await db.insert(siteSettingsTable).values({ timezone: tz });
+        } else if (!s.timezone || s.timezone === "UTC") {
+          await db.update(siteSettingsTable).set({ timezone: tz }).where(eq(siteSettingsTable.id, s.id));
+        }
+      }
+    } catch {
+      // Non-fatal: tutor can still set her timezone manually in Settings.
     }
 
     res.redirect("/?admin=1#/settings?calendarConnected=1");

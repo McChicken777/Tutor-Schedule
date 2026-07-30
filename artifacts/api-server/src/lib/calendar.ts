@@ -18,6 +18,73 @@ function parseHhMm(value: string): { hour: number; minute: number } {
   return { hour: hour || 0, minute: minute || 0 };
 }
 
+// ─── Timezone helpers ───────────────────────────────────────────────────────
+// The server may run in any timezone (Replit is UTC), but the tutor's weekly
+// hours are wall-clock times in HER timezone. These helpers convert between a
+// wall-clock time in a given IANA zone and an absolute UTC instant, without any
+// external dependency (Node ships full ICU on v18+).
+
+// How far ahead of UTC the given zone is, in ms, at the given instant (DST-aware).
+function tzOffsetMs(instant: Date, timeZone: string): number {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const m: Record<string, string> = {};
+  for (const p of dtf.formatToParts(instant)) {
+    if (p.type !== "literal") m[p.type] = p.value;
+  }
+  const asUTC = Date.UTC(+m.year, +m.month - 1, +m.day, +m.hour, +m.minute, +m.second);
+  return asUTC - instant.getTime();
+}
+
+// Wall-clock time in `timeZone` → absolute UTC instant.
+function zonedWallTimeToUtc(
+  y: number,
+  mo: number,
+  d: number,
+  h: number,
+  mi: number,
+  timeZone: string,
+): Date {
+  const guessUtc = Date.UTC(y, mo - 1, d, h, mi, 0);
+  const off = tzOffsetMs(new Date(guessUtc), timeZone);
+  let result = guessUtc - off;
+  // Re-check once in case the guess landed on the other side of a DST change.
+  const off2 = tzOffsetMs(new Date(result), timeZone);
+  if (off2 !== off) result = guessUtc - off2;
+  return new Date(result);
+}
+
+// "YYYY-MM-DD" calendar date of `instant` as seen in `timeZone`.
+function tzDateString(instant: Date, timeZone: string): string {
+  const dtf = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return dtf.format(instant);
+}
+
+function addOneDay(dateStr: string): string {
+  const [y, mo, d] = dateStr.split("-").map(Number);
+  const next = new Date(Date.UTC(y, mo - 1, d + 1));
+  return next.toISOString().slice(0, 10);
+}
+
+// Day-of-week (0=Sun..6=Sat) for a calendar date. Timezone-independent.
+function dowForDate(dateStr: string): number {
+  const [y, mo, d] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(y, mo - 1, d)).getUTCDay();
+}
+
 export function createOAuth2Client() {
   return new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
@@ -61,6 +128,20 @@ export async function isCalendarConnected(): Promise<boolean> {
 export async function getCalendarEmail(): Promise<string | null> {
   const [token] = await db.select().from(calendarTokensTable).limit(1);
   return token?.calendarEmail ?? null;
+}
+
+// The IANA timezone Google has configured for the tutor's account. Used as the
+// authoritative default for her working hours when the calendar is connected.
+export async function getCalendarTimezone(): Promise<string | null> {
+  const calendar = await getAuthenticatedCalendar();
+  if (!calendar) return null;
+  try {
+    const res = await calendar.settings.get({ setting: "timezone" });
+    return res.data.value ?? null;
+  } catch (err) {
+    logger.warn({ err }, "getCalendarTimezone failed");
+    return null;
+  }
 }
 
 export async function getFreeBusySlots(
@@ -220,33 +301,39 @@ export function generateAvailableSlots(
   durationMinutes: number,
   weeklyHours: WeeklyHours = DEFAULT_WEEKLY_HOURS,
   slotIntervalMinutes = 30,
+  timeZone = "UTC",
 ): Array<{ startTime: Date; endTime: Date; available: boolean }> {
   // Returns EVERY candidate slot within working hours, flagged available/busy,
   // so the UI can grey out taken times rather than hiding them. Past slots are
   // still excluded entirely.
+  //
+  // Working hours are wall-clock times in the tutor's `timeZone`, converted to
+  // absolute UTC instants here. This makes slot times correct regardless of the
+  // server's own timezone (Replit runs in UTC).
   const slots: Array<{ startTime: Date; endTime: Date; available: boolean }> = [];
   const now = new Date();
-  const current = new Date(startDate);
-  current.setHours(0, 0, 0, 0);
 
-  while (current < endDate) {
-    const dayHours: DayHours = weeklyHours[DAY_KEYS[current.getDay()]];
+  // Walk calendar days in the tutor's timezone from the start to the end date.
+  let dateStr = tzDateString(startDate, timeZone);
+  const lastDateStr = tzDateString(endDate, timeZone);
+
+  while (dateStr <= lastDateStr) {
+    const [y, mo, d] = dateStr.split("-").map(Number);
+    const dayHours: DayHours = weeklyHours[DAY_KEYS[dowForDate(dateStr)]];
 
     if (dayHours.enabled) {
       const { hour: startHour, minute: startMinute } = parseHhMm(dayHours.start);
       const { hour: endHour, minute: endMinute } = parseHhMm(dayHours.end);
 
-      const dayEnd = new Date(current);
-      dayEnd.setHours(endHour, endMinute, 0, 0);
-
-      let slotStart = new Date(current);
-      slotStart.setHours(startHour, startMinute, 0, 0);
+      const dayEnd = zonedWallTimeToUtc(y, mo, d, endHour, endMinute, timeZone);
+      let slotStart = zonedWallTimeToUtc(y, mo, d, startHour, startMinute, timeZone);
 
       while (slotStart < dayEnd) {
         const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60 * 1000);
         if (slotEnd > dayEnd) break;
 
-        if (slotStart > now) {
+        // Keep only slots inside the requested window and in the future.
+        if (slotStart > now && slotStart >= startDate && slotStart <= endDate) {
           const isBusy = busySlots.some(
             (busy) => slotStart < busy.end && slotEnd > busy.start,
           );
@@ -257,8 +344,7 @@ export function generateAvailableSlots(
       }
     }
 
-    current.setDate(current.getDate() + 1);
-    current.setHours(0, 0, 0, 0);
+    dateStr = addOneDay(dateStr);
   }
 
   return slots;

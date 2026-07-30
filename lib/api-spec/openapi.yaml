@@ -1699,6 +1699,9 @@ components:
           type: ["string", "null"]
         weeklyHours:
           $ref: "#/components/schemas/WeeklyHours"
+        timezone:
+          type: string
+          description: IANA timezone the tutor's weekly hours are expressed in (e.g. "Europe/Madrid").
       required:
         - id
         - tutorName
@@ -1707,6 +1710,7 @@ components:
         - freeTrialEnabled
         - tutorPhotoUrl
         - weeklyHours
+        - timezone
 
     SiteSettingsUpdate:
       type: object
@@ -1723,6 +1727,8 @@ components:
           type: string
         weeklyHours:
           $ref: "#/components/schemas/WeeklyHours"
+        timezone:
+          type: string
 
     AdminLoginInput:
       type: object

@@ -168,9 +168,13 @@ export default function BookLesson() {
             </div>
             
             <div>
-              <h3 className="font-bold mb-4">
+              <h3 className="font-bold mb-1">
                 Available times for {selectedDate ? format(selectedDate, "MMM d, yyyy") : "selected date"}
               </h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                Shown in your timezone (
+                {(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC").replace(/_/g, " ")})
+              </p>
               {loadingSlots ? (
                 <div className="space-y-2">
                   {[...Array(6)].map((_, i) => (
