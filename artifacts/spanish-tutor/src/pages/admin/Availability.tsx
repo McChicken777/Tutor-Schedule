@@ -5,17 +5,32 @@ import {
   useSetDayAvailabilityOverrides,
   useDeleteAvailabilityOverride,
   useGetAdminSiteSettings,
+  useUpdateSiteSettings,
   useGetCalendarBusy,
   getListAvailabilityOverridesQueryKey,
   getGetCalendarBusyQueryKey,
+  getGetAdminSiteSettingsQueryKey,
+  getGetSiteSettingsQueryKey,
 } from "@workspace/api-client-react";
-import type { WeeklyHours } from "@workspace/api-client-react";
+import type { WeeklyHours, DayHours } from "@workspace/api-client-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2, CalendarOff } from "lucide-react";
+import { Trash2, CalendarOff, Clock } from "lucide-react";
+
+const DAY_LABELS: Array<{ key: keyof WeeklyHours; label: string }> = [
+  { key: "mon", label: "Monday" },
+  { key: "tue", label: "Tuesday" },
+  { key: "wed", label: "Wednesday" },
+  { key: "thu", label: "Thursday" },
+  { key: "fri", label: "Friday" },
+  { key: "sat", label: "Saturday" },
+  { key: "sun", label: "Sunday" },
+];
 
 const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 
@@ -123,9 +138,64 @@ export default function AdminAvailability() {
   const { data: settings, isLoading: settingsLoading } = useGetAdminSiteSettings();
   const setDayMutation = useSetDayAvailabilityOverrides();
   const deleteMutation = useDeleteAvailabilityOverride();
+  const updateSettings = useUpdateSiteSettings();
 
   const weeklyHours: WeeklyHours = settings?.weeklyHours ?? DEFAULT_WEEKLY_HOURS;
-  const tz = settings?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+
+  // ─── Working-hours + timezone editor (draft state) ─────────────────────────
+  const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const [whDraft, setWhDraft] = useState<WeeklyHours>(DEFAULT_WEEKLY_HOURS);
+  const [tzDraft, setTzDraft] = useState<string>(detectedTz);
+
+  useEffect(() => {
+    if (settings?.weeklyHours) setWhDraft(settings.weeklyHours);
+    setTzDraft(
+      settings?.timezone && settings.timezone !== "UTC" ? settings.timezone : detectedTz,
+    );
+  }, [settings]);
+
+  const tzOptions = useMemo(() => {
+    let zones: string[] = [];
+    try {
+      const sv = (Intl as unknown as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf;
+      if (sv) zones = sv("timeZone");
+    } catch {
+      zones = [];
+    }
+    if (zones.length === 0) {
+      zones = [
+        "UTC", "Europe/Madrid", "Europe/London", "Europe/Paris", "Europe/Berlin",
+        "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+        "America/Mexico_City", "America/Bogota", "America/Argentina/Buenos_Aires",
+      ];
+    }
+    if (!zones.includes(detectedTz)) zones = [detectedTz, ...zones];
+    return zones;
+  }, [detectedTz]);
+
+  const updateDayHours = (day: keyof WeeklyHours, patch: Partial<DayHours>) => {
+    setWhDraft((prev) => ({ ...prev, [day]: { ...prev[day], ...patch } }));
+  };
+
+  const handleSaveHours = () => {
+    updateSettings.mutate(
+      { data: { weeklyHours: whDraft, timezone: tzDraft } },
+      {
+        onSuccess: () => {
+          toast({ title: "Working hours saved" });
+          qc.invalidateQueries({ queryKey: getGetAdminSiteSettingsQueryKey() });
+          qc.invalidateQueries({ queryKey: getGetSiteSettingsQueryKey() });
+        },
+        onError: () => toast({ title: "Failed to save", variant: "destructive" }),
+      },
+    );
+  };
+  // Treat the default "UTC" as "not configured yet" and fall back to the
+  // teacher's actual device timezone, so times aren't silently shifted.
+  const tz =
+    settings?.timezone && settings.timezone !== "UTC"
+      ? settings.timezone
+      : Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
   const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : null;
 
@@ -242,9 +312,83 @@ export default function AdminAvailability() {
     <div className="p-6 md:p-10 bg-background min-h-full max-w-5xl mx-auto w-full">
       <h1 className="text-3xl font-serif font-bold text-foreground mb-2">Availability</h1>
       <p className="text-muted-foreground mb-8">
-        Block specific times or full days on top of your weekly schedule. Times shown in your
-        timezone ({tz.replace(/_/g, " ")}) — change it in Settings.
+        Set your weekly working hours, then block specific times or full days on top of them.
+        Times are shown in your timezone ({tz.replace(/_/g, " ")}).
       </p>
+
+      {/* Working hours + timezone editor */}
+      <div className="bg-card border border-border rounded-3xl p-6 md:p-8 mb-8">
+        <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
+          <Clock className="w-5 h-5 text-primary" /> Weekly working hours
+        </h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          Students can only book within these hours. For a one-off day off, block the day below or
+          add an event to your Google Calendar — both are respected automatically.
+        </p>
+
+        <div className="mb-6 pb-6 border-b border-border">
+          <label className="text-sm font-medium mb-2 block">Your timezone</label>
+          <select
+            value={tzDraft}
+            onChange={(e) => setTzDraft(e.target.value)}
+            className="w-full max-w-sm h-10 rounded-md border border-border bg-background px-3 text-sm"
+          >
+            {tzOptions.map((z) => (
+              <option key={z} value={z}>
+                {z.replace(/_/g, " ")}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground mt-1.5">
+            Working hours below are in this timezone; each student sees times in their own.
+            Detected from your device: {detectedTz.replace(/_/g, " ")}.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          {DAY_LABELS.map(({ key, label }) => {
+            const day = whDraft[key];
+            return (
+              <div
+                key={key}
+                className="flex items-center gap-4 py-2.5 border-b border-border last:border-b-0"
+              >
+                <Switch
+                  checked={day.enabled}
+                  onCheckedChange={(v) => updateDayHours(key, { enabled: v })}
+                />
+                <span className={`w-28 text-sm font-medium ${day.enabled ? "text-foreground" : "text-muted-foreground"}`}>
+                  {label}
+                </span>
+                {day.enabled ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="time"
+                      value={day.start}
+                      onChange={(e) => updateDayHours(key, { start: e.target.value })}
+                      className="w-32"
+                    />
+                    <span className="text-muted-foreground text-sm">to</span>
+                    <Input
+                      type="time"
+                      value={day.end}
+                      onChange={(e) => updateDayHours(key, { end: e.target.value })}
+                      className="w-32"
+                    />
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Closed</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="pt-6 flex justify-end">
+          <Button onClick={handleSaveHours} disabled={updateSettings.isPending}>
+            {updateSettings.isPending ? "Saving…" : "Save working hours"}
+          </Button>
+        </div>
+      </div>
 
       <div className="grid md:grid-cols-2 gap-8">
         {/* Calendar picker */}

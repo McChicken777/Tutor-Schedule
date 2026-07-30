@@ -42,7 +42,7 @@ import {
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
 import { requireAdmin } from "../middlewares/requireAdmin";
-import { isCalendarConnected, getCalendarEmail, deleteCalendarEvent, createOAuth2Client, getFreeBusySlots } from "../lib/calendar";
+import { isCalendarConnected, getCalendarEmail, deleteCalendarEvent, createOAuth2Client, getFreeBusySlots, zonedDayRange } from "../lib/calendar";
 import { google } from "googleapis";
 import { calendarTokensTable } from "@workspace/db";
 
@@ -945,11 +945,12 @@ router.get("/admin/calendar/busy", requireAdmin, async (req, res): Promise<void>
     res.status(400).json({ error: "date query param required (YYYY-MM-DD)" });
     return;
   }
-  // Query a generous ±24h window around the UTC day so events near the day's
-  // edges aren't missed for teachers in non-UTC timezones. The client does its
-  // own precise per-slot overlap check, so over-fetching here is harmless.
-  const dayStart = new Date(new Date(date + "T00:00:00Z").getTime() - 24 * 60 * 60 * 1000);
-  const dayEnd = new Date(new Date(date + "T00:00:00Z").getTime() + 48 * 60 * 60 * 1000);
+  // Query exactly the selected day as it is lived in the tutor's timezone, so
+  // the returned events are only that day's (no neighbouring-day noise) and the
+  // day boundaries line up with how she reads her calendar.
+  const [settings] = await db.select().from(siteSettingsTable).limit(1);
+  const tz = settings?.timezone || "UTC";
+  const { start: dayStart, end: dayEnd } = zonedDayRange(date, tz);
   const busy = await getFreeBusySlots(dayStart, dayEnd);
   res.json(busy.map((b) => ({ start: b.start.toISOString(), end: b.end.toISOString() })));
 });

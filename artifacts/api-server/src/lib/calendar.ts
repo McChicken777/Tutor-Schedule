@@ -85,6 +85,15 @@ function dowForDate(dateStr: string): number {
   return new Date(Date.UTC(y, mo - 1, d)).getUTCDay();
 }
 
+// The absolute UTC start/end instants of a calendar date ("YYYY-MM-DD") as it is
+// lived in `timeZone`. e.g. 2026-07-30 in Europe/Madrid → [22:00Z prev day, 22:00Z].
+export function zonedDayRange(dateStr: string, timeZone: string): { start: Date; end: Date } {
+  const [y, mo, d] = dateStr.split("-").map(Number);
+  const start = zonedWallTimeToUtc(y, mo, d, 0, 0, timeZone);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  return { start, end };
+}
+
 export function createOAuth2Client() {
   return new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
@@ -154,12 +163,11 @@ export async function getFreeBusySlots(
     return [];
   }
 
-  // Which calendars to check. Default to "primary"; try to expand to the
-  // teacher's own calendars (owner/writer) where they'd add appointments.
-  // We deliberately SKIP read-only subscribed calendars (holidays, birthdays,
-  // week-numbers, shared-with-reader) — those would wrongly mark whole days
-  // busy and also eat into the freebusy 50-calendar limit.
-  let items: Array<{ id: string }> = [{ id: "primary" }];
+  // Which calendars to scan. Default to "primary"; expand to the teacher's own
+  // calendars (owner/writer) where she'd add appointments. We deliberately SKIP
+  // read-only subscribed calendars (holidays, birthdays, week-numbers,
+  // shared-with-reader) — those would wrongly block whole days.
+  let calendarIds: string[] = ["primary"];
   try {
     const calendarList = await calendar.calendarList.list({ maxResults: 250 });
     const owned = (calendarList.data.items ?? [])
@@ -168,44 +176,62 @@ export async function getFreeBusySlots(
           !!c.id &&
           (c.primary === true || c.accessRole === "owner" || c.accessRole === "writer"),
       )
-      .map((c) => ({ id: c.id as string }));
-    // freebusy.query rejects >50 items with a 400, so cap it.
-    if (owned.length > 0) items = owned.slice(0, 50);
+      .map((c) => c.id as string);
+    if (owned.length > 0) calendarIds = Array.from(new Set(owned));
   } catch (listErr) {
-    // Non-fatal: fall back to querying just "primary" rather than giving up.
     logger.warn({ err: listErr }, "calendarList.list failed — falling back to primary calendar only");
   }
 
-  try {
-    const res = await calendar.freebusy.query({
-      requestBody: {
+  // We use events.list rather than freebusy.query on purpose: freebusy only
+  // reports events whose visibility is "Busy" and silently omits any event the
+  // tutor marked as "Free" — which would let students book over real events.
+  // events.list returns every event, so nothing is missed.
+  const busy: Array<{ start: Date; end: Date }> = [];
+  const seen = new Set<string>(); // dedupe the same event shared across calendars
+  let scanned = 0;
+
+  for (const calId of calendarIds) {
+    try {
+      const evRes = await calendar.events.list({
+        calendarId: calId,
         timeMin: startDate.toISOString(),
         timeMax: endDate.toISOString(),
-        items,
-      },
-    });
-
-    const calendars = res.data.calendars ?? {};
-    const busy: Array<{ start: Date; end: Date }> = [];
-    for (const [calId, cal] of Object.entries(calendars)) {
-      if (cal.errors?.length) {
-        logger.warn({ calId, errors: cal.errors }, "freebusy returned errors for a calendar");
+        singleEvents: true, // expand recurring events into individual instances
+        orderBy: "startTime",
+        maxResults: 2500,
+        showDeleted: false,
+      });
+      scanned++;
+      for (const ev of evRes.data.items ?? []) {
+        if (ev.status === "cancelled") continue;
+        // Ignore events the tutor has declined — she's free then.
+        const self = ev.attendees?.find((a) => a.self);
+        if (self?.responseStatus === "declined") continue;
+        // Only timed events block. All-day events (birthdays, reminders, "OOO"
+        // banners) have a `date` but no `dateTime`; blocking a whole day for
+        // those would be wrong.
+        const start = ev.start?.dateTime;
+        const end = ev.end?.dateTime;
+        if (!start || !end) continue;
+        const key = `${start}|${end}|${ev.summary ?? ""}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        busy.push({ start: new Date(start), end: new Date(end) });
       }
-      for (const b of cal.busy ?? []) {
-        if (b.start && b.end) busy.push({ start: new Date(b.start), end: new Date(b.end) });
-      }
+    } catch (calErr) {
+      logger.warn({ err: calErr, calId }, "events.list failed for a calendar — skipping it");
     }
-    logger.info(
-      { calendarsQueried: items.length, busyBlocks: busy.length, window: [startDate.toISOString(), endDate.toISOString()] },
-      "getFreeBusySlots result",
-    );
-    return busy;
-  } catch (err) {
-    // Previously this failed silently and returned [], making every slot look
-    // free (e.g. on a revoked/expired token). Log it so it's diagnosable.
-    logger.warn({ err }, "getFreeBusySlots failed — treating calendar as fully free");
-    return [];
   }
+
+  logger.info(
+    {
+      calendarsScanned: scanned,
+      busyBlocks: busy.length,
+      window: [startDate.toISOString(), endDate.toISOString()],
+    },
+    "getFreeBusySlots (events.list) result",
+  );
+  return busy;
 }
 
 // The single source of truth for "when is the tutor unavailable" over a window:
