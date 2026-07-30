@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type CSSProperties } from "react";
 import { format, startOfDay, isBefore } from "date-fns";
 import {
   useListAvailabilityOverrides,
@@ -212,7 +212,13 @@ export default function AdminAvailability() {
 
   const chips = useMemo(() => {
     if (!dateStr || !dayHours?.enabled) return [];
-    return generateChips(dateStr, dayHours.start, dayHours.end, tz);
+    const all = generateChips(dateStr, dayHours.start, dayHours.end, tz);
+    // For today, hide time slots that have already passed — nothing to
+    // manage there since students can't book them either.
+    const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
+    if (!isToday) return all;
+    const now = Date.now();
+    return all.filter((c) => c.startTime.getTime() > now);
   }, [dateStr, dayHours, tz]);
 
   // Chip indices that are already occupied by a Google Calendar event — grey + non-interactive
@@ -390,16 +396,18 @@ export default function AdminAvailability() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8">
+      <div className="grid md:grid-cols-[minmax(0,420px)_1fr] gap-8">
         {/* Calendar picker */}
         <div>
-          <div className="bg-card p-4 rounded-3xl border border-border inline-block">
+          <div className="bg-card p-6 rounded-3xl border border-border">
             <Calendar
               mode="single"
               selected={selectedDate}
               onSelect={(d) => setSelectedDate(d)}
               disabled={(d) => isBefore(d, startOfDay(new Date()))}
               className="bg-transparent"
+              classNames={{ root: "w-full", month: "w-full" }}
+              style={{ "--cell-size": "3.25rem" } as CSSProperties}
             />
           </div>
         </div>

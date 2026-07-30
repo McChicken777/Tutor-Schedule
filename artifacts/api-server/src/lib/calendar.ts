@@ -163,21 +163,20 @@ export async function getFreeBusySlots(
     return [];
   }
 
-  // Which calendars to scan. Default to "primary"; expand to the teacher's own
-  // calendars (owner/writer) where she'd add appointments. We deliberately SKIP
-  // read-only subscribed calendars (holidays, birthdays, week-numbers,
-  // shared-with-reader) — those would wrongly block whole days.
+  // Which calendars to scan. Default to "primary"; expand to every calendar
+  // visible in the account — including read-only/subscribed ones, since
+  // third-party syncs (e.g. AmazingTalker) add their events to a *secondary*
+  // calendar the tutor only has reader access to. We don't restrict to
+  // owner/writer any more: the all-day-event skip below already protects
+  // against holiday/birthday calendars wrongly blocking whole days, so
+  // there's no real downside to scanning every calendar.
   let calendarIds: string[] = ["primary"];
   try {
     const calendarList = await calendar.calendarList.list({ maxResults: 250 });
-    const owned = (calendarList.data.items ?? [])
-      .filter(
-        (c) =>
-          !!c.id &&
-          (c.primary === true || c.accessRole === "owner" || c.accessRole === "writer"),
-      )
+    const all = (calendarList.data.items ?? [])
+      .filter((c) => !!c.id && c.hidden !== true)
       .map((c) => c.id as string);
-    if (owned.length > 0) calendarIds = Array.from(new Set(owned));
+    if (all.length > 0) calendarIds = Array.from(new Set(all));
   } catch (listErr) {
     logger.warn({ err: listErr }, "calendarList.list failed — falling back to primary calendar only");
   }
