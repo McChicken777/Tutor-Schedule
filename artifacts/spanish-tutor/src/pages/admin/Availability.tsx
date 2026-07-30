@@ -92,7 +92,11 @@ export default function AdminAvailability() {
   const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : null;
 
   const gcalBusyParams = { date: dateStr ?? "" };
-  const { data: gcalBusy } = useGetCalendarBusy(gcalBusyParams, {
+  const {
+    data: gcalBusy,
+    isLoading: gcalLoading,
+    isError: gcalError,
+  } = useGetCalendarBusy(gcalBusyParams, {
     query: { enabled: !!dateStr, queryKey: getGetCalendarBusyQueryKey(gcalBusyParams) },
   });
   const dayKey = selectedDate ? DAY_KEYS[selectedDate.getDay()] : null;
@@ -249,6 +253,20 @@ export default function AdminAvailability() {
                 >
                   {allBlocked ? "Unblock all" : "Block whole day"}
                 </button>
+              </div>
+
+              {/* Google Calendar sync status — tells us exactly what the
+                  backend returned for this day so calendar issues are visible. */}
+              <div className="mb-3 text-xs rounded-lg px-3 py-2 bg-accent/60 text-muted-foreground">
+                {gcalLoading
+                  ? "Checking Google Calendar…"
+                  : gcalError
+                    ? "⚠️ Couldn't reach Google Calendar (check that it's connected)."
+                    : (gcalBusy?.length ?? 0) === 0
+                      ? "Google Calendar: no events on this day."
+                      : `Google Calendar: ${gcalBusy!.length} event${gcalBusy!.length === 1 ? "" : "s"} on this day — ${gcalBusy!
+                          .map((b) => `${format(new Date(b.start), "h:mm a")}–${format(new Date(b.end), "h:mm a")}`)
+                          .join(", ")}`}
               </div>
 
               <div className="grid grid-cols-3 gap-2 mb-3">
