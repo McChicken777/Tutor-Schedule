@@ -6,10 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HomeworkInput {
-  submittedText?: string;
-  fileUrl?: string;
-  fileKey?: string;
-  fileName?: string;
-  fileMime?: string;
+export interface UploadedFile {
+  key: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
 }

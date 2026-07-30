@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Link, useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { LogOut, LayoutDashboard, Calendar, BookOpen, MessageCircle } from "lucide-react";
+import { LogOut, LayoutDashboard, Calendar, BookOpen, MessageCircle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   useGetStudentDashboard,
@@ -41,6 +41,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
     { label: "Bookings", href: "/bookings", icon: Calendar },
     { label: "Book a Lesson", href: "/book", icon: BookOpen },
     { label: "Messages", href: "/messages", icon: MessageCircle },
+    { label: "Homework", href: "/homework", icon: FileText },
   ];
 
   return (

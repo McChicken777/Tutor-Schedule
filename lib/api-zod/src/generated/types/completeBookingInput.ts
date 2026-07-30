@@ -14,4 +14,7 @@ export interface CompleteBookingInput {
   notes: string;
   homeworkAssignedText?: string;
   homeworkAssignedFileUrl?: string;
+  homeworkAssignedFileKey?: string;
+  homeworkAssignedFileName?: string;
+  homeworkAssignedFileMime?: string;
 }

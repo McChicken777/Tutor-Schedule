@@ -472,7 +472,7 @@ export default function AdminAvailability() {
                       title={isGcalBusy ? "Already in Google Calendar" : undefined}
                       className={`py-2.5 px-3 rounded-xl text-sm font-medium transition border ${
                         isGcalBusy
-                          ? "bg-muted text-muted-foreground border-transparent cursor-not-allowed opacity-60"
+                          ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/25 cursor-not-allowed opacity-90"
                           : isBlocked
                             ? "bg-destructive/10 text-destructive border-destructive/25 hover:bg-destructive/20"
                             : "bg-accent text-foreground border-transparent hover:border-primary/30 hover:bg-primary/5"
@@ -494,7 +494,7 @@ export default function AdminAvailability() {
                   Blocked by you
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded bg-muted opacity-60 inline-block" />
+                  <span className="w-3 h-3 rounded bg-amber-500/10 border border-amber-500/25 inline-block" />
                   Google Calendar
                 </span>
               </div>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListAdminStudents, useGetAdminStudent, useGrantPackage } from "@workspace/api-client-react";
+import { useListAdminStudents, useGetAdminStudent, useGrantPackage, useListAdminHomework } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,6 +10,7 @@ import { useListAdminLessonTypes } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListAdminStudentsQueryKey, getGetAdminStudentQueryKey } from "@workspace/api-client-react";
+import { HomeworkCard } from "@/pages/admin/Homework";
 
 export default function AdminStudents() {
   const { data: students, isLoading } = useListAdminStudents();
@@ -75,6 +76,7 @@ export default function AdminStudents() {
 function StudentDetail({ id }: { id: number }) {
   const { data: student, isLoading } = useGetAdminStudent(id);
   const { data: lessonTypes } = useListAdminLessonTypes();
+  const { data: homeworkList } = useListAdminHomework({ studentId: id, submitted: false });
   const grantMutation = useGrantPackage();
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -147,6 +149,28 @@ function StudentDetail({ id }: { id: number }) {
           </div>
         ) : (
           <p className="text-muted-foreground">No active packages.</p>
+        )}
+      </div>
+
+      <div>
+        <h3 className="font-bold text-lg mb-4">Homework</h3>
+        {!homeworkList || homeworkList.length === 0 ? (
+          <p className="text-muted-foreground">No homework assigned yet.</p>
+        ) : (
+          <div className="space-y-4">
+            {homeworkList.filter(hw => !hw.submittedAt).length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {homeworkList.filter(hw => !hw.submittedAt).map(hw => (
+                  <span key={hw.id} className="inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium bg-accent text-muted-foreground">
+                    {hw.lessonTypeName} ({format(new Date(hw.lessonDate), "MMM d")}) — Assigned, not yet submitted
+                  </span>
+                ))}
+              </div>
+            )}
+            {homeworkList.filter(hw => hw.submittedAt).map(hw => (
+              <HomeworkCard key={hw.id} hw={hw} />
+            ))}
+          </div>
         )}
       </div>
     </div>

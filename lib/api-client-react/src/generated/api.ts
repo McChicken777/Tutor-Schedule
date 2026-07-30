@@ -47,6 +47,7 @@ import type {
   Homework,
   HomeworkFeedbackInput,
   HomeworkInput,
+  HomeworkReminderSweepResult,
   LessonPackage,
   LessonType,
   LessonTypeInput,
@@ -69,7 +70,9 @@ import type {
   Testimonial,
   TestimonialInput,
   TestimonialUpdate,
-  TimeSlot
+  TimeSlot,
+  UploadFileInput,
+  UploadedFile
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -175,6 +178,78 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
+
+export const getRunHomeworkReminderSweepUrl = () => {
+
+
+
+
+  return `/api/internal/homework-reminders/run`
+}
+
+/**
+ * Guarded by an X-Internal-Secret header (compared against INTERNAL_CRON_SECRET), not a user session. Intended to be hit hourly by a Replit Scheduled Deployment.
+ * @summary Sweep for unsubmitted homework past its reminder due date and flag it
+ */
+export const runHomeworkReminderSweep = async ( options?: Parameters<typeof customFetch>[1]): Promise<HomeworkReminderSweepResult> => {
+
+  return customFetch<HomeworkReminderSweepResult>(getRunHomeworkReminderSweepUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRunHomeworkReminderSweepMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runHomeworkReminderSweep>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof runHomeworkReminderSweep>>, TError,void, TContext> => {
+
+const mutationKey = ['runHomeworkReminderSweep'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runHomeworkReminderSweep>>, void> = () => {
+
+
+          return  runHomeworkReminderSweep(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunHomeworkReminderSweepMutationResult = NonNullable<Awaited<ReturnType<typeof runHomeworkReminderSweep>>>
+
+    export type RunHomeworkReminderSweepMutationError = ErrorType<void>
+
+    /**
+ * @summary Sweep for unsubmitted homework past its reminder due date and flag it
+ */
+export const useRunHomeworkReminderSweep = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runHomeworkReminderSweep>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof runHomeworkReminderSweep>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getRunHomeworkReminderSweepMutationOptions(options));
+    }
 
 export const getListLessonTypesUrl = () => {
 
@@ -1246,6 +1321,83 @@ export const useSubmitHomework = <TError = ErrorType<void>,
       > => {
       return useMutation(getSubmitHomeworkMutationOptions(options));
     }
+
+export const getListStudentHomeworkUrl = () => {
+
+
+
+
+  return `/api/student/homework`
+}
+
+/**
+ * @summary List all homework for the logged-in student across all bookings
+ */
+export const listStudentHomework = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminHomework[]> => {
+
+  return customFetch<AdminHomework[]>(getListStudentHomeworkUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListStudentHomeworkQueryKey = () => {
+    return [
+    `/api/student/homework`
+    ] as const;
+    }
+
+
+export const getListStudentHomeworkQueryOptions = <TData = Awaited<ReturnType<typeof listStudentHomework>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStudentHomework>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListStudentHomeworkQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listStudentHomework>>> = ({ signal }) => listStudentHomework({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listStudentHomework>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListStudentHomeworkQueryResult = NonNullable<Awaited<ReturnType<typeof listStudentHomework>>>
+export type ListStudentHomeworkQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all homework for the logged-in student across all bookings
+ */
+
+export function useListStudentHomework<TData = Awaited<ReturnType<typeof listStudentHomework>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStudentHomework>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListStudentHomeworkQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getSubmitReviewUrl = (id: number,) => {
 
@@ -4140,4 +4292,162 @@ export const useDisconnectCalendar = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getDisconnectCalendarMutationOptions(options));
     }
+
+export const getUploadFileUrl = () => {
+
+
+
+
+  return `/api/uploads`
+}
+
+/**
+ * Admin session covers homework-assigned/homework-review contexts; a Clerk-authenticated student who owns the booking covers homework-submission.
+ * @summary Upload a file (PDF or image) to object storage
+ */
+export const uploadFile = async (uploadFileInput: UploadFileInput, options?: Parameters<typeof customFetch>[1]): Promise<UploadedFile> => {
+    const formData = new FormData();
+formData.append(`file`, uploadFileInput.file);
+formData.append(`context`, uploadFileInput.context);
+formData.append(`bookingId`, uploadFileInput.bookingId.toString())
+
+  return customFetch<UploadedFile>(getUploadFileUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+
+export const getUploadFileMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadFile>>, TError,{data: BodyType<UploadFileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadFile>>, TError,{data: BodyType<UploadFileInput>}, TContext> => {
+
+const mutationKey = ['uploadFile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadFile>>, {data: BodyType<UploadFileInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  uploadFile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadFileMutationResult = NonNullable<Awaited<ReturnType<typeof uploadFile>>>
+    export type UploadFileMutationBody = BodyType<UploadFileInput>
+    export type UploadFileMutationError = ErrorType<void>
+
+    /**
+ * @summary Upload a file (PDF or image) to object storage
+ */
+export const useUploadFile = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadFile>>, TError,{data: BodyType<UploadFileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadFile>>,
+        TError,
+        {data: BodyType<UploadFileInput>},
+        TContext
+      > => {
+      return useMutation(getUploadFileMutationOptions(options));
+    }
+
+export const getGetHomeworkFileUrl = (homeworkId: number,
+    which: 'assigned' | 'submission' | 'review',) => {
+
+
+
+
+  return `/api/files/homework/${homeworkId}/${which}`
+}
+
+/**
+ * @summary Download/view a homework file (assigned, submission, or review) via a private proxy
+ */
+export const getHomeworkFile = async (homeworkId: number,
+    which: 'assigned' | 'submission' | 'review', options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetHomeworkFileUrl(homeworkId,which),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHomeworkFileQueryKey = (homeworkId: number,
+    which: 'assigned' | 'submission' | 'review',) => {
+    return [
+    `/api/files/homework/${homeworkId}/${which}`
+    ] as const;
+    }
+
+
+export const getGetHomeworkFileQueryOptions = <TData = Awaited<ReturnType<typeof getHomeworkFile>>, TError = ErrorType<void>>(homeworkId: number,
+    which: 'assigned' | 'submission' | 'review', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHomeworkFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHomeworkFileQueryKey(homeworkId,which);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHomeworkFile>>> = ({ signal }) => getHomeworkFile(homeworkId,which, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: homeworkId !== null && homeworkId !== undefined && which !== null && which !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHomeworkFile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHomeworkFileQueryResult = NonNullable<Awaited<ReturnType<typeof getHomeworkFile>>>
+export type GetHomeworkFileQueryError = ErrorType<void>
+
+
+/**
+ * @summary Download/view a homework file (assigned, submission, or review) via a private proxy
+ */
+
+export function useGetHomeworkFile<TData = Awaited<ReturnType<typeof getHomeworkFile>>, TError = ErrorType<void>>(
+ homeworkId: number,
+    which: 'assigned' | 'submission' | 'review', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHomeworkFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHomeworkFileQueryOptions(homeworkId,which,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

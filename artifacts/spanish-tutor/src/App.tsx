@@ -15,6 +15,7 @@ import StudentBookings from "@/pages/student/Bookings";
 import BookingDetail from "@/pages/student/BookingDetail";
 import BookLesson from "@/pages/student/Book";
 import StudentMessages from "@/pages/student/Messages";
+import StudentHomework from "@/pages/student/Homework";
 
 import AdminLogin from "@/pages/admin/Login";
 import AdminDashboard from "@/pages/admin/Dashboard";
@@ -219,6 +220,9 @@ function ClerkProviderWithRoutes() {
             </Route>
             <Route path="/messages">
               <StudentPortal><StudentMessages /></StudentPortal>
+            </Route>
+            <Route path="/homework">
+              <StudentPortal><StudentHomework /></StudentPortal>
             </Route>
 
             <Route component={NotFound} />

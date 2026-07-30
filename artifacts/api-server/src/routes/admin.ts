@@ -45,6 +45,7 @@ import { requireAdmin } from "../middlewares/requireAdmin";
 import { isCalendarConnected, getCalendarEmail, deleteCalendarEvent, createOAuth2Client, getFreeBusySlots, zonedDayRange } from "../lib/calendar";
 import { google } from "googleapis";
 import { calendarTokensTable } from "@workspace/db";
+import { mapHomeworkRow } from "../lib/homeworkMapper";
 
 const router: IRouter = Router();
 
@@ -282,12 +283,19 @@ router.patch("/admin/bookings/:id/complete", requireAdmin, async (req, res): Pro
     .where(eq(bookingsTable.id, id))
     .returning();
 
-  if (parsed.data.homeworkAssignedText != null || parsed.data.homeworkAssignedFileUrl != null) {
+  if (
+    parsed.data.homeworkAssignedText != null ||
+    parsed.data.homeworkAssignedFileUrl != null ||
+    parsed.data.homeworkAssignedFileKey != null
+  ) {
     await db
       .update(homeworkTable)
       .set({
         assignedText: parsed.data.homeworkAssignedText ?? null,
         assignedFileUrl: parsed.data.homeworkAssignedFileUrl ?? null,
+        assignedFileKey: parsed.data.homeworkAssignedFileKey ?? null,
+        assignedFileName: parsed.data.homeworkAssignedFileName ?? null,
+        assignedFileMime: parsed.data.homeworkAssignedFileMime ?? null,
       })
       .where(eq(homeworkTable.bookingId, id));
   }
@@ -400,13 +408,24 @@ router.delete("/admin/lesson-types/:id", requireAdmin, async (req, res): Promise
 // ─── Homework ─────────────────────────────────────────────────────────────────
 
 router.get("/admin/homework", requireAdmin, async (req, res): Promise<void> => {
-  const { reviewed } = req.query;
-  let conditions: any[] = [sql`${homeworkTable.submittedAt} IS NOT NULL`];
+  const { reviewed, studentId, submitted } = req.query;
+  const conditions: any[] = [];
+
+  if (submitted === "false") {
+    conditions.push(sql`${homeworkTable.submittedAt} IS NULL`);
+  } else {
+    // default (and submitted=true): preserve legacy global-inbox behavior
+    conditions.push(sql`${homeworkTable.submittedAt} IS NOT NULL`);
+  }
 
   if (reviewed === "true") {
     conditions.push(sql`${homeworkTable.reviewedAt} IS NOT NULL`);
   } else if (reviewed === "false") {
     conditions.push(sql`${homeworkTable.reviewedAt} IS NULL`);
+  }
+
+  if (studentId && typeof studentId === "string" && Number.isFinite(Number(studentId))) {
+    conditions.push(eq(bookingsTable.studentId, Number(studentId)));
   }
 
   const rows = await db
@@ -415,23 +434,18 @@ router.get("/admin/homework", requireAdmin, async (req, res): Promise<void> => {
     .innerJoin(bookingsTable, eq(homeworkTable.bookingId, bookingsTable.id))
     .innerJoin(usersTable, eq(bookingsTable.studentId, usersTable.id))
     .innerJoin(lessonTypesTable, eq(bookingsTable.lessonTypeId, lessonTypesTable.id))
-    .where(and(...conditions))
+    .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(desc(homeworkTable.submittedAt));
 
   res.json(
-    rows.map((r) => ({
-      id: r.hw.id,
-      bookingId: r.hw.bookingId,
-      studentName: r.user.displayName,
-      lessonTypeName: r.lessonType.name,
-      lessonDate: r.booking.startTime,
-      submittedText: r.hw.submittedText ?? null,
-      fileUrl: r.hw.fileUrl ?? null,
-      tutorFeedback: r.hw.tutorFeedback ?? null,
-      grade: r.hw.grade ?? null,
-      submittedAt: r.hw.submittedAt ?? null,
-      reviewedAt: r.hw.reviewedAt ?? null,
-    })),
+    rows.map((r) =>
+      mapHomeworkRow(r.hw, {
+        studentId: r.booking.studentId,
+        studentName: r.user.displayName,
+        lessonTypeName: r.lessonType.name,
+        lessonDate: r.booking.startTime,
+      }),
+    ),
   );
 });
 
@@ -454,6 +468,9 @@ router.patch("/admin/homework/:id", requireAdmin, async (req, res): Promise<void
   const updateData: any = { reviewedAt: new Date() };
   if (parsed.data.tutorFeedback != null) updateData.tutorFeedback = parsed.data.tutorFeedback;
   if (parsed.data.grade != null) updateData.grade = parsed.data.grade;
+  if (parsed.data.reviewedFileKey != null) updateData.reviewedFileKey = parsed.data.reviewedFileKey;
+  if (parsed.data.reviewedFileName != null) updateData.reviewedFileName = parsed.data.reviewedFileName;
+  if (parsed.data.reviewedFileMime != null) updateData.reviewedFileMime = parsed.data.reviewedFileMime;
 
   const [updated] = await db
     .update(homeworkTable)
@@ -468,19 +485,14 @@ router.patch("/admin/homework/:id", requireAdmin, async (req, res): Promise<void
     .innerJoin(lessonTypesTable, eq(bookingsTable.lessonTypeId, lessonTypesTable.id))
     .where(eq(bookingsTable.id, updated.bookingId));
 
-  res.json({
-    id: updated.id,
-    bookingId: updated.bookingId,
-    studentName: row?.user.displayName ?? "",
-    lessonTypeName: row?.lessonType.name ?? "",
-    lessonDate: row?.booking.startTime ?? new Date(),
-    submittedText: updated.submittedText ?? null,
-    fileUrl: updated.fileUrl ?? null,
-    tutorFeedback: updated.tutorFeedback ?? null,
-    grade: updated.grade ?? null,
-    submittedAt: updated.submittedAt ?? null,
-    reviewedAt: updated.reviewedAt ?? null,
-  });
+  res.json(
+    mapHomeworkRow(updated, {
+      studentId: row?.booking.studentId ?? 0,
+      studentName: row?.user.displayName ?? "",
+      lessonTypeName: row?.lessonType.name ?? "",
+      lessonDate: row?.booking.startTime ?? new Date(),
+    }),
+  );
 });
 
 // ─── Students ─────────────────────────────────────────────────────────────────

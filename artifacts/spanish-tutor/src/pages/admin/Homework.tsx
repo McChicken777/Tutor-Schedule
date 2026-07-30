@@ -6,10 +6,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListAdminHomeworkQueryKey } from "@workspace/api-client-react";
-import { FileText, Download } from "lucide-react";
+import { useFileUpload } from "@/hooks/use-file-upload";
+import AnnotationEditor from "@/components/homework/AnnotationEditor";
+import { FileText, Download, Paperclip, PenLine } from "lucide-react";
 
 export default function AdminHomework() {
   const [tab, setTab] = useState<"pending" | "reviewed">("pending");
@@ -47,23 +50,58 @@ export default function AdminHomework() {
   );
 }
 
-function HomeworkCard({ hw }: { hw: any }) {
+export function HomeworkCard({ hw }: { hw: any }) {
   const qc = useQueryClient();
   const { toast } = useToast();
   const updateMutation = useUpdateHomework();
-  
+  const uploadMutation = useFileUpload();
+
   const [feedback, setFeedback] = useState(hw.tutorFeedback || "");
   const [grade, setGrade] = useState(hw.grade || "");
+  const [annotating, setAnnotating] = useState(false);
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: getListAdminHomeworkQueryKey() });
 
   const handleSave = () => {
     updateMutation.mutate({ id: hw.id, data: { tutorFeedback: feedback, grade } }, {
       onSuccess: () => {
         toast({ title: "Feedback saved" });
-        qc.invalidateQueries({ queryKey: getListAdminHomeworkQueryKey({ reviewed: false }) });
-        qc.invalidateQueries({ queryKey: getListAdminHomeworkQueryKey({ reviewed: true }) });
+        invalidate();
       }
     });
   };
+
+  const handleAnnotationSave = async (blob: Blob, mimeType: string) => {
+    try {
+      const file = new File([blob], mimeType === "application/pdf" ? "annotated.pdf" : "annotated.png", { type: mimeType });
+      const uploaded = await uploadMutation.mutateAsync({
+        file,
+        context: "homework-review",
+        bookingId: hw.bookingId,
+      });
+      updateMutation.mutate({
+        id: hw.id,
+        data: {
+          tutorFeedback: feedback,
+          grade,
+          reviewedFileKey: uploaded.key,
+          reviewedFileName: uploaded.fileName,
+          reviewedFileMime: uploaded.mimeType,
+        },
+      }, {
+        onSuccess: () => {
+          toast({ title: "Marked-up file saved" });
+          invalidate();
+          setAnnotating(false);
+        }
+      });
+    } catch (err) {
+      toast({ title: "Failed to save annotation", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+    }
+  };
+
+  const submittedFileMime = hw.submittedFileMime as string | undefined;
+  const canAnnotate = !!hw.submittedFileKey && (submittedFileMime === "application/pdf" || submittedFileMime?.startsWith("image/"));
 
   return (
     <div className="bg-card border border-border rounded-2xl p-6">
@@ -76,7 +114,7 @@ function HomeworkCard({ hw }: { hw: any }) {
           Submitted {hw.submittedAt ? format(new Date(hw.submittedAt), "MMM d") : "Unknown"}
         </div>
       </div>
-      
+
       <div className="grid md:grid-cols-2 gap-8">
         <div>
           <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
@@ -87,27 +125,44 @@ function HomeworkCard({ hw }: { hw: any }) {
               {hw.submittedText}
             </div>
           )}
-          {hw.fileUrl && (
-            <a href={hw.fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center px-4 py-2 bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium">
-              <Download className="w-4 h-4 mr-2" /> View Attachment
+          <div className="flex flex-wrap gap-2">
+            {hw.fileUrl && (
+              <a href={hw.fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center px-4 py-2 bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium">
+                <Download className="w-4 h-4 mr-2" /> View Attachment
+              </a>
+            )}
+            {hw.submittedFileKey && (
+              <a href={`/api/files/homework/${hw.id}/submission`} target="_blank" rel="noreferrer" className="inline-flex items-center px-4 py-2 bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium">
+                <Paperclip className="w-4 h-4 mr-2" /> {hw.submittedFileName || "View file"}
+              </a>
+            )}
+            {canAnnotate && (
+              <Button variant="outline" size="sm" onClick={() => setAnnotating(true)}>
+                <PenLine className="w-4 h-4 mr-2" /> Annotate
+              </Button>
+            )}
+          </div>
+          {hw.reviewedFileKey && (
+            <a href={`/api/files/homework/${hw.id}/review`} target="_blank" rel="noreferrer" className="inline-flex items-center text-secondary hover:underline text-sm mt-3">
+              <FileText className="w-4 h-4 mr-1" /> View marked-up version
             </a>
           )}
         </div>
-        
+
         <div className="space-y-4">
           <h4 className="font-medium text-foreground mb-2">Your Feedback</h4>
-          <Textarea 
-            value={feedback} 
-            onChange={(e) => setFeedback(e.target.value)} 
-            placeholder="Write your feedback here..." 
+          <Textarea
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            placeholder="Write your feedback here..."
             className="h-32"
           />
           <div className="flex gap-4">
             <div className="flex-1">
-              <Input 
-                value={grade} 
-                onChange={(e) => setGrade(e.target.value)} 
-                placeholder="Grade (e.g. A, 90%, Great)" 
+              <Input
+                value={grade}
+                onChange={(e) => setGrade(e.target.value)}
+                placeholder="Grade (e.g. A, 90%, Great)"
               />
             </div>
             <Button onClick={handleSave} disabled={updateMutation.isPending}>
@@ -116,6 +171,22 @@ function HomeworkCard({ hw }: { hw: any }) {
           </div>
         </div>
       </div>
+
+      <Dialog open={annotating} onOpenChange={setAnnotating}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Annotate Submission</DialogTitle>
+          </DialogHeader>
+          {annotating && (
+            <AnnotationEditor
+              fileUrl={`/api/files/homework/${hw.id}/submission`}
+              mimeType={submittedFileMime || "application/pdf"}
+              onSave={handleAnnotationSave}
+              onCancel={() => setAnnotating(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

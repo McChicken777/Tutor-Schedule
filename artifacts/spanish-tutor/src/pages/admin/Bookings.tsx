@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListAdminBookingsQueryKey } from "@workspace/api-client-react";
+import { useFileUpload } from "@/hooks/use-file-upload";
+import { Paperclip } from "lucide-react";
 
 export default function AdminBookings() {
   const [statusFilter, setStatusFilter] = useState<string>("upcoming");
@@ -22,7 +24,9 @@ export default function AdminBookings() {
   const [recap, setRecap] = useState("");
   const [homeworkText, setHomeworkText] = useState("");
   const [homeworkFileUrl, setHomeworkFileUrl] = useState("");
+  const [homeworkFile, setHomeworkFile] = useState<File | null>(null);
   const completeMutation = useCompleteBooking();
+  const uploadMutation = useFileUpload();
 
   const handleStatusChange = (id: number, newStatus: string) => {
     updateMutation.mutate({ id, data: { status: newStatus as any } }, {
@@ -37,17 +41,36 @@ export default function AdminBookings() {
     setRecap("");
     setHomeworkText("");
     setHomeworkFileUrl("");
+    setHomeworkFile(null);
     setCompletingId(id);
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (completingId == null || !recap.trim()) return;
+
+    let uploaded: Awaited<ReturnType<typeof uploadMutation.mutateAsync>> | undefined;
+    if (homeworkFile) {
+      try {
+        uploaded = await uploadMutation.mutateAsync({
+          file: homeworkFile,
+          context: "homework-assigned",
+          bookingId: completingId,
+        });
+      } catch (err) {
+        toast({ title: "File upload failed", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+        return;
+      }
+    }
+
     completeMutation.mutate({
       id: completingId,
       data: {
         notes: recap,
         homeworkAssignedText: homeworkText || undefined,
         homeworkAssignedFileUrl: homeworkFileUrl || undefined,
+        homeworkAssignedFileKey: uploaded?.key,
+        homeworkAssignedFileName: uploaded?.fileName,
+        homeworkAssignedFileMime: uploaded?.mimeType,
       },
     }, {
       onSuccess: () => {
@@ -159,8 +182,21 @@ export default function AdminBookings() {
               <label className="text-sm font-medium mb-1 block">Homework link (optional)</label>
               <Input value={homeworkFileUrl} onChange={e => setHomeworkFileUrl(e.target.value)} placeholder="Link to a worksheet, doc, etc." />
             </div>
-            <Button onClick={handleComplete} disabled={completeMutation.isPending || !recap.trim()} className="w-full">
-              {completeMutation.isPending ? "Completing..." : "Complete Lesson"}
+            <div>
+              <label className="text-sm font-medium mb-1 block">Attach a file (optional)</label>
+              <label className="flex items-center gap-2 border border-dashed border-border rounded-md px-3 py-2 text-sm text-muted-foreground cursor-pointer hover:bg-accent/50 transition">
+                <Paperclip className="size-4" />
+                {homeworkFile ? homeworkFile.name : "PDF or image, up to 15MB"}
+                <input
+                  type="file"
+                  accept="application/pdf,image/*"
+                  className="hidden"
+                  onChange={(e) => setHomeworkFile(e.target.files?.[0] ?? null)}
+                />
+              </label>
+            </div>
+            <Button onClick={handleComplete} disabled={completeMutation.isPending || uploadMutation.isPending || !recap.trim()} className="w-full">
+              {uploadMutation.isPending ? "Uploading..." : completeMutation.isPending ? "Completing..." : "Complete Lesson"}
             </Button>
           </div>
         </DialogContent>

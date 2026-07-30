@@ -111,9 +111,27 @@ export interface Homework {
   /** @nullable */
   assignedFileUrl: string | null;
   /** @nullable */
+  assignedFileKey: string | null;
+  /** @nullable */
+  assignedFileName: string | null;
+  /** @nullable */
+  assignedFileMime: string | null;
+  /** @nullable */
   submittedText: string | null;
   /** @nullable */
   fileUrl: string | null;
+  /** @nullable */
+  submittedFileKey: string | null;
+  /** @nullable */
+  submittedFileName: string | null;
+  /** @nullable */
+  submittedFileMime: string | null;
+  /** @nullable */
+  reviewedFileKey: string | null;
+  /** @nullable */
+  reviewedFileName: string | null;
+  /** @nullable */
+  reviewedFileMime: string | null;
   /** @nullable */
   tutorFeedback: string | null;
   /** @nullable */
@@ -122,6 +140,7 @@ export interface Homework {
   submittedAt: string | null;
   /** @nullable */
   reviewedAt: string | null;
+  reminderActive: boolean;
 }
 
 export interface Review {
@@ -173,11 +192,48 @@ export interface RescheduleInput {
 export interface HomeworkInput {
   submittedText?: string;
   fileUrl?: string;
+  fileKey?: string;
+  fileName?: string;
+  fileMime?: string;
 }
 
 export interface HomeworkFeedbackInput {
   tutorFeedback?: string;
   grade?: string;
+  reviewedFileKey?: string;
+  reviewedFileName?: string;
+  reviewedFileMime?: string;
+}
+
+export interface UploadedFile {
+  key: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+}
+
+export type UploadFileInputContext = typeof UploadFileInputContext[keyof typeof UploadFileInputContext];
+
+
+export const UploadFileInputContext = {
+  'homework-assigned': 'homework-assigned',
+  'homework-submission': 'homework-submission',
+  'homework-review': 'homework-review',
+} as const;
+
+/**
+ * Multipart form fields for POST /uploads. The "file" field carries the binary upload; multer parses it server-side rather than this schema.
+ */
+export interface UploadFileInput {
+  file: string;
+  context: UploadFileInputContext;
+  bookingId: number;
+}
+
+export interface HomeworkReminderSweepResult {
+  checkedAt: string;
+  remindersSet: number;
+  homeworkIds: number[];
 }
 
 export interface ReviewInput {
@@ -212,13 +268,36 @@ export interface StudentProfile {
 export interface AdminHomework {
   id: number;
   bookingId: number;
+  studentId: number;
   studentName: string;
   lessonTypeName: string;
   lessonDate: string;
   /** @nullable */
+  assignedText: string | null;
+  /** @nullable */
+  assignedFileUrl: string | null;
+  /** @nullable */
+  assignedFileKey: string | null;
+  /** @nullable */
+  assignedFileName: string | null;
+  /** @nullable */
+  assignedFileMime: string | null;
+  /** @nullable */
   submittedText: string | null;
   /** @nullable */
   fileUrl: string | null;
+  /** @nullable */
+  submittedFileKey: string | null;
+  /** @nullable */
+  submittedFileName: string | null;
+  /** @nullable */
+  submittedFileMime: string | null;
+  /** @nullable */
+  reviewedFileKey: string | null;
+  /** @nullable */
+  reviewedFileName: string | null;
+  /** @nullable */
+  reviewedFileMime: string | null;
   /** @nullable */
   tutorFeedback: string | null;
   /** @nullable */
@@ -227,6 +306,7 @@ export interface AdminHomework {
   submittedAt: string | null;
   /** @nullable */
   reviewedAt: string | null;
+  reminderActive: boolean;
 }
 
 export interface StudentDashboard {
@@ -408,6 +488,9 @@ export interface CompleteBookingInput {
   notes: string;
   homeworkAssignedText?: string;
   homeworkAssignedFileUrl?: string;
+  homeworkAssignedFileKey?: string;
+  homeworkAssignedFileName?: string;
+  homeworkAssignedFileMime?: string;
 }
 
 export interface AdminStudent {
@@ -504,6 +587,11 @@ date?: string;
 
 export type ListAdminHomeworkParams = {
 reviewed?: boolean;
+studentId?: number;
+/**
+ * Defaults to true (existing behavior — only submitted homework). Set to false to include assigned-but-unsubmitted homework too.
+ */
+submitted?: boolean;
 };
 
 export type GetCalendarBusyParams = {

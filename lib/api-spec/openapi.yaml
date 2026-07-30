@@ -16,6 +16,10 @@ tags:
     description: Student endpoints (Clerk auth required)
   - name: admin
     description: Admin endpoints (password session required)
+  - name: uploads
+    description: File upload/download endpoints shared by admin and student
+  - name: internal
+    description: Internal endpoints for scheduled jobs (shared-secret header, not a user session)
 
 paths:
   /healthz:
@@ -30,6 +34,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── INTERNAL (scheduled jobs) ───────────────────────────────────────────
+  /internal/homework-reminders/run:
+    post:
+      operationId: runHomeworkReminderSweep
+      tags: [internal]
+      summary: Sweep for unsubmitted homework past its reminder due date and flag it
+      description: Guarded by an X-Internal-Secret header (compared against INTERNAL_CRON_SECRET), not a user session. Intended to be hit hourly by a Replit Scheduled Deployment.
+      responses:
+        "200":
+          description: Sweep result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeworkReminderSweepResult"
+        "401":
+          description: Missing or invalid X-Internal-Secret header
 
   # ─── PUBLIC ───────────────────────────────────────────────────────────────
   /lesson-types:
@@ -325,6 +346,21 @@ paths:
           description: Invalid input
         "404":
           description: Not found
+
+  /student/homework:
+    get:
+      operationId: listStudentHomework
+      tags: [student]
+      summary: List all homework for the logged-in student across all bookings
+      responses:
+        "200":
+          description: All homework for the current student
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminHomework"
 
   /student/bookings/{id}/review:
     post:
@@ -640,6 +676,17 @@ paths:
         - name: reviewed
           in: query
           required: false
+          schema:
+            type: boolean
+        - name: studentId
+          in: query
+          required: false
+          schema:
+            type: number
+        - name: submitted
+          in: query
+          required: false
+          description: Defaults to true (existing behavior — only submitted homework). Set to false to include assigned-but-unsubmitted homework too.
           schema:
             type: boolean
       responses:
@@ -1098,6 +1145,61 @@ paths:
                 required:
                   - success
 
+  # ─── UPLOADS ──────────────────────────────────────────────────────────────
+  /uploads:
+    post:
+      operationId: uploadFile
+      tags: [uploads]
+      summary: Upload a file (PDF or image) to object storage
+      description: Admin session covers homework-assigned/homework-review contexts; a Clerk-authenticated student who owns the booking covers homework-submission.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/UploadFileInput"
+      responses:
+        "201":
+          description: Uploaded file metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadedFile"
+        "400":
+          description: Invalid file
+        "401":
+          description: Unauthorized
+
+  /files/homework/{homeworkId}/{which}:
+    get:
+      operationId: getHomeworkFile
+      tags: [uploads]
+      summary: Download/view a homework file (assigned, submission, or review) via a private proxy
+      parameters:
+        - name: homeworkId
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: which
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [assigned, submission, review]
+      responses:
+        "200":
+          description: File contents
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not found
+
 components:
   schemas:
     HealthStatus:
@@ -1364,9 +1466,27 @@ components:
           type: ["string", "null"]
         assignedFileUrl:
           type: ["string", "null"]
+        assignedFileKey:
+          type: ["string", "null"]
+        assignedFileName:
+          type: ["string", "null"]
+        assignedFileMime:
+          type: ["string", "null"]
         submittedText:
           type: ["string", "null"]
         fileUrl:
+          type: ["string", "null"]
+        submittedFileKey:
+          type: ["string", "null"]
+        submittedFileName:
+          type: ["string", "null"]
+        submittedFileMime:
+          type: ["string", "null"]
+        reviewedFileKey:
+          type: ["string", "null"]
+        reviewedFileName:
+          type: ["string", "null"]
+        reviewedFileMime:
           type: ["string", "null"]
         tutorFeedback:
           type: ["string", "null"]
@@ -1378,17 +1498,29 @@ components:
         reviewedAt:
           type: ["string", "null"]
           format: date-time
+        reminderActive:
+          type: boolean
       required:
         - id
         - bookingId
         - assignedText
         - assignedFileUrl
+        - assignedFileKey
+        - assignedFileName
+        - assignedFileMime
         - submittedText
         - fileUrl
+        - submittedFileKey
+        - submittedFileName
+        - submittedFileMime
+        - reviewedFileKey
+        - reviewedFileName
+        - reviewedFileMime
         - tutorFeedback
         - grade
         - submittedAt
         - reviewedAt
+        - reminderActive
 
     HomeworkInput:
       type: object
@@ -1396,6 +1528,12 @@ components:
         submittedText:
           type: string
         fileUrl:
+          type: string
+        fileKey:
+          type: string
+        fileName:
+          type: string
+        fileMime:
           type: string
 
     HomeworkFeedbackInput:
@@ -1405,6 +1543,62 @@ components:
           type: string
         grade:
           type: string
+        reviewedFileKey:
+          type: string
+        reviewedFileName:
+          type: string
+        reviewedFileMime:
+          type: string
+
+    UploadedFile:
+      type: object
+      properties:
+        key:
+          type: string
+        fileName:
+          type: string
+        mimeType:
+          type: string
+        size:
+          type: number
+      required:
+        - key
+        - fileName
+        - mimeType
+        - size
+
+    UploadFileInput:
+      type: object
+      description: Multipart form fields for POST /uploads. The "file" field carries the binary upload; multer parses it server-side rather than this schema.
+      properties:
+        file:
+          type: string
+        context:
+          type: string
+          enum: [homework-assigned, homework-submission, homework-review]
+        bookingId:
+          type: number
+      required:
+        - file
+        - context
+        - bookingId
+
+    HomeworkReminderSweepResult:
+      type: object
+      properties:
+        checkedAt:
+          type: string
+          format: date-time
+        remindersSet:
+          type: number
+        homeworkIds:
+          type: array
+          items:
+            type: number
+      required:
+        - checkedAt
+        - remindersSet
+        - homeworkIds
 
     Review:
       type: object
@@ -1836,6 +2030,12 @@ components:
           type: string
         homeworkAssignedFileUrl:
           type: string
+        homeworkAssignedFileKey:
+          type: string
+        homeworkAssignedFileName:
+          type: string
+        homeworkAssignedFileMime:
+          type: string
       required:
         - notes
 
@@ -1846,6 +2046,8 @@ components:
           type: number
         bookingId:
           type: number
+        studentId:
+          type: number
         studentName:
           type: string
         lessonTypeName:
@@ -1853,9 +2055,31 @@ components:
         lessonDate:
           type: string
           format: date-time
+        assignedText:
+          type: ["string", "null"]
+        assignedFileUrl:
+          type: ["string", "null"]
+        assignedFileKey:
+          type: ["string", "null"]
+        assignedFileName:
+          type: ["string", "null"]
+        assignedFileMime:
+          type: ["string", "null"]
         submittedText:
           type: ["string", "null"]
         fileUrl:
+          type: ["string", "null"]
+        submittedFileKey:
+          type: ["string", "null"]
+        submittedFileName:
+          type: ["string", "null"]
+        submittedFileMime:
+          type: ["string", "null"]
+        reviewedFileKey:
+          type: ["string", "null"]
+        reviewedFileName:
+          type: ["string", "null"]
+        reviewedFileMime:
           type: ["string", "null"]
         tutorFeedback:
           type: ["string", "null"]
@@ -1867,18 +2091,33 @@ components:
         reviewedAt:
           type: ["string", "null"]
           format: date-time
+        reminderActive:
+          type: boolean
       required:
         - id
         - bookingId
+        - studentId
         - studentName
         - lessonTypeName
         - lessonDate
+        - assignedText
+        - assignedFileUrl
+        - assignedFileKey
+        - assignedFileName
+        - assignedFileMime
         - submittedText
         - fileUrl
+        - submittedFileKey
+        - submittedFileName
+        - submittedFileMime
+        - reviewedFileKey
+        - reviewedFileName
+        - reviewedFileMime
         - tutorFeedback
         - grade
         - submittedAt
         - reviewedAt
+        - reminderActive
 
     AdminStudent:
       type: object

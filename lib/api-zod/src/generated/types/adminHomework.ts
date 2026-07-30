@@ -9,13 +9,36 @@
 export interface AdminHomework {
   id: number;
   bookingId: number;
+  studentId: number;
   studentName: string;
   lessonTypeName: string;
   lessonDate: Date;
   /** @nullable */
+  assignedText: string | null;
+  /** @nullable */
+  assignedFileUrl: string | null;
+  /** @nullable */
+  assignedFileKey: string | null;
+  /** @nullable */
+  assignedFileName: string | null;
+  /** @nullable */
+  assignedFileMime: string | null;
+  /** @nullable */
   submittedText: string | null;
   /** @nullable */
   fileUrl: string | null;
+  /** @nullable */
+  submittedFileKey: string | null;
+  /** @nullable */
+  submittedFileName: string | null;
+  /** @nullable */
+  submittedFileMime: string | null;
+  /** @nullable */
+  reviewedFileKey: string | null;
+  /** @nullable */
+  reviewedFileName: string | null;
+  /** @nullable */
+  reviewedFileMime: string | null;
   /** @nullable */
   tutorFeedback: string | null;
   /** @nullable */
@@ -24,4 +47,5 @@ export interface AdminHomework {
   submittedAt: Date | null;
   /** @nullable */
   reviewedAt: Date | null;
+  reminderActive: boolean;
 }

@@ -8,4 +8,9 @@
 
 export type ListAdminHomeworkParams = {
 reviewed?: boolean;
+studentId?: number;
+/**
+ * Defaults to true (existing behavior — only submitted homework). Set to false to include assigned-but-unsubmitted homework too.
+ */
+submitted?: boolean;
 };

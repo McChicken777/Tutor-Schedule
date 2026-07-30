@@ -2,11 +2,12 @@ import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { LogOut, Users, BookOpen, Settings, LayoutDashboard, Calendar, CalendarOff, FileText, MessageSquare, MessageCircle, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAdminLogout } from "@workspace/api-client-react";
+import { useAdminLogout, useGetAdminDashboard } from "@workspace/api-client-react";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const logout = useAdminLogout();
+  const { data: dashboard } = useGetAdminDashboard();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   const handleLogout = () => {
@@ -44,18 +45,24 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const active = location === item.href;
+            const badgeCount = item.href === "/admin/homework" ? dashboard?.pendingHomeworkCount ?? 0 : 0;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  active 
-                    ? "bg-secondary text-secondary-foreground" 
+                  active
+                    ? "bg-secondary text-secondary-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 }`}
               >
                 <item.icon className="w-5 h-5" />
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {badgeCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-xs font-bold">
+                    {badgeCount}
+                  </span>
+                )}
               </Link>
             );
           })}

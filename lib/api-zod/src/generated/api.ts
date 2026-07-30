@@ -17,6 +17,17 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * Guarded by an X-Internal-Secret header (compared against INTERNAL_CRON_SECRET), not a user session. Intended to be hit hourly by a Replit Scheduled Deployment.
+ * @summary Sweep for unsubmitted homework past its reminder due date and flag it
+ */
+export const RunHomeworkReminderSweepResponse = zod.object({
+  "checkedAt": zod.coerce.date(),
+  "remindersSet": zod.number(),
+  "homeworkIds": zod.array(zod.number())
+})
+
+
+/**
  * @summary List active lesson types
  */
 export const ListLessonTypesResponseItem = zod.object({
@@ -185,15 +196,28 @@ export const GetStudentDashboardResponse = zod.object({
   "recentHomework": zod.array(zod.object({
   "id": zod.number(),
   "bookingId": zod.number(),
+  "studentId": zod.number(),
   "studentName": zod.string(),
   "lessonTypeName": zod.string(),
   "lessonDate": zod.coerce.date(),
+  "assignedText": zod.string().nullable(),
+  "assignedFileUrl": zod.string().nullable(),
+  "assignedFileKey": zod.string().nullable(),
+  "assignedFileName": zod.string().nullable(),
+  "assignedFileMime": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
   "fileUrl": zod.string().nullable(),
+  "submittedFileKey": zod.string().nullable(),
+  "submittedFileName": zod.string().nullable(),
+  "submittedFileMime": zod.string().nullable(),
+  "reviewedFileKey": zod.string().nullable(),
+  "reviewedFileName": zod.string().nullable(),
+  "reviewedFileMime": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
-  "reviewedAt": zod.coerce.date().nullable()
+  "reviewedAt": zod.coerce.date().nullable(),
+  "reminderActive": zod.boolean()
 }))
 })
 
@@ -264,12 +288,22 @@ export const GetStudentBookingResponse = zod.object({
   "bookingId": zod.number(),
   "assignedText": zod.string().nullable(),
   "assignedFileUrl": zod.string().nullable(),
+  "assignedFileKey": zod.string().nullable(),
+  "assignedFileName": zod.string().nullable(),
+  "assignedFileMime": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
   "fileUrl": zod.string().nullable(),
+  "submittedFileKey": zod.string().nullable(),
+  "submittedFileName": zod.string().nullable(),
+  "submittedFileMime": zod.string().nullable(),
+  "reviewedFileKey": zod.string().nullable(),
+  "reviewedFileName": zod.string().nullable(),
+  "reviewedFileMime": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
-  "reviewedAt": zod.coerce.date().nullable()
+  "reviewedAt": zod.coerce.date().nullable(),
+  "reminderActive": zod.boolean()
 }).optional(),
   "review": zod.object({
   "id": zod.number(),
@@ -340,12 +374,22 @@ export const GetHomeworkResponse = zod.object({
   "bookingId": zod.number(),
   "assignedText": zod.string().nullable(),
   "assignedFileUrl": zod.string().nullable(),
+  "assignedFileKey": zod.string().nullable(),
+  "assignedFileName": zod.string().nullable(),
+  "assignedFileMime": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
   "fileUrl": zod.string().nullable(),
+  "submittedFileKey": zod.string().nullable(),
+  "submittedFileName": zod.string().nullable(),
+  "submittedFileMime": zod.string().nullable(),
+  "reviewedFileKey": zod.string().nullable(),
+  "reviewedFileName": zod.string().nullable(),
+  "reviewedFileMime": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
-  "reviewedAt": zod.coerce.date().nullable()
+  "reviewedAt": zod.coerce.date().nullable(),
+  "reminderActive": zod.boolean()
 })
 
 
@@ -358,7 +402,10 @@ export const SubmitHomeworkParams = zod.object({
 
 export const SubmitHomeworkBody = zod.object({
   "submittedText": zod.string().optional(),
-  "fileUrl": zod.string().optional()
+  "fileUrl": zod.string().optional(),
+  "fileKey": zod.string().optional(),
+  "fileName": zod.string().optional(),
+  "fileMime": zod.string().optional()
 })
 
 export const SubmitHomeworkResponse = zod.object({
@@ -366,13 +413,55 @@ export const SubmitHomeworkResponse = zod.object({
   "bookingId": zod.number(),
   "assignedText": zod.string().nullable(),
   "assignedFileUrl": zod.string().nullable(),
+  "assignedFileKey": zod.string().nullable(),
+  "assignedFileName": zod.string().nullable(),
+  "assignedFileMime": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
   "fileUrl": zod.string().nullable(),
+  "submittedFileKey": zod.string().nullable(),
+  "submittedFileName": zod.string().nullable(),
+  "submittedFileMime": zod.string().nullable(),
+  "reviewedFileKey": zod.string().nullable(),
+  "reviewedFileName": zod.string().nullable(),
+  "reviewedFileMime": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
-  "reviewedAt": zod.coerce.date().nullable()
+  "reviewedAt": zod.coerce.date().nullable(),
+  "reminderActive": zod.boolean()
 })
+
+
+/**
+ * @summary List all homework for the logged-in student across all bookings
+ */
+export const ListStudentHomeworkResponseItem = zod.object({
+  "id": zod.number(),
+  "bookingId": zod.number(),
+  "studentId": zod.number(),
+  "studentName": zod.string(),
+  "lessonTypeName": zod.string(),
+  "lessonDate": zod.coerce.date(),
+  "assignedText": zod.string().nullable(),
+  "assignedFileUrl": zod.string().nullable(),
+  "assignedFileKey": zod.string().nullable(),
+  "assignedFileName": zod.string().nullable(),
+  "assignedFileMime": zod.string().nullable(),
+  "submittedText": zod.string().nullable(),
+  "fileUrl": zod.string().nullable(),
+  "submittedFileKey": zod.string().nullable(),
+  "submittedFileName": zod.string().nullable(),
+  "submittedFileMime": zod.string().nullable(),
+  "reviewedFileKey": zod.string().nullable(),
+  "reviewedFileName": zod.string().nullable(),
+  "reviewedFileMime": zod.string().nullable(),
+  "tutorFeedback": zod.string().nullable(),
+  "grade": zod.string().nullable(),
+  "submittedAt": zod.coerce.date().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "reminderActive": zod.boolean()
+})
+export const ListStudentHomeworkResponse = zod.array(ListStudentHomeworkResponseItem)
 
 
 /**
@@ -571,7 +660,10 @@ export const CompleteBookingParams = zod.object({
 export const CompleteBookingBody = zod.object({
   "notes": zod.string().min(1).describe('The teacher\'s recap of the lesson.'),
   "homeworkAssignedText": zod.string().optional(),
-  "homeworkAssignedFileUrl": zod.string().optional()
+  "homeworkAssignedFileUrl": zod.string().optional(),
+  "homeworkAssignedFileKey": zod.string().optional(),
+  "homeworkAssignedFileName": zod.string().optional(),
+  "homeworkAssignedFileMime": zod.string().optional()
 })
 
 export const CompleteBookingResponse = zod.object({
@@ -686,21 +778,36 @@ export const DeleteLessonTypeResponse = zod.void()
  * @summary List all homework submissions
  */
 export const ListAdminHomeworkQueryParams = zod.object({
-  "reviewed": zod.coerce.boolean().optional()
+  "reviewed": zod.coerce.boolean().optional(),
+  "studentId": zod.coerce.number().optional(),
+  "submitted": zod.coerce.boolean().optional().describe('Defaults to true (existing behavior — only submitted homework). Set to false to include assigned-but-unsubmitted homework too.')
 })
 
 export const ListAdminHomeworkResponseItem = zod.object({
   "id": zod.number(),
   "bookingId": zod.number(),
+  "studentId": zod.number(),
   "studentName": zod.string(),
   "lessonTypeName": zod.string(),
   "lessonDate": zod.coerce.date(),
+  "assignedText": zod.string().nullable(),
+  "assignedFileUrl": zod.string().nullable(),
+  "assignedFileKey": zod.string().nullable(),
+  "assignedFileName": zod.string().nullable(),
+  "assignedFileMime": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
   "fileUrl": zod.string().nullable(),
+  "submittedFileKey": zod.string().nullable(),
+  "submittedFileName": zod.string().nullable(),
+  "submittedFileMime": zod.string().nullable(),
+  "reviewedFileKey": zod.string().nullable(),
+  "reviewedFileName": zod.string().nullable(),
+  "reviewedFileMime": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
-  "reviewedAt": zod.coerce.date().nullable()
+  "reviewedAt": zod.coerce.date().nullable(),
+  "reminderActive": zod.boolean()
 })
 export const ListAdminHomeworkResponse = zod.array(ListAdminHomeworkResponseItem)
 
@@ -714,21 +821,37 @@ export const UpdateHomeworkParams = zod.object({
 
 export const UpdateHomeworkBody = zod.object({
   "tutorFeedback": zod.string().optional(),
-  "grade": zod.string().optional()
+  "grade": zod.string().optional(),
+  "reviewedFileKey": zod.string().optional(),
+  "reviewedFileName": zod.string().optional(),
+  "reviewedFileMime": zod.string().optional()
 })
 
 export const UpdateHomeworkResponse = zod.object({
   "id": zod.number(),
   "bookingId": zod.number(),
+  "studentId": zod.number(),
   "studentName": zod.string(),
   "lessonTypeName": zod.string(),
   "lessonDate": zod.coerce.date(),
+  "assignedText": zod.string().nullable(),
+  "assignedFileUrl": zod.string().nullable(),
+  "assignedFileKey": zod.string().nullable(),
+  "assignedFileName": zod.string().nullable(),
+  "assignedFileMime": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
   "fileUrl": zod.string().nullable(),
+  "submittedFileKey": zod.string().nullable(),
+  "submittedFileName": zod.string().nullable(),
+  "submittedFileMime": zod.string().nullable(),
+  "reviewedFileKey": zod.string().nullable(),
+  "reviewedFileName": zod.string().nullable(),
+  "reviewedFileMime": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
-  "reviewedAt": zod.coerce.date().nullable()
+  "reviewedAt": zod.coerce.date().nullable(),
+  "reminderActive": zod.boolean()
 })
 
 
@@ -1236,5 +1359,34 @@ export const GetCalendarStatusResponse = zod.object({
 export const DisconnectCalendarResponse = zod.object({
   "success": zod.boolean()
 })
+
+
+/**
+ * Admin session covers homework-assigned/homework-review contexts; a Clerk-authenticated student who owns the booking covers homework-submission.
+ * @summary Upload a file (PDF or image) to object storage
+ */
+export const UploadFileBody = zod.object({
+  "file": zod.string(),
+  "context": zod.enum(['homework-assigned', 'homework-submission', 'homework-review']),
+  "bookingId": zod.number()
+}).describe('Multipart form fields for POST \/uploads. The \"file\" field carries the binary upload; multer parses it server-side rather than this schema.')
+
+export const UploadFileResponse = zod.object({
+  "key": zod.string(),
+  "fileName": zod.string(),
+  "mimeType": zod.string(),
+  "size": zod.number()
+})
+
+
+/**
+ * @summary Download/view a homework file (assigned, submission, or review) via a private proxy
+ */
+export const GetHomeworkFileParams = zod.object({
+  "homeworkId": zod.coerce.number(),
+  "which": zod.enum(['assigned', 'submission', 'review'])
+})
+
+export const GetHomeworkFileResponse = zod.unknown()
 
 

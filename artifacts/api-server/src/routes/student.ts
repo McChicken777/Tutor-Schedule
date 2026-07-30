@@ -34,6 +34,7 @@ import {
   deleteCalendarEvent,
   getFreeBusySlots,
 } from "../lib/calendar";
+import { mapHomeworkFields, mapHomeworkRow } from "../lib/homeworkMapper";
 
 const router: IRouter = Router();
 
@@ -291,19 +292,14 @@ router.get("/student/dashboard", requireAuth, async (req, res): Promise<void> =>
       remainingCredits: p.pkg.totalCredits - p.pkg.usedCredits,
       purchasedAt: p.pkg.purchasedAt,
     })),
-    recentHomework: recentHomework.map((r) => ({
-      id: r.hw.id,
-      bookingId: r.hw.bookingId,
-      studentName: "",
-      lessonTypeName: r.lessonType.name,
-      lessonDate: r.booking.startTime,
-      submittedText: r.hw.submittedText ?? null,
-      fileUrl: r.hw.fileUrl ?? null,
-      tutorFeedback: r.hw.tutorFeedback ?? null,
-      grade: r.hw.grade ?? null,
-      submittedAt: r.hw.submittedAt ?? null,
-      reviewedAt: r.hw.reviewedAt ?? null,
-    })),
+    recentHomework: recentHomework.map((r) =>
+      mapHomeworkRow(r.hw, {
+        studentId: user.id,
+        studentName: "",
+        lessonTypeName: r.lessonType.name,
+        lessonDate: r.booking.startTime,
+      }),
+    ),
   });
 });
 
@@ -688,16 +684,7 @@ router.get("/student/bookings/:id/homework", requireAuth, async (req, res): Prom
     return;
   }
 
-  res.json({
-    id: hw.id,
-    bookingId: hw.bookingId,
-    submittedText: hw.submittedText ?? null,
-    fileUrl: hw.fileUrl ?? null,
-    tutorFeedback: hw.tutorFeedback ?? null,
-    grade: hw.grade ?? null,
-    submittedAt: hw.submittedAt ?? null,
-    reviewedAt: hw.reviewedAt ?? null,
-  });
+  res.json(mapHomeworkFields(hw));
 });
 
 router.post("/student/bookings/:id/homework", requireAuth, async (req, res): Promise<void> => {
@@ -731,7 +718,11 @@ router.post("/student/bookings/:id/homework", requireAuth, async (req, res): Pro
       .set({
         submittedText: parsed.data.submittedText ?? existing.submittedText,
         fileUrl: parsed.data.fileUrl ?? existing.fileUrl,
+        submittedFileKey: parsed.data.fileKey ?? existing.submittedFileKey,
+        submittedFileName: parsed.data.fileName ?? existing.submittedFileName,
+        submittedFileMime: parsed.data.fileMime ?? existing.submittedFileMime,
         submittedAt: new Date(),
+        reminderActive: false,
       })
       .where(eq(homeworkTable.bookingId, id))
       .returning();
@@ -742,21 +733,40 @@ router.post("/student/bookings/:id/homework", requireAuth, async (req, res): Pro
         bookingId: id,
         submittedText: parsed.data.submittedText ?? null,
         fileUrl: parsed.data.fileUrl ?? null,
+        submittedFileKey: parsed.data.fileKey ?? null,
+        submittedFileName: parsed.data.fileName ?? null,
+        submittedFileMime: parsed.data.fileMime ?? null,
         submittedAt: new Date(),
+        reminderActive: false,
       })
       .returning();
   }
 
-  res.status(201).json({
-    id: hw.id,
-    bookingId: hw.bookingId,
-    submittedText: hw.submittedText ?? null,
-    fileUrl: hw.fileUrl ?? null,
-    tutorFeedback: hw.tutorFeedback ?? null,
-    grade: hw.grade ?? null,
-    submittedAt: hw.submittedAt ?? null,
-    reviewedAt: hw.reviewedAt ?? null,
-  });
+  res.status(201).json(mapHomeworkFields(hw));
+});
+
+router.get("/student/homework", requireAuth, async (req, res): Promise<void> => {
+  const clerkUserId = (req as any).clerkUserId;
+  const user = await getOrCreateUser(clerkUserId);
+
+  const rows = await db
+    .select({ hw: homeworkTable, booking: bookingsTable, lessonType: lessonTypesTable })
+    .from(homeworkTable)
+    .innerJoin(bookingsTable, eq(homeworkTable.bookingId, bookingsTable.id))
+    .innerJoin(lessonTypesTable, eq(bookingsTable.lessonTypeId, lessonTypesTable.id))
+    .where(eq(bookingsTable.studentId, user.id))
+    .orderBy(desc(bookingsTable.startTime));
+
+  res.json(
+    rows.map((r) =>
+      mapHomeworkRow(r.hw, {
+        studentId: user.id,
+        studentName: user.displayName,
+        lessonTypeName: r.lessonType.name,
+        lessonDate: r.booking.startTime,
+      }),
+    ),
+  );
 });
 
 router.post("/student/bookings/:id/review", requireAuth, async (req, res): Promise<void> => {

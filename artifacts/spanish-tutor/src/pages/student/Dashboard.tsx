@@ -2,7 +2,7 @@ import { useGetStudentDashboard, useListLessonTypes } from "@workspace/api-clien
 import { Link } from "wouter";
 import { format, isBefore, addMinutes, differenceInMinutes } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Calendar, FileText, ArrowRight, Video, Clock, Gift } from "lucide-react";
+import { Calendar, FileText, ArrowRight, Video, Clock, Gift, Bell } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function StudentDashboard() {
@@ -25,6 +25,7 @@ export default function StudentDashboard() {
   if (!dashboard) return null;
 
   const nextBooking = dashboard.nextBooking;
+  const dueHomework = dashboard.recentHomework?.filter((hw: any) => hw.reminderActive) ?? [];
 
   const trialLessonType = lessonTypes?.find((lt) => lt.isTrial);
   const hasUnusedTrial = dashboard.trialAvailable && !!trialLessonType;
@@ -48,6 +49,28 @@ export default function StudentDashboard() {
   return (
     <div className="p-6 md:p-10 bg-background min-h-full">
       <h1 className="text-3xl font-serif font-bold text-foreground mb-8">Welcome back</h1>
+
+      {dueHomework.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-amber-500/10 border border-amber-500/25 rounded-2xl p-6 mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-11 h-11 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-700 dark:text-amber-400 flex-shrink-0">
+              <Bell className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-bold text-foreground">You have homework due</p>
+              <p className="text-sm text-muted-foreground">
+                {dueHomework.length === 1
+                  ? `${dueHomework[0].lessonTypeName}, assigned ${format(new Date(dueHomework[0].lessonDate), "MMM d")}`
+                  : `${dueHomework.length} lessons are waiting on your homework`}
+                {" "}— complete it now to stay on track.
+              </p>
+            </div>
+          </div>
+          <Button asChild>
+            <Link href="/homework">Complete it now</Link>
+          </Button>
+        </div>
+      )}
 
       {hasUnusedTrial && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-primary/10 border border-primary/20 rounded-2xl p-6 mb-8">
@@ -149,13 +172,13 @@ export default function StudentDashboard() {
         <div>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-serif font-bold text-foreground">Recent Homework</h2>
-            <Link href="/bookings" className="text-sm font-medium text-primary hover:underline">
+            <Link href="/homework" className="text-sm font-medium text-primary hover:underline">
               View all
             </Link>
           </div>
           <div className="space-y-4">
-            {dashboard.recentHomework.slice(0, 3).map(hw => (
-              <div key={hw.id} className="bg-card border border-border rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {dashboard.recentHomework.slice(0, 3).map((hw: any) => (
+              <div key={hw.id} className={`bg-card border rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${hw.reminderActive ? "border-amber-500/40" : "border-border"}`}>
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-accent rounded-xl text-primary">
                     <FileText className="w-6 h-6" />
@@ -166,6 +189,11 @@ export default function StudentDashboard() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
+                  {hw.reminderActive && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/25">
+                      <Bell className="w-3 h-3" /> Reminder
+                    </span>
+                  )}
                   {hw.reviewedAt ? (
                     <span className="text-sm font-medium px-3 py-1 rounded-md bg-secondary/10 text-secondary">Reviewed</span>
                   ) : (
