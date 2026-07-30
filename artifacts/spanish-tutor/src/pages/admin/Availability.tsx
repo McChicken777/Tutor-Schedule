@@ -40,10 +40,15 @@ function parseHhMm(v: string) {
 function generateChips(dateStr: string, start: string, end: string) {
   const { hour: sh, minute: sm } = parseHhMm(start);
   const { hour: eh, minute: em } = parseHhMm(end);
-  const base = new Date(dateStr + "T00:00:00Z").getTime();
+  const [y, mo, d] = dateStr.split("-").map(Number);
+  // Build chip instants in the browser's LOCAL timezone (not UTC) so they line
+  // up with how the teacher reads their own working hours AND with the absolute
+  // instants Google Calendar events sit at. Using UTC midnight here shifted the
+  // whole grid by the teacher's UTC offset, so real morning events fell outside
+  // the chip range and nothing ever greyed out.
   const chips: { startTime: Date; endTime: Date }[] = [];
-  let cur = base + (sh * 60 + sm) * 60000;
-  const endMs = base + (eh * 60 + em) * 60000;
+  let cur = new Date(y, mo - 1, d, sh, sm, 0, 0).getTime();
+  const endMs = new Date(y, mo - 1, d, eh, em, 0, 0).getTime();
   while (cur + 30 * 60000 <= endMs) {
     chips.push({ startTime: new Date(cur), endTime: new Date(cur + 30 * 60000) });
     cur += 30 * 60000;
