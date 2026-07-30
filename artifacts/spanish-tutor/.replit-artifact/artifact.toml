@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "Spanish Tutor"
+title = "Loquu"
 version = "1.0.0"
 id = "artifacts/spanish-tutor"
 router = "path"

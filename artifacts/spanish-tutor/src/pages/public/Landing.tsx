@@ -28,7 +28,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <img src={`${basePath}/logo.svg`} alt="Logo" className="w-8 h-8 rounded-lg" />
-            <span className="font-serif text-xl font-bold tracking-tight">El Sol</span>
+            <span className="font-serif text-xl font-bold tracking-tight">Loquu</span>
           </div>
           <nav className="flex items-center gap-6">
             <Link href="/sign-in" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
@@ -254,12 +254,12 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2.5">
             <img src={`${basePath}/logo.svg`} alt="Logo" className="w-6 h-6 rounded-md opacity-70" />
-            <span className="font-serif font-bold text-foreground">El Sol</span>
+            <span className="font-serif font-bold text-foreground">Loquu</span>
           </div>
           <p className="text-sm text-muted-foreground">
             <a href={`mailto:${contactEmail}`} className="hover:text-foreground hover:underline">{contactEmail}</a>
             <span className="mx-2">·</span>
-            © {new Date().getFullYear()} El Sol Spanish Tutoring
+            © {new Date().getFullYear()} Loquu
           </p>
         </div>
       </footer>

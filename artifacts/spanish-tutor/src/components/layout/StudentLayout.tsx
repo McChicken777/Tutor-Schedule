@@ -51,7 +51,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
         <div className="p-6">
           <Link href="/dashboard" className="flex items-center gap-3">
             <img src={`${basePath}/logo.svg`} alt="Logo" className="w-8 h-8 rounded" />
-            <span className="font-serif text-xl font-bold text-foreground">El Sol Tutor</span>
+            <span className="font-serif text-xl font-bold text-foreground">Loquu</span>
           </Link>
         </div>
 

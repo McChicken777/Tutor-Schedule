@@ -38,7 +38,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <div className="p-6">
           <Link href="/admin" className="flex items-center gap-3">
             <img src={`${basePath}/logo.svg`} alt="Logo" className="w-8 h-8 rounded" />
-            <span className="font-serif text-xl font-bold text-foreground">Tutor Admin</span>
+            <span className="font-serif text-xl font-bold text-foreground">Loquu</span>
           </Link>
         </div>
 
