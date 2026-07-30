@@ -406,7 +406,7 @@ export default function AdminAvailability() {
               onSelect={(d) => setSelectedDate(d)}
               disabled={(d) => isBefore(d, startOfDay(new Date()))}
               className="bg-transparent"
-              classNames={{ root: "w-full", month: "w-full" }}
+              classNames={{ root: "w-full", month: "flex w-full flex-col gap-4" }}
               style={{ "--cell-size": "3.25rem" } as CSSProperties}
             />
           </div>

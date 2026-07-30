@@ -181,10 +181,12 @@ export async function getFreeBusySlots(
     logger.warn({ err: listErr }, "calendarList.list failed — falling back to primary calendar only");
   }
 
-  // We use events.list rather than freebusy.query on purpose: freebusy only
-  // reports events whose visibility is "Busy" and silently omits any event the
-  // tutor marked as "Free" — which would let students book over real events.
-  // events.list returns every event, so nothing is missed.
+  // We use events.list as the primary source rather than freebusy.query:
+  // freebusy only reports events whose visibility is "Busy" and silently
+  // omits any event marked "Free", which would let students book over real
+  // events. events.list returns every event. We fall back to freebusy.query
+  // per-calendar below for calendars where events.list isn't permitted (see
+  // the catch block).
   const busy: Array<{ start: Date; end: Date }> = [];
   const seen = new Set<string>(); // dedupe the same event shared across calendars
   let scanned = 0;
@@ -218,7 +220,32 @@ export async function getFreeBusySlots(
         busy.push({ start: new Date(start), end: new Date(end) });
       }
     } catch (calErr) {
-      logger.warn({ err: calErr, calId }, "events.list failed for a calendar — skipping it");
+      // Some secondary calendars — notably ones added via "Subscribe from
+      // URL" (how third-party sync tools like AmazingTalker typically hook
+      // into Google Calendar) — only grant "freeBusyReader" access. That
+      // access level can't list individual events (events.list 403s) but
+      // CAN answer a freebusy query, so fall back to that rather than
+      // silently dropping the whole calendar.
+      try {
+        const fbRes = await calendar.freebusy.query({
+          requestBody: {
+            timeMin: startDate.toISOString(),
+            timeMax: endDate.toISOString(),
+            items: [{ id: calId }],
+          },
+        });
+        const periods = fbRes.data.calendars?.[calId]?.busy ?? [];
+        for (const p of periods) {
+          if (!p.start || !p.end) continue;
+          const key = `${p.start}|${p.end}|freebusy:${calId}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          busy.push({ start: new Date(p.start), end: new Date(p.end) });
+        }
+        scanned++;
+      } catch (fbErr) {
+        logger.warn({ err: calErr, fbErr, calId }, "events.list and freebusy fallback both failed for a calendar — skipping it");
+      }
     }
   }
 
