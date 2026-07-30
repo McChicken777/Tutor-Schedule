@@ -73,16 +73,29 @@ export async function getFreeBusySlots(
     return [];
   }
 
+  // Which calendars to check. Default to "primary"; try to expand to the
+  // teacher's own calendars (owner/writer) where they'd add appointments.
+  // We deliberately SKIP read-only subscribed calendars (holidays, birthdays,
+  // week-numbers, shared-with-reader) — those would wrongly mark whole days
+  // busy and also eat into the freebusy 50-calendar limit.
+  let items: Array<{ id: string }> = [{ id: "primary" }];
   try {
-    // Query every calendar the account can see, not just "primary" — manual and
-    // external-app events often live on secondary/shared/subscribed calendars.
     const calendarList = await calendar.calendarList.list({ maxResults: 250 });
-    const calendarIds = (calendarList.data.items ?? [])
-      .map((c) => c.id)
-      .filter((id): id is string => !!id);
-    // Fall back to primary if the list came back empty for any reason.
-    const items = calendarIds.length > 0 ? calendarIds.map((id) => ({ id })) : [{ id: "primary" }];
+    const owned = (calendarList.data.items ?? [])
+      .filter(
+        (c) =>
+          !!c.id &&
+          (c.primary === true || c.accessRole === "owner" || c.accessRole === "writer"),
+      )
+      .map((c) => ({ id: c.id as string }));
+    // freebusy.query rejects >50 items with a 400, so cap it.
+    if (owned.length > 0) items = owned.slice(0, 50);
+  } catch (listErr) {
+    // Non-fatal: fall back to querying just "primary" rather than giving up.
+    logger.warn({ err: listErr }, "calendarList.list failed — falling back to primary calendar only");
+  }
 
+  try {
     const res = await calendar.freebusy.query({
       requestBody: {
         timeMin: startDate.toISOString(),
@@ -93,11 +106,18 @@ export async function getFreeBusySlots(
 
     const calendars = res.data.calendars ?? {};
     const busy: Array<{ start: Date; end: Date }> = [];
-    for (const cal of Object.values(calendars)) {
+    for (const [calId, cal] of Object.entries(calendars)) {
+      if (cal.errors?.length) {
+        logger.warn({ calId, errors: cal.errors }, "freebusy returned errors for a calendar");
+      }
       for (const b of cal.busy ?? []) {
         if (b.start && b.end) busy.push({ start: new Date(b.start), end: new Date(b.end) });
       }
     }
+    logger.info(
+      { calendarsQueried: items.length, busyBlocks: busy.length, window: [startDate.toISOString(), endDate.toISOString()] },
+      "getFreeBusySlots result",
+    );
     return busy;
   } catch (err) {
     // Previously this failed silently and returned [], making every slot look

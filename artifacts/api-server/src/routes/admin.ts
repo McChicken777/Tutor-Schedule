@@ -944,8 +944,11 @@ router.get("/admin/calendar/busy", requireAdmin, async (req, res): Promise<void>
     res.status(400).json({ error: "date query param required (YYYY-MM-DD)" });
     return;
   }
-  const dayStart = new Date(date + "T00:00:00Z");
-  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+  // Query a generous ±24h window around the UTC day so events near the day's
+  // edges aren't missed for teachers in non-UTC timezones. The client does its
+  // own precise per-slot overlap check, so over-fetching here is harmless.
+  const dayStart = new Date(new Date(date + "T00:00:00Z").getTime() - 24 * 60 * 60 * 1000);
+  const dayEnd = new Date(new Date(date + "T00:00:00Z").getTime() + 48 * 60 * 60 * 1000);
   const busy = await getFreeBusySlots(dayStart, dayEnd);
   res.json(busy.map((b) => ({ start: b.start.toISOString(), end: b.end.toISOString() })));
 });
