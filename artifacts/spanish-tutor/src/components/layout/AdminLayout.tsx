@@ -42,7 +42,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col md:flex-row">
       {/* Sidebar */}
-      <aside className="w-full md:w-64 border-r border-border bg-card flex-shrink-0 flex flex-col">
+      <aside className="w-full md:w-64 border-r border-border bg-card flex-shrink-0 flex flex-col md:sticky md:top-0 md:h-[100dvh] md:self-start">
         <div className="p-6">
           <Link href="/admin" className="flex items-center gap-3">
             <img src={`${basePath}/logo.svg`} alt="Logo" className="w-8 h-8 rounded" />

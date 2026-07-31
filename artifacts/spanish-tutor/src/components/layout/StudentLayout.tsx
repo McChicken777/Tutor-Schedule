@@ -47,7 +47,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col md:flex-row">
       {/* Sidebar */}
-      <aside className="w-full md:w-64 border-r border-border bg-card flex-shrink-0 flex flex-col">
+      <aside className="w-full md:w-64 border-r border-border bg-card flex-shrink-0 flex flex-col md:sticky md:top-0 md:h-[100dvh] md:self-start">
         <div className="p-6">
           <Link href="/dashboard" className="flex items-center gap-3">
             <img src={`${basePath}/logo.svg`} alt="Logo" className="w-8 h-8 rounded" />
@@ -55,7 +55,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
           </Link>
         </div>
 
-        <nav className="flex-1 px-4 space-y-1">
+        <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
           {navItems.map((item, index) => {
             const active = location === item.href || (item.href !== "/dashboard" && location.startsWith(item.href));
             const isTourStep = tourActive && index === tourStep;
