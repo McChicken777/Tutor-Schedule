@@ -487,20 +487,7 @@ router.get("/student/bookings/:id", requireAuth, async (req, res): Promise<void>
     status: row.booking.status,
     meetLink: row.booking.meetLink ?? null,
     notes: row.booking.notes ?? null,
-    homework: hw
-      ? {
-          id: hw.id,
-          bookingId: hw.bookingId,
-          assignedText: hw.assignedText ?? null,
-          assignedFileUrl: hw.assignedFileUrl ?? null,
-          submittedText: hw.submittedText ?? null,
-          fileUrl: hw.fileUrl ?? null,
-          tutorFeedback: hw.tutorFeedback ?? null,
-          grade: hw.grade ?? null,
-          submittedAt: hw.submittedAt ?? null,
-          reviewedAt: hw.reviewedAt ?? null,
-        }
-      : null,
+    homework: hw ? mapHomeworkFields(hw) : null,
     review: review
       ? {
           id: review.id,
@@ -553,9 +540,10 @@ router.patch("/student/bookings/:id/cancel", requireAuth, async (req, res): Prom
     .where(eq(bookingsTable.id, id))
     .returning();
 
-  // Refund credit — but not if cancelling less than 24 hours before the lesson
+  // Refund credit — but not if cancelling less than 24 hours before the lesson,
+  // and never for a trial booking, which never consumed a credit to begin with.
   const hoursUntilLesson = (row.booking.startTime.getTime() - Date.now()) / (1000 * 60 * 60);
-  if (hoursUntilLesson >= 24) {
+  if (!row.lessonType.isTrial && hoursUntilLesson >= 24) {
     const packages = await db
       .select()
       .from(lessonPackagesTable)

@@ -288,16 +288,27 @@ router.patch("/admin/bookings/:id/complete", requireAdmin, async (req, res): Pro
     parsed.data.homeworkAssignedFileUrl != null ||
     parsed.data.homeworkAssignedFileKey != null
   ) {
-    await db
-      .update(homeworkTable)
-      .set({
-        assignedText: parsed.data.homeworkAssignedText ?? null,
-        assignedFileUrl: parsed.data.homeworkAssignedFileUrl ?? null,
-        assignedFileKey: parsed.data.homeworkAssignedFileKey ?? null,
-        assignedFileName: parsed.data.homeworkAssignedFileName ?? null,
-        assignedFileMime: parsed.data.homeworkAssignedFileMime ?? null,
-      })
+    const assignment = {
+      assignedText: parsed.data.homeworkAssignedText ?? null,
+      assignedFileUrl: parsed.data.homeworkAssignedFileUrl ?? null,
+      assignedFileKey: parsed.data.homeworkAssignedFileKey ?? null,
+      assignedFileName: parsed.data.homeworkAssignedFileName ?? null,
+      assignedFileMime: parsed.data.homeworkAssignedFileMime ?? null,
+    };
+
+    // Bookings normally get an empty homework row at creation time, but older
+    // (and seeded) bookings predate that — upsert so the assignment is never
+    // silently dropped by an UPDATE that matches no rows.
+    const [existingHw] = await db
+      .select({ id: homeworkTable.id })
+      .from(homeworkTable)
       .where(eq(homeworkTable.bookingId, id));
+
+    if (existingHw) {
+      await db.update(homeworkTable).set(assignment).where(eq(homeworkTable.bookingId, id));
+    } else {
+      await db.insert(homeworkTable).values({ bookingId: id, ...assignment });
+    }
   }
 
   res.json({
@@ -913,9 +924,15 @@ router.put("/admin/availability-overrides/day", requireAdmin, async (req, res): 
     return;
   }
 
-  // Treat the date string as UTC midnight so it's unambiguous regardless of server TZ
-  const dayStart = new Date(parsed.data.date + "T00:00:00Z");
-  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+  // Resolve the day in the tutor's timezone — the incoming blocks are real
+  // instants derived from her local wall-clock, so a UTC-midnight window would
+  // put late-evening (or early-morning) blocks in the neighbouring day's bucket
+  // and fail to clear them on re-save.
+  const [tzSettings] = await db.select().from(siteSettingsTable).limit(1);
+  const { start: dayStart, end: dayEnd } = zonedDayRange(
+    parsed.data.date,
+    tzSettings?.timezone || "UTC",
+  );
 
   await db
     .delete(availabilityOverridesTable)

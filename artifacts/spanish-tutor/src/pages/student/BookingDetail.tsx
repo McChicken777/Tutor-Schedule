@@ -16,13 +16,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getGetStudentBookingQueryKey } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFileUpload } from "@/hooks/use-file-upload";
+import ErrorState from "@/components/ErrorState";
 import { Video, ArrowLeft, Star, Upload, Download, MessageSquare, FileText, Paperclip } from "lucide-react";
 import { Link } from "wouter";
 
 export default function BookingDetail() {
   const [, params] = useRoute("/bookings/:id");
   const id = parseInt(params?.id || "0", 10);
-  const { data: booking, isLoading } = useGetStudentBooking(id, { query: { enabled: !!id, queryKey: getGetStudentBookingQueryKey(id) } });
+  const { data: booking, isLoading, error, refetch } = useGetStudentBooking(id, { query: { enabled: !!id, queryKey: getGetStudentBookingQueryKey(id) } });
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -37,6 +38,8 @@ export default function BookingDetail() {
 
   const [rating, setRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
+
+  if (error) return <ErrorState error={error} onRetry={refetch} fullPage />;
 
   if (isLoading || !booking) {
     return (
@@ -193,7 +196,7 @@ export default function BookingDetail() {
             <FileText className="w-6 h-6 text-primary" /> Homework
           </h2>
           
-          {booking.homework?.assignedText || booking.homework?.assignedFileUrl ? (
+          {booking.homework?.assignedText || booking.homework?.assignedFileUrl || booking.homework?.assignedFileKey ? (
             <div className="mb-6 pb-6 border-b border-border">
               <h3 className="font-bold text-foreground mb-2">Assigned by your teacher</h3>
               {booking.homework.assignedText && (
@@ -204,10 +207,15 @@ export default function BookingDetail() {
                   <Download className="w-4 h-4 mr-1" /> View attachment
                 </a>
               )}
+              {booking.homework.assignedFileKey && (
+                <a href={`/api/files/homework/${booking.homework.id}/assigned`} target="_blank" rel="noreferrer" className="inline-flex items-center text-primary mt-2 ml-4 hover:underline">
+                  <FileText className="w-4 h-4 mr-1" /> {booking.homework.assignedFileName || "View attachment"}
+                </a>
+              )}
             </div>
           ) : null}
 
-          {booking.homework ? (
+          {booking.homework?.submittedAt ? (
             <div className="space-y-6">
               <div>
                 <h3 className="font-bold text-foreground mb-2">Your Submission</h3>
@@ -219,9 +227,9 @@ export default function BookingDetail() {
                     <Upload className="w-4 h-4 mr-1" /> View attached file
                   </a>
                 )}
-                {(booking.homework as any).submittedFileKey && (
+                {booking.homework.submittedFileKey && (
                   <a href={`/api/files/homework/${booking.homework.id}/submission`} target="_blank" rel="noreferrer" className="inline-flex items-center text-primary mt-2 ml-4 hover:underline">
-                    <Paperclip className="w-4 h-4 mr-1" /> {(booking.homework as any).submittedFileName || "View uploaded file"}
+                    <Paperclip className="w-4 h-4 mr-1" /> {booking.homework.submittedFileName || "View uploaded file"}
                   </a>
                 )}
               </div>
@@ -234,7 +242,7 @@ export default function BookingDetail() {
                   <div className="bg-secondary/5 p-4 rounded-xl border border-secondary/20">
                     <p className="text-foreground whitespace-pre-wrap mb-2">{booking.homework.tutorFeedback}</p>
                     {booking.homework.grade && <p className="font-bold text-secondary mb-2">Grade: {booking.homework.grade}</p>}
-                    {(booking.homework as any).reviewedFileKey && (
+                    {booking.homework.reviewedFileKey && (
                       <a href={`/api/files/homework/${booking.homework.id}/review`} target="_blank" rel="noreferrer" className="inline-flex items-center text-secondary hover:underline text-sm">
                         <FileText className="w-4 h-4 mr-1" /> View marked-up version
                       </a>
