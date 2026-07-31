@@ -89,10 +89,9 @@ async function getOrCreateUser(clerkUserId: string) {
 }
 
 // The trial lesson type needs no credits to book, but a student can only ever
-// use it once. Only "upcoming" (already holding a trial slot) or "completed"
-// (the lesson actually happened) count as used — a cancelled trial that never
-// happened doesn't burn the one-time trial, so a genuine cancellation lets a
-// student try again.
+// use it once. Only a "completed" (the lesson actually happened) booking
+// counts as used — an upcoming or cancelled trial doesn't burn the one-time
+// trial, so a student can still be re-scheduled or try again before it happens.
 async function hasUsedTrial(studentId: number): Promise<boolean> {
   const [existing] = await db
     .select({ id: bookingsTable.id })
@@ -102,7 +101,7 @@ async function hasUsedTrial(studentId: number): Promise<boolean> {
       and(
         eq(bookingsTable.studentId, studentId),
         eq(lessonTypesTable.isTrial, true),
-        sql`${bookingsTable.status} IN ('upcoming', 'completed')`,
+        eq(bookingsTable.status, "completed"),
       ),
     );
   return !!existing;
