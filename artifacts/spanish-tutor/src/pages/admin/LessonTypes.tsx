@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import ErrorState from "@/components/ErrorState";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -11,7 +12,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function AdminLessonTypes() {
-  const { data: lessonTypes, isLoading } = useListAdminLessonTypes();
+  const { data: lessonTypes, isLoading, error, refetch } = useListAdminLessonTypes();
   const updateMutation = useUpdateLessonType();
   const createMutation = useCreateLessonType();
   const qc = useQueryClient();
@@ -148,6 +149,8 @@ export default function AdminLessonTypes() {
           <Skeleton className="h-48 rounded-2xl" />
           <Skeleton className="h-48 rounded-2xl" />
         </div>
+      ) : error ? (
+        <ErrorState error={error} onRetry={refetch} />
       ) : (
         <div className="grid md:grid-cols-2 gap-6">
           {lessonTypes?.map(lt => (

@@ -12,11 +12,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getListAdminHomeworkQueryKey } from "@workspace/api-client-react";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import AnnotationEditor from "@/components/homework/AnnotationEditor";
+import ErrorState from "@/components/ErrorState";
 import { FileText, Download, Paperclip, PenLine } from "lucide-react";
 
 export default function AdminHomework() {
   const [tab, setTab] = useState<"pending" | "reviewed">("pending");
-  const { data: homeworkList, isLoading } = useListAdminHomework({ reviewed: tab === "reviewed" });
+  const { data: homeworkList, isLoading, error, refetch } = useListAdminHomework({ reviewed: tab === "reviewed" });
   
   return (
     <div className="p-6 md:p-10 bg-background min-h-full">
@@ -33,6 +34,8 @@ export default function AdminHomework() {
             <div className="space-y-4">
               <Skeleton className="h-48 w-full rounded-2xl" />
             </div>
+          ) : error ? (
+            <ErrorState error={error} onRetry={refetch} />
           ) : !homeworkList || homeworkList.length === 0 ? (
             <div className="p-12 bg-card border border-border rounded-3xl text-center text-muted-foreground">
               No {tab} homework found.

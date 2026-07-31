@@ -4,9 +4,10 @@ import { format, isBefore, addMinutes, differenceInMinutes } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Calendar, FileText, ArrowRight, Video, Clock, Gift, Bell } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import ErrorState from "@/components/ErrorState";
 
 export default function StudentDashboard() {
-  const { data: dashboard, isLoading } = useGetStudentDashboard();
+  const { data: dashboard, isLoading, error, refetch } = useGetStudentDashboard();
   const { data: lessonTypes } = useListLessonTypes();
 
   if (isLoading) {
@@ -22,6 +23,7 @@ export default function StudentDashboard() {
     );
   }
 
+  if (error) return <ErrorState error={error} onRetry={refetch} fullPage />;
   if (!dashboard) return null;
 
   const nextBooking = dashboard.nextBooking;

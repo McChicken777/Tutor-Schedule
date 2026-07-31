@@ -8,13 +8,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import ErrorState from "@/components/ErrorState";
 import { useQueryClient } from "@tanstack/react-query";
 import { Send, MessageSquare } from "lucide-react";
 
 export default function StudentMessages() {
   const [draft, setDraft] = useState("");
   const qc = useQueryClient();
-  const { data: messages, isLoading } = useListStudentMessages({
+  const { data: messages, isLoading, error, refetch } = useListStudentMessages({
     query: { refetchInterval: 10000, queryKey: getListStudentMessagesQueryKey() },
   });
   const sendMutation = useSendStudentMessage();
@@ -43,6 +44,8 @@ export default function StudentMessages() {
       <div className="flex-1 overflow-y-auto p-6 md:px-10 space-y-4">
         {isLoading ? (
           <Skeleton className="h-40 w-full" />
+        ) : error ? (
+          <ErrorState error={error} onRetry={refetch} />
         ) : !messages || messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-3 py-16">
             <MessageSquare className="w-10 h-10 opacity-40" />

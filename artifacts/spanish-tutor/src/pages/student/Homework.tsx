@@ -12,10 +12,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFileUpload } from "@/hooks/use-file-upload";
+import ErrorState from "@/components/ErrorState";
 import { FileText, Download, Paperclip, MessageSquare, Bell } from "lucide-react";
 
 export default function StudentHomework() {
-  const { data: homeworkList, isLoading } = useListStudentHomework();
+  const { data: homeworkList, isLoading, error, refetch } = useListStudentHomework();
 
   return (
     <div className="p-6 md:p-10 bg-background min-h-full">
@@ -25,6 +26,8 @@ export default function StudentHomework() {
         <div className="space-y-4">
           <Skeleton className="h-48 w-full rounded-2xl" />
         </div>
+      ) : error ? (
+        <ErrorState error={error} onRetry={refetch} />
       ) : !homeworkList || homeworkList.length === 0 ? (
         <div className="p-12 bg-card border border-border rounded-3xl text-center text-muted-foreground">
           No homework yet.

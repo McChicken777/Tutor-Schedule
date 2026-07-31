@@ -3,9 +3,12 @@ import { ClerkProvider, SignIn, SignUp, Show, useClerk } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
-import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { QueryCache, MutationCache, QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { toast } from "@/hooks/use-toast";
+import { describeError } from "@/lib/errors";
 
 import Landing from "@/pages/public/Landing";
 import SignInPage from "@/pages/public/SignIn";
@@ -41,7 +44,35 @@ const clerkPubKey = publishableKeyFromHost(
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-const queryClient = new QueryClient();
+// Query/mutation failures are surfaced per-screen via ErrorState, but during
+// development it's far quicker to see every failure in one place, tagged with
+// the endpoint that produced it, than to hunt for the screen that swallowed it.
+function logFailure(kind: string, error: unknown, key: unknown) {
+  if (!import.meta.env.DEV) return;
+  const status = (error as { status?: number } | null)?.status;
+  console.error(
+    `[${kind} failed]${status ? ` ${status}` : ""}`,
+    Array.isArray(key) ? key[0] : key,
+    error,
+  );
+}
+
+const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error, query) => logFailure("query", error, query.queryKey),
+  }),
+  mutationCache: new MutationCache({
+    // Most call sites only pass onSuccess, so before this a failed save just
+    // did nothing at all. Toasting centrally means every mutation reports its
+    // failure, and individual screens only need custom handling when they want
+    // something *more* than the message.
+    onError: (error, _vars, _ctx, mutation) => {
+      logFailure("mutation", error, mutation.options.mutationKey);
+      const { title, message } = describeError(error);
+      toast({ title, description: message, variant: "destructive" });
+    },
+  }),
+});
 
 function stripBase(path: string): string {
   return basePath && path.startsWith(basePath)
@@ -166,6 +197,7 @@ function ClerkProviderWithRoutes() {
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
         <TooltipProvider>
+          <ErrorBoundary>
           <Switch>
             {/* Public */}
             <Route path="/" component={HomeRedirect} />
@@ -227,6 +259,7 @@ function ClerkProviderWithRoutes() {
 
             <Route component={NotFound} />
           </Switch>
+          </ErrorBoundary>
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>

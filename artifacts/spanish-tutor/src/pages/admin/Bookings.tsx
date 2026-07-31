@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import ErrorState from "@/components/ErrorState";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import { Paperclip } from "lucide-react";
 
 export default function AdminBookings() {
   const [statusFilter, setStatusFilter] = useState<string>("upcoming");
-  const { data: bookings, isLoading } = useListAdminBookings({ status: statusFilter !== "all" ? statusFilter : undefined });
+  const { data: bookings, isLoading, error, refetch } = useListAdminBookings({ status: statusFilter !== "all" ? statusFilter : undefined });
   const updateMutation = useUpdateAdminBooking();
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -105,6 +106,8 @@ export default function AdminBookings() {
           <Skeleton className="h-24 rounded-2xl" />
           <Skeleton className="h-24 rounded-2xl" />
         </div>
+      ) : error ? (
+        <ErrorState error={error} onRetry={refetch} />
       ) : !bookings || bookings.length === 0 ? (
         <div className="p-12 bg-card border border-border rounded-3xl text-center text-muted-foreground">
           No bookings found.

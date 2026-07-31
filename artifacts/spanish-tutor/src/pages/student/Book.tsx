@@ -64,9 +64,6 @@ export default function BookLesson() {
         toast({ title: "Lesson booked successfully!" });
         setLocation(`/bookings/${data.id}`);
       },
-      onError: (err: any) => {
-        toast({ title: "Booking failed", description: err.message || "Unknown error", variant: "destructive" });
-      }
     });
   };
 

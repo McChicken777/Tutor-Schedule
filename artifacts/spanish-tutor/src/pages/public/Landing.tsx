@@ -3,13 +3,22 @@ import { Button } from "@/components/ui/button";
 import { useGetSiteSettings, useListLessonTypes, useListTestimonials, useListFaqs } from "@workspace/api-client-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
+import ErrorState from "@/components/ErrorState";
 
 export default function Landing() {
-  const { data: settings, isLoading: loadingSettings } = useGetSiteSettings();
+  const { data: settings, isLoading: loadingSettings, error: settingsError, refetch: refetchSettings } = useGetSiteSettings();
   const { data: lessonTypes } = useListLessonTypes();
   const { data: testimonials } = useListTestimonials();
   const { data: faqs } = useListFaqs();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  if (settingsError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <ErrorState error={settingsError} onRetry={refetchSettings} />
+      </div>
+    );
+  }
 
   if (loadingSettings) {
     return <div className="min-h-screen bg-background animate-pulse" />;

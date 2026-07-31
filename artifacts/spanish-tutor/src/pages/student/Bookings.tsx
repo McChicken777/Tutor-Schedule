@@ -6,10 +6,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Calendar, Video, FileText, Star } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import ErrorState from "@/components/ErrorState";
 
 export default function StudentBookings() {
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
-  const { data: bookings, isLoading } = useListStudentBookings({ status: tab });
+  const { data: bookings, isLoading, error, refetch } = useListStudentBookings({ status: tab });
 
   return (
     <div className="p-6 md:p-10 bg-background min-h-full">
@@ -32,6 +33,8 @@ export default function StudentBookings() {
               <Skeleton className="h-24 w-full rounded-2xl" />
               <Skeleton className="h-24 w-full rounded-2xl" />
             </div>
+          ) : error ? (
+            <ErrorState error={error} onRetry={refetch} />
           ) : !bookings || bookings.length === 0 ? (
             <div className="text-center py-16 bg-card border border-border rounded-3xl">
               <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />

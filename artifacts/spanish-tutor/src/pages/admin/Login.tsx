@@ -6,7 +6,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useToast } from "@/hooks/use-toast";
+import { describeError } from "@/lib/errors";
 
 const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
@@ -14,7 +14,6 @@ const loginSchema = z.object({
 
 export default function AdminLogin() {
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
   const loginMutation = useAdminLogin();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -30,13 +29,6 @@ export default function AdminLogin() {
       onSuccess: () => {
         setLocation("/admin");
       },
-      onError: () => {
-        toast({
-          title: "Error",
-          description: "Invalid password",
-          variant: "destructive"
-        });
-      }
     });
   }
 
@@ -63,6 +55,20 @@ export default function AdminLogin() {
                 </FormItem>
               )}
             />
+            {loginMutation.error && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3" role="alert">
+                <p className="text-sm font-medium text-destructive">
+                  {loginMutation.error.status === 401
+                    ? "That password didn't match."
+                    : describeError(loginMutation.error).message}
+                </p>
+                {loginMutation.error.status !== 401 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This isn't a wrong password — the server couldn't be reached or errored.
+                  </p>
+                )}
+              </div>
+            )}
             <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
               {loginMutation.isPending ? "Logging in..." : "Log in"}
             </Button>

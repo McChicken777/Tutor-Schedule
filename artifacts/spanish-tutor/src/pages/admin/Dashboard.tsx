@@ -4,9 +4,10 @@ import { Users, Calendar, FileText, TrendingUp, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
+import ErrorState from "@/components/ErrorState";
 
 export default function AdminDashboard() {
-  const { data: dashboard, isLoading } = useGetAdminDashboard();
+  const { data: dashboard, isLoading, error, refetch } = useGetAdminDashboard();
 
   if (isLoading) {
     return (
@@ -19,6 +20,7 @@ export default function AdminDashboard() {
     );
   }
 
+  if (error) return <ErrorState error={error} onRetry={refetch} fullPage />;
   if (!dashboard) return null;
 
   return (

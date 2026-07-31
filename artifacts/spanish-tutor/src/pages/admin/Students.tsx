@@ -11,9 +11,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListAdminStudentsQueryKey, getGetAdminStudentQueryKey } from "@workspace/api-client-react";
 import { HomeworkCard } from "@/pages/admin/Homework";
+import ErrorState from "@/components/ErrorState";
 
 export default function AdminStudents() {
-  const { data: students, isLoading } = useListAdminStudents();
+  const { data: students, isLoading, error, refetch } = useListAdminStudents();
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   return (
@@ -25,6 +26,8 @@ export default function AdminStudents() {
           <Skeleton className="h-16 rounded-xl" />
           <Skeleton className="h-16 rounded-xl" />
         </div>
+      ) : error ? (
+        <ErrorState error={error} onRetry={refetch} />
       ) : !students || students.length === 0 ? (
         <div className="p-12 bg-card border border-border rounded-3xl text-center text-muted-foreground">
           No students found.

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import ErrorState from "@/components/ErrorState";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -12,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Star, Trash2 } from "lucide-react";
 
 export default function AdminTestimonials() {
-  const { data: testimonials, isLoading } = useListAdminTestimonials();
+  const { data: testimonials, isLoading, error, refetch } = useListAdminTestimonials();
   const createMutation = useCreateTestimonial();
   const updateMutation = useUpdateTestimonial();
   const deleteMutation = useDeleteTestimonial();
@@ -92,6 +93,8 @@ export default function AdminTestimonials() {
           <Skeleton className="h-48 rounded-2xl" />
           <Skeleton className="h-48 rounded-2xl" />
         </div>
+      ) : error ? (
+        <ErrorState error={error} onRetry={refetch} />
       ) : (
         <div className="grid md:grid-cols-2 gap-6">
           {testimonials?.map(t => (

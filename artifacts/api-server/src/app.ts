@@ -11,6 +11,7 @@ import {
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
+import { apiNotFound, errorHandler } from "./middlewares/errorHandler";
 import { logger } from "./lib/logger";
 
 // The frontend's built static assets — served by this same process so the
@@ -71,6 +72,7 @@ app.use(
 );
 
 app.use("/api", router);
+app.use("/api", apiNotFound);
 
 // Serve the built frontend for everything else, falling through to index.html
 // for client-side routes (wouter) that don't correspond to a real file.
@@ -82,5 +84,8 @@ app.use((req, res, next) => {
   }
   res.sendFile(path.join(FRONTEND_DIST, "index.html"));
 });
+
+// Must be last — Express only treats a 4-arg middleware as an error handler.
+app.use(errorHandler);
 
 export default app;

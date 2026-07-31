@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import ErrorState from "@/components/ErrorState";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -11,7 +12,7 @@ import { getGetAdminSiteSettingsQueryKey, getGetSiteSettingsQueryKey, getGetCale
 import { Calendar as CalendarIcon, CheckCircle2, AlertCircle, Unlink } from "lucide-react";
 
 export default function AdminSettings() {
-  const { data: settings, isLoading } = useGetAdminSiteSettings();
+  const { data: settings, isLoading, error, refetch } = useGetAdminSiteSettings();
   const { data: calendarStatus, refetch: refetchCalendarStatus } = useGetCalendarStatus();
   const updateMutation = useUpdateSiteSettings();
   const disconnectMutation = useDisconnectCalendar();
@@ -62,9 +63,6 @@ export default function AdminSettings() {
       onSuccess: () => {
         toast({ title: "Google Calendar disconnected" });
         qc.invalidateQueries({ queryKey: getGetCalendarStatusQueryKey() });
-      },
-      onError: () => {
-        toast({ title: "Failed to disconnect", variant: "destructive" });
       },
     });
   };
@@ -128,6 +126,8 @@ export default function AdminSettings() {
         {/* Site Content */}
         {isLoading ? (
           <Skeleton className="h-96 w-full rounded-3xl" />
+        ) : error ? (
+          <ErrorState error={error} onRetry={refetch} />
         ) : (
           <div className="bg-card border border-border rounded-3xl p-8 space-y-6">
             <h2 className="text-xl font-bold mb-6">Site Content</h2>

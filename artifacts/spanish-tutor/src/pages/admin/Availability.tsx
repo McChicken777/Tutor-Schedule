@@ -186,7 +186,6 @@ export default function AdminAvailability() {
           qc.invalidateQueries({ queryKey: getGetAdminSiteSettingsQueryKey() });
           qc.invalidateQueries({ queryKey: getGetSiteSettingsQueryKey() });
         },
-        onError: () => toast({ title: "Failed to save", variant: "destructive" }),
       },
     );
   };
@@ -285,7 +284,6 @@ export default function AdminAvailability() {
           toast({ title: "Availability saved" });
           qc.invalidateQueries({ queryKey: getListAvailabilityOverridesQueryKey() });
         },
-        onError: () => toast({ title: "Failed to save", variant: "destructive" }),
       },
     );
   };
@@ -297,7 +295,6 @@ export default function AdminAvailability() {
         onSuccess: () => {
           qc.invalidateQueries({ queryKey: getListAvailabilityOverridesQueryKey() });
         },
-        onError: () => toast({ title: "Delete failed", variant: "destructive" }),
       },
     );
   };

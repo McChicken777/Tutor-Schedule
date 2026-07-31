@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { LogOut, Users, BookOpen, Settings, LayoutDashboard, Calendar, CalendarOff, FileText, MessageSquare, MessageCircle, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,16 @@ import { useAdminLogout, useGetAdminDashboard } from "@workspace/api-client-reac
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const logout = useAdminLogout();
-  const { data: dashboard } = useGetAdminDashboard();
+  const { data: dashboard, error } = useGetAdminDashboard();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  // Without this, an expired/absent admin session leaves every admin page
+  // rendering an empty shell (each one bails on `!data`) with no hint that a
+  // login is needed. Bounce to the login screen instead.
+  const isUnauthorized = (error as { status?: number } | null)?.status === 401;
+  useEffect(() => {
+    if (isUnauthorized) setLocation("/admin/login");
+  }, [isUnauthorized, setLocation]);
 
   const handleLogout = () => {
     logout.mutate(undefined, {

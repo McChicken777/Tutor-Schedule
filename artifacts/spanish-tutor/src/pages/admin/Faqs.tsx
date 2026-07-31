@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import ErrorState from "@/components/ErrorState";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -12,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Trash2 } from "lucide-react";
 
 export default function AdminFaqs() {
-  const { data: faqs, isLoading } = useListAdminFaqs();
+  const { data: faqs, isLoading, error, refetch } = useListAdminFaqs();
   const createMutation = useCreateFaq();
   const updateMutation = useUpdateFaq();
   const deleteMutation = useDeleteFaq();
@@ -92,6 +93,8 @@ export default function AdminFaqs() {
           <Skeleton className="h-32 w-full rounded-2xl" />
           <Skeleton className="h-32 w-full rounded-2xl" />
         </div>
+      ) : error ? (
+        <ErrorState error={error} onRetry={refetch} />
       ) : (
         <div className="space-y-4">
           {faqs?.map(faq => (

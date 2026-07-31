@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import ErrorState from "@/components/ErrorState";
 import { useQueryClient } from "@tanstack/react-query";
 import { Send, MessageSquare } from "lucide-react";
 
@@ -19,7 +20,7 @@ function formatThreadTime(date: Date): string {
 
 export default function AdminMessages() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const { data: threads, isLoading } = useListAdminMessageThreads({
+  const { data: threads, isLoading, error, refetch } = useListAdminMessageThreads({
     query: { refetchInterval: 15000, queryKey: getListAdminMessageThreadsQueryKey() },
   });
 
@@ -37,6 +38,8 @@ export default function AdminMessages() {
               <Skeleton className="h-16 rounded-xl" />
               <Skeleton className="h-16 rounded-xl" />
             </div>
+          ) : error ? (
+            <ErrorState error={error} onRetry={refetch} className="p-4" />
           ) : !threads || threads.length === 0 ? (
             <p className="p-6 text-sm text-muted-foreground">
               No messages yet. Students can start a conversation from their dashboard.
