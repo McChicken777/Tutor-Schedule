@@ -35,6 +35,9 @@ export default function Landing() {
     activeBundles.length > 0
       ? Math.min(...activeBundles.map((b) => b.priceCents / b.credits)) / 100
       : null;
+  const sortedLessonTypes = [...activeLessonTypes].sort(
+    (a, b) => (a.isTrial ? 0 : a.creditCost) - (b.isTrial ? 0 : b.creditCost)
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -162,7 +165,7 @@ export default function Landing() {
             </p>
           ) : (
             <div className="border-t border-border">
-              {activeLessonTypes.map((lt, i) => (
+              {sortedLessonTypes.map((lt, i) => (
                 <Link
                   key={lt.id}
                   href="/sign-up"
