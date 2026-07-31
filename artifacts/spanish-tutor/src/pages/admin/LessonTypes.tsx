@@ -178,10 +178,12 @@ export default function AdminLessonTypes() {
                 </span>
               </div>
               <p className="text-muted-foreground text-sm mb-4">{lt.description}</p>
-              <div className="flex items-center justify-between pt-4 border-t border-border">
-                <span className="text-sm text-muted-foreground">Free trial lesson</span>
-                <Switch checked={lt.isTrial} onCheckedChange={(v) => handleToggleTrial(lt.id, v)} />
-              </div>
+              {lt.isTrial && (
+                <div className="flex items-center justify-between pt-4 border-t border-border">
+                  <span className="text-sm text-muted-foreground">Free trial lesson</span>
+                  <Switch checked={lt.isTrial} onCheckedChange={(v) => handleToggleTrial(lt.id, v)} />
+                </div>
+              )}
               <Button variant="outline" size="sm" className="w-full mt-4" onClick={() => openEdit(lt)}>
                 Edit
               </Button>
