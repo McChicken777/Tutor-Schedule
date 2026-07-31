@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   lessonTypesTable,
@@ -45,16 +46,24 @@ export async function seed() {
     console.log("Seeded lesson types");
   }
 
-  // Credit packages
-  const existingBundles = await db.select().from(creditBundlesTable);
-  if (existingBundles.length === 0) {
-    await db.insert(creditBundlesTable).values([
-      { credits: 3, priceCents: 4200, sortOrder: 0, isActive: true },
-      { credits: 10, priceCents: 13500, sortOrder: 1, isActive: true },
-      { credits: 20, priceCents: 25000, sortOrder: 2, isActive: true },
-    ]);
-    console.log("Seeded credit packages");
+  // Credit packages — seed.ts is the single source of truth for pricing (no admin UI for these)
+  const desiredBundles = [
+    { credits: 3, priceCents: 600, sortOrder: 0, isActive: true },
+    { credits: 10, priceCents: 1800, sortOrder: 1, isActive: true },
+    { credits: 20, priceCents: 3200, sortOrder: 2, isActive: true },
+  ];
+  for (const bundle of desiredBundles) {
+    const [existing] = await db.select().from(creditBundlesTable).where(eq(creditBundlesTable.credits, bundle.credits));
+    if (existing) {
+      await db
+        .update(creditBundlesTable)
+        .set({ priceCents: bundle.priceCents, sortOrder: bundle.sortOrder, isActive: bundle.isActive })
+        .where(eq(creditBundlesTable.id, existing.id));
+    } else {
+      await db.insert(creditBundlesTable).values(bundle);
+    }
   }
+  console.log("Synced credit packages");
 
   // Testimonials
   const existingTestimonials = await db.select().from(testimonialsTable);
