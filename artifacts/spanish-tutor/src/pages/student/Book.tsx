@@ -124,9 +124,12 @@ export default function BookLesson() {
                         <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-primary/10 text-primary">Free</span>
                       )}
                     </div>
-                    <p className="text-primary font-medium mb-4">
-                      {lt.durationMinutes} minutes • {lt.isTrial ? "Free" : `${lt.creditCost} credit${lt.creditCost === 1 ? "" : "s"}`}
-                    </p>
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="text-sm text-muted-foreground">{lt.durationMinutes} minutes</span>
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-xs font-semibold">
+                        {lt.isTrial ? "Free" : `${lt.creditCost} credit${lt.creditCost === 1 ? "" : "s"}`}
+                      </span>
+                    </div>
                     <p className="text-muted-foreground text-sm mb-4">{lt.description}</p>
                     {!bookable && (
                       <div className="flex items-center justify-between gap-2">
