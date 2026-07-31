@@ -5,6 +5,13 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import ErrorState from "@/components/ErrorState";
 
+// Snaps a raw computed price to the nearest "charm price" ending in .49 or .99,
+// so marketing copy reads like normal retail pricing instead of a raw formula output.
+function toCharmPrice(price: number): number {
+  const steps = Math.round((price - 0.49) / 0.5);
+  return Math.max(0.49, 0.49 + steps * 0.5);
+}
+
 export default function Landing() {
   const { data: settings, isLoading: loadingSettings, error: settingsError, refetch: refetchSettings } = useGetSiteSettings();
   const { data: lessonTypes } = useListLessonTypes();
@@ -191,7 +198,7 @@ export default function Landing() {
                         {lt.isTrial && settings?.freeTrialEnabled
                           ? "Free"
                           : perCreditRate !== null
-                            ? `from €${(perCreditRate * lt.creditCost).toFixed(2)}`
+                            ? `from €${toCharmPrice(perCreditRate * lt.creditCost).toFixed(2)}`
                             : null}
                       </div>
                       <div className="text-sm text-muted-foreground">{lt.durationMinutes} min</div>
