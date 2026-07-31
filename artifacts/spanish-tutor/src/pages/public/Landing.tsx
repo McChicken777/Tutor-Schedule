@@ -5,10 +5,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import ErrorState from "@/components/ErrorState";
 
-// Snaps a raw computed price to the nearest "charm price" ending in .49 or .99,
-// so marketing copy reads like normal retail pricing instead of a raw formula output.
+// Rounds a raw computed price UP to the next "charm price" ending in .49 or .99,
+// so marketing copy reads like normal retail pricing while the advertised figure
+// is always a ceiling — the real price a student pays is never higher than this.
 function toCharmPrice(price: number): number {
-  const steps = Math.round((price - 0.49) / 0.5);
+  const steps = Math.ceil((price - 0.49) / 0.5);
   return Math.max(0.49, 0.49 + steps * 0.5);
 }
 
