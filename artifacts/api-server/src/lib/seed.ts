@@ -48,9 +48,9 @@ export async function seed() {
 
   // Credit packages — seed.ts is the single source of truth for pricing (no admin UI for these)
   const desiredBundles = [
-    { credits: 3, priceCents: 3000, sortOrder: 0, isActive: true },
-    { credits: 10, priceCents: 9000, sortOrder: 1, isActive: true },
-    { credits: 20, priceCents: 16000, sortOrder: 2, isActive: true },
+    { credits: 60, priceCents: 2340, sortOrder: 0, isActive: true },
+    { credits: 150, priceCents: 5265, sortOrder: 1, isActive: true },
+    { credits: 300, priceCents: 9360, sortOrder: 2, isActive: true },
   ];
   for (const bundle of desiredBundles) {
     const [existing] = await db.select().from(creditBundlesTable).where(eq(creditBundlesTable.credits, bundle.credits));
