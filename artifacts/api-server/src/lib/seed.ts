@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, notInArray } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   lessonTypesTable,
@@ -48,9 +48,9 @@ export async function seed() {
 
   // Credit packages — seed.ts is the single source of truth for pricing (no admin UI for these)
   const desiredBundles = [
-    { credits: 60, priceCents: 2340, sortOrder: 0, isActive: true },
-    { credits: 150, priceCents: 5265, sortOrder: 1, isActive: true },
-    { credits: 300, priceCents: 9360, sortOrder: 2, isActive: true },
+    { credits: 100, priceCents: 3900, sortOrder: 0, isActive: true },
+    { credits: 200, priceCents: 7410, sortOrder: 1, isActive: true },
+    { credits: 400, priceCents: 14040, sortOrder: 2, isActive: true },
   ];
   for (const bundle of desiredBundles) {
     const [existing] = await db.select().from(creditBundlesTable).where(eq(creditBundlesTable.credits, bundle.credits));
@@ -63,6 +63,12 @@ export async function seed() {
       await db.insert(creditBundlesTable).values(bundle);
     }
   }
+  // Deactivate any leftover packages from a previous pricing scheme so they
+  // stop showing up for students, without deleting rows tied to past purchases.
+  await db
+    .update(creditBundlesTable)
+    .set({ isActive: false })
+    .where(notInArray(creditBundlesTable.credits, desiredBundles.map((b) => b.credits)));
   console.log("Synced credit packages");
 
   // Testimonials
