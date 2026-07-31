@@ -1,56 +1,28 @@
-import { useEffect, useState } from "react";
-import {
-  useListLessonTypes,
-  useGetStudentDashboard,
-  useSendStudentMessage,
-} from "@workspace/api-client-react";
+import { useListCreditBundles, useSendStudentMessage } from "@workspace/api-client-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 interface PurchaseCreditsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initialLessonTypeId?: number;
 }
 
-export default function PurchaseCreditsDialog({ open, onOpenChange, initialLessonTypeId }: PurchaseCreditsDialogProps) {
+export default function PurchaseCreditsDialog({ open, onOpenChange }: PurchaseCreditsDialogProps) {
   const { toast } = useToast();
-  const { data: lessonTypes } = useListLessonTypes();
-  const { data: dashboard } = useGetStudentDashboard();
+  const { data: bundlesRaw } = useListCreditBundles();
   const sendMutation = useSendStudentMessage();
 
-  const purchasableTypes = (lessonTypes || []).filter((lt) => !lt.isTrial);
-
-  const [selectedTypeId, setSelectedTypeId] = useState<number | undefined>(initialLessonTypeId);
-
-  useEffect(() => {
-    if (!open) return;
-    if (initialLessonTypeId != null) {
-      setSelectedTypeId(initialLessonTypeId);
-      return;
-    }
-    if (selectedTypeId != null) return;
-    const mostRecent = dashboard?.packages?.find((p) =>
-      purchasableTypes.some((lt) => lt.id === p.lessonTypeId),
-    )?.lessonTypeId;
-    setSelectedTypeId(mostRecent ?? purchasableTypes[0]?.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initialLessonTypeId, lessonTypes]);
-
-  const selectedType = purchasableTypes.find((lt) => lt.id === selectedTypeId);
-  const bundles = [...(selectedType?.creditBundles || [])].sort((a, b) => a.credits - b.credits);
+  const bundles = [...(bundlesRaw || [])].sort((a, b) => a.credits - b.credits);
 
   const handleRequest = (credits: number, priceCents: number) => {
-    if (!selectedType) return;
     const price = (priceCents / 100).toFixed(2);
-    const body = `Hi! I'd like to purchase the ${credits}-credit package (€${price}) for ${selectedType.name}.`;
+    const body = `Hi! I'd like to purchase the ${credits}-credit package (€${price}).`;
     sendMutation.mutate(
       { data: { body } },
       {
         onSuccess: () => {
-          toast({ title: "Request sent", description: `${selectedType.name} will follow up about payment.` });
+          toast({ title: "Request sent", description: "Your teacher will follow up about payment." });
           onOpenChange(false);
         },
       },
@@ -65,33 +37,13 @@ export default function PurchaseCreditsDialog({ open, onOpenChange, initialLesso
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {purchasableTypes.length > 1 && (
-            <Select
-              value={selectedTypeId != null ? String(selectedTypeId) : undefined}
-              onValueChange={(v) => setSelectedTypeId(Number(v))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a lesson type" />
-              </SelectTrigger>
-              <SelectContent>
-                {purchasableTypes.map((lt) => (
-                  <SelectItem key={lt.id} value={String(lt.id)}>
-                    {lt.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          {selectedType && (
-            <p className="text-sm text-muted-foreground">
-              Single lesson: €{(selectedType.priceCents / 100).toFixed(2)} for {selectedType.durationMinutes} minutes.
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground">
+            Credits are shared across all lesson types — buy a package and spend it on any lesson you like.
+          </p>
 
           {bundles.length === 0 ? (
             <div className="p-6 bg-accent rounded-2xl text-center text-sm text-muted-foreground">
-              No credit packages are available for this lesson type yet. Message your teacher directly to arrange credits.
+              No credit packages are available yet. Message your teacher directly to arrange credits.
             </div>
           ) : (
             <div className="grid gap-3">
@@ -106,7 +58,7 @@ export default function PurchaseCreditsDialog({ open, onOpenChange, initialLesso
                       <p className="font-bold text-foreground">
                         {bundle.credits} credit{bundle.credits === 1 ? "" : "s"} — €{(bundle.priceCents / 100).toFixed(2)}
                       </p>
-                      <p className="text-xs text-muted-foreground">€{perCredit.toFixed(2)} / lesson</p>
+                      <p className="text-xs text-muted-foreground">€{perCredit.toFixed(2)} / credit</p>
                     </div>
                     <Button
                       size="sm"

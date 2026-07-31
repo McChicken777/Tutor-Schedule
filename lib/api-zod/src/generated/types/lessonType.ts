@@ -5,16 +5,14 @@
  * Spanish Tutor Booking Platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { CreditBundle } from './creditBundle';
 
 export interface LessonType {
   id: number;
   name: string;
   durationMinutes: number;
-  priceCents: number;
+  creditCost: number;
   description: string;
   isActive: boolean;
   isTrial: boolean;
   createdAt: Date;
-  creditBundles: CreditBundle[];
 }

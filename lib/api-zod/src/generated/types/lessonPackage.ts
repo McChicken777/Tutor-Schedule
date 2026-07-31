@@ -8,8 +8,6 @@
 
 export interface LessonPackage {
   id: number;
-  lessonTypeId: number;
-  lessonTypeName: string;
   totalCredits: number;
   usedCredits: number;
   remainingCredits: number;

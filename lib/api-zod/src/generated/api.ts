@@ -34,22 +34,27 @@ export const ListLessonTypesResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "durationMinutes": zod.number(),
-  "priceCents": zod.number(),
+  "creditCost": zod.number(),
   "description": zod.string(),
   "isActive": zod.boolean(),
   "isTrial": zod.boolean(),
-  "createdAt": zod.coerce.date(),
-  "creditBundles": zod.array(zod.object({
+  "createdAt": zod.coerce.date()
+})
+export const ListLessonTypesResponse = zod.array(ListLessonTypesResponseItem)
+
+
+/**
+ * @summary List active credit bundles
+ */
+export const ListCreditBundlesResponseItem = zod.object({
   "id": zod.number(),
-  "lessonTypeId": zod.number(),
   "credits": zod.number(),
   "priceCents": zod.number(),
   "sortOrder": zod.number(),
   "isActive": zod.boolean(),
   "createdAt": zod.coerce.date()
-}))
 })
-export const ListLessonTypesResponse = zod.array(ListLessonTypesResponseItem)
+export const ListCreditBundlesResponse = zod.array(ListCreditBundlesResponseItem)
 
 
 /**
@@ -195,8 +200,6 @@ export const GetStudentDashboardResponse = zod.object({
   "pendingHomeworkCount": zod.number(),
   "packages": zod.array(zod.object({
   "id": zod.number(),
-  "lessonTypeId": zod.number(),
-  "lessonTypeName": zod.string(),
   "totalCredits": zod.number(),
   "usedCredits": zod.number(),
   "remainingCredits": zod.number(),
@@ -507,8 +510,6 @@ export const SubmitReviewResponse = zod.object({
  */
 export const ListStudentPackagesResponseItem = zod.object({
   "id": zod.number(),
-  "lessonTypeId": zod.number(),
-  "lessonTypeName": zod.string(),
   "totalCredits": zod.number(),
   "usedCredits": zod.number(),
   "remainingCredits": zod.number(),
@@ -698,20 +699,11 @@ export const ListAdminLessonTypesResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "durationMinutes": zod.number(),
-  "priceCents": zod.number(),
+  "creditCost": zod.number(),
   "description": zod.string(),
   "isActive": zod.boolean(),
   "isTrial": zod.boolean(),
-  "createdAt": zod.coerce.date(),
-  "creditBundles": zod.array(zod.object({
-  "id": zod.number(),
-  "lessonTypeId": zod.number(),
-  "credits": zod.number(),
-  "priceCents": zod.number(),
-  "sortOrder": zod.number(),
-  "isActive": zod.boolean(),
   "createdAt": zod.coerce.date()
-}))
 })
 export const ListAdminLessonTypesResponse = zod.array(ListAdminLessonTypesResponseItem)
 
@@ -722,14 +714,13 @@ export const ListAdminLessonTypesResponse = zod.array(ListAdminLessonTypesRespon
 
 export const createLessonTypeBodyDurationMinutesMin = 15;
 
-export const createLessonTypeBodyPriceCentsMin = 0;
 
 
 
 export const CreateLessonTypeBody = zod.object({
   "name": zod.string().min(1),
   "durationMinutes": zod.number().min(createLessonTypeBodyDurationMinutesMin),
-  "priceCents": zod.number().min(createLessonTypeBodyPriceCentsMin),
+  "creditCost": zod.number().min(1),
   "description": zod.string(),
   "isActive": zod.boolean().optional(),
   "isTrial": zod.boolean().optional()
@@ -739,20 +730,11 @@ export const CreateLessonTypeResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "durationMinutes": zod.number(),
-  "priceCents": zod.number(),
+  "creditCost": zod.number(),
   "description": zod.string(),
   "isActive": zod.boolean(),
   "isTrial": zod.boolean(),
-  "createdAt": zod.coerce.date(),
-  "creditBundles": zod.array(zod.object({
-  "id": zod.number(),
-  "lessonTypeId": zod.number(),
-  "credits": zod.number(),
-  "priceCents": zod.number(),
-  "sortOrder": zod.number(),
-  "isActive": zod.boolean(),
   "createdAt": zod.coerce.date()
-}))
 })
 
 
@@ -766,14 +748,13 @@ export const UpdateLessonTypeParams = zod.object({
 
 export const updateLessonTypeBodyDurationMinutesMin = 15;
 
-export const updateLessonTypeBodyPriceCentsMin = 0;
 
 
 
 export const UpdateLessonTypeBody = zod.object({
   "name": zod.string().min(1).optional(),
   "durationMinutes": zod.number().min(updateLessonTypeBodyDurationMinutesMin).optional(),
-  "priceCents": zod.number().min(updateLessonTypeBodyPriceCentsMin).optional(),
+  "creditCost": zod.number().min(1).optional(),
   "description": zod.string().optional(),
   "isActive": zod.boolean().optional(),
   "isTrial": zod.boolean().optional()
@@ -783,20 +764,11 @@ export const UpdateLessonTypeResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "durationMinutes": zod.number(),
-  "priceCents": zod.number(),
+  "creditCost": zod.number(),
   "description": zod.string(),
   "isActive": zod.boolean(),
   "isTrial": zod.boolean(),
-  "createdAt": zod.coerce.date(),
-  "creditBundles": zod.array(zod.object({
-  "id": zod.number(),
-  "lessonTypeId": zod.number(),
-  "credits": zod.number(),
-  "priceCents": zod.number(),
-  "sortOrder": zod.number(),
-  "isActive": zod.boolean(),
   "createdAt": zod.coerce.date()
-}))
 })
 
 
@@ -811,7 +783,21 @@ export const DeleteLessonTypeResponse = zod.void()
 
 
 /**
- * @summary Create a purchasable credit bundle for a lesson type
+ * @summary List all credit bundles (including inactive)
+ */
+export const ListAdminCreditBundlesResponseItem = zod.object({
+  "id": zod.number(),
+  "credits": zod.number(),
+  "priceCents": zod.number(),
+  "sortOrder": zod.number(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+export const ListAdminCreditBundlesResponse = zod.array(ListAdminCreditBundlesResponseItem)
+
+
+/**
+ * @summary Create a purchasable credit bundle
  */
 
 export const createCreditBundleBodyPriceCentsMin = 0;
@@ -819,7 +805,6 @@ export const createCreditBundleBodyPriceCentsMin = 0;
 
 
 export const CreateCreditBundleBody = zod.object({
-  "lessonTypeId": zod.number(),
   "credits": zod.number().min(1),
   "priceCents": zod.number().min(createCreditBundleBodyPriceCentsMin),
   "sortOrder": zod.number().optional(),
@@ -828,7 +813,6 @@ export const CreateCreditBundleBody = zod.object({
 
 export const CreateCreditBundleResponse = zod.object({
   "id": zod.number(),
-  "lessonTypeId": zod.number(),
   "credits": zod.number(),
   "priceCents": zod.number(),
   "sortOrder": zod.number(),
@@ -858,7 +842,6 @@ export const UpdateCreditBundleBody = zod.object({
 
 export const UpdateCreditBundleResponse = zod.object({
   "id": zod.number(),
-  "lessonTypeId": zod.number(),
   "credits": zod.number(),
   "priceCents": zod.number(),
   "sortOrder": zod.number(),
@@ -986,8 +969,6 @@ export const GetAdminStudentResponse = zod.object({
   "displayName": zod.string(),
   "packages": zod.array(zod.object({
   "id": zod.number(),
-  "lessonTypeId": zod.number(),
-  "lessonTypeName": zod.string(),
   "totalCredits": zod.number(),
   "usedCredits": zod.number(),
   "remainingCredits": zod.number(),
@@ -1071,14 +1052,11 @@ export const SendAdminMessageResponse = zod.object({
 
 export const GrantPackageBody = zod.object({
   "studentId": zod.number(),
-  "lessonTypeId": zod.number(),
   "totalCredits": zod.number().min(1)
 })
 
 export const GrantPackageResponse = zod.object({
   "id": zod.number(),
-  "lessonTypeId": zod.number(),
-  "lessonTypeName": zod.string(),
   "totalCredits": zod.number(),
   "usedCredits": zod.number(),
   "remainingCredits": zod.number(),

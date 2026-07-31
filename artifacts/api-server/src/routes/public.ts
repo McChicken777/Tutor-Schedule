@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, asc, inArray } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   lessonTypesTable,
@@ -22,27 +22,27 @@ router.get("/lesson-types", async (_req, res): Promise<void> => {
     .where(eq(lessonTypesTable.isActive, true))
     .orderBy(asc(lessonTypesTable.id));
 
-  const bundles = types.length
-    ? await db
-        .select()
-        .from(creditBundlesTable)
-        .where(inArray(creditBundlesTable.lessonTypeId, types.map((t) => t.id)))
-        .orderBy(asc(creditBundlesTable.credits))
-    : [];
-
   res.json(
     types.map((t) => ({
       id: t.id,
       name: t.name,
       durationMinutes: t.durationMinutes,
-      priceCents: t.priceCents,
+      creditCost: t.creditCost,
       description: t.description,
       isActive: t.isActive,
       isTrial: t.isTrial,
       createdAt: t.createdAt,
-      creditBundles: bundles.filter((b) => b.lessonTypeId === t.id && b.isActive),
     })),
   );
+});
+
+router.get("/credit-bundles", async (_req, res): Promise<void> => {
+  const bundles = await db
+    .select()
+    .from(creditBundlesTable)
+    .where(eq(creditBundlesTable.isActive, true))
+    .orderBy(asc(creditBundlesTable.credits));
+  res.json(bundles);
 });
 
 router.get("/available-slots", async (req, res): Promise<void> => {

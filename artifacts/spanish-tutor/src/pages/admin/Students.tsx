@@ -4,9 +4,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { useListAdminLessonTypes } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListAdminStudentsQueryKey, getGetAdminStudentQueryKey } from "@workspace/api-client-react";
@@ -78,25 +76,21 @@ export default function AdminStudents() {
 
 function StudentDetail({ id }: { id: number }) {
   const { data: student, isLoading } = useGetAdminStudent(id);
-  const { data: lessonTypes } = useListAdminLessonTypes();
   const { data: homeworkList } = useListAdminHomework({ studentId: id, submitted: false });
   const grantMutation = useGrantPackage();
   const qc = useQueryClient();
   const { toast } = useToast();
 
-  const [grantType, setGrantType] = useState<string>("");
   const [grantCredits, setGrantCredits] = useState(5);
 
   if (isLoading || !student) return <Skeleton className="h-64 w-full" />;
 
   const handleGrant = () => {
-    if (!grantType) return;
-    grantMutation.mutate({ data: { studentId: id, lessonTypeId: Number(grantType), totalCredits: grantCredits } }, {
+    grantMutation.mutate({ data: { studentId: id, totalCredits: grantCredits } }, {
       onSuccess: () => {
         toast({ title: "Credits granted" });
         qc.invalidateQueries({ queryKey: getGetAdminStudentQueryKey(id) });
         qc.invalidateQueries({ queryKey: getListAdminStudentsQueryKey() });
-        setGrantType("");
       }
     });
   };
@@ -113,24 +107,14 @@ function StudentDetail({ id }: { id: number }) {
       <div className="bg-accent/30 p-6 rounded-2xl border border-border">
         <h3 className="font-bold text-lg mb-4">Grant Credits</h3>
         <div className="flex gap-4">
-          <Select value={grantType} onValueChange={setGrantType}>
-            <SelectTrigger className="w-[200px] bg-background">
-              <SelectValue placeholder="Select Lesson Type" />
-            </SelectTrigger>
-            <SelectContent>
-              {lessonTypes?.map(lt => (
-                <SelectItem key={lt.id} value={lt.id.toString()}>{lt.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input 
-            type="number" 
-            value={grantCredits} 
-            onChange={(e) => setGrantCredits(Number(e.target.value))} 
-            className="w-24 bg-background" 
+          <Input
+            type="number"
+            value={grantCredits}
+            onChange={(e) => setGrantCredits(Number(e.target.value))}
+            className="w-24 bg-background"
             min={1}
           />
-          <Button onClick={handleGrant} disabled={grantMutation.isPending || !grantType}>Grant</Button>
+          <Button onClick={handleGrant} disabled={grantMutation.isPending}>Grant</Button>
         </div>
       </div>
 
@@ -141,8 +125,7 @@ function StudentDetail({ id }: { id: number }) {
             {student.packages.map(pkg => (
               <div key={pkg.id} className="bg-card border border-border p-4 rounded-xl flex justify-between items-center">
                 <div>
-                  <span className="font-medium">{pkg.lessonTypeName}</span>
-                  <span className="text-sm text-muted-foreground ml-2">Purchased {format(new Date(pkg.purchasedAt), "MMM d")}</span>
+                  <span className="text-sm text-muted-foreground">Purchased {format(new Date(pkg.purchasedAt), "MMM d")}</span>
                 </div>
                 <div className="font-bold text-primary">
                   {pkg.remainingCredits} / {pkg.totalCredits} credits left

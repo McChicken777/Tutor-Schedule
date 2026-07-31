@@ -68,6 +68,21 @@ paths:
                 items:
                   $ref: "#/components/schemas/LessonType"
 
+  /credit-bundles:
+    get:
+      operationId: listCreditBundles
+      tags: [public]
+      summary: List active credit bundles
+      responses:
+        "200":
+          description: List of active credit bundles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CreditBundle"
+
   /available-slots:
     get:
       operationId: getAvailableSlots
@@ -668,10 +683,23 @@ paths:
           description: Deleted
 
   /admin/credit-bundles:
+    get:
+      operationId: listAdminCreditBundles
+      tags: [admin]
+      summary: List all credit bundles (including inactive)
+      responses:
+        "200":
+          description: All credit bundles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CreditBundle"
     post:
       operationId: createCreditBundle
       tags: [admin]
-      summary: Create a purchasable credit bundle for a lesson type
+      summary: Create a purchasable credit bundle
       requestBody:
         required: true
         content:
@@ -1278,7 +1306,7 @@ components:
           type: string
         durationMinutes:
           type: number
-        priceCents:
+        creditCost:
           type: number
         description:
           type: string
@@ -1289,20 +1317,15 @@ components:
         createdAt:
           type: string
           format: date-time
-        creditBundles:
-          type: array
-          items:
-            $ref: "#/components/schemas/CreditBundle"
       required:
         - id
         - name
         - durationMinutes
-        - priceCents
+        - creditCost
         - description
         - isActive
         - isTrial
         - createdAt
-        - creditBundles
 
     LessonTypeInput:
       type: object
@@ -1313,9 +1336,9 @@ components:
         durationMinutes:
           type: number
           minimum: 15
-        priceCents:
+        creditCost:
           type: number
-          minimum: 0
+          minimum: 1
         description:
           type: string
         isActive:
@@ -1325,7 +1348,7 @@ components:
       required:
         - name
         - durationMinutes
-        - priceCents
+        - creditCost
         - description
 
     LessonTypeUpdate:
@@ -1337,9 +1360,9 @@ components:
         durationMinutes:
           type: number
           minimum: 15
-        priceCents:
+        creditCost:
           type: number
-          minimum: 0
+          minimum: 1
         description:
           type: string
         isActive:
@@ -1352,8 +1375,6 @@ components:
       properties:
         id:
           type: number
-        lessonTypeId:
-          type: number
         credits:
           type: number
         priceCents:
@@ -1367,7 +1388,6 @@ components:
           format: date-time
       required:
         - id
-        - lessonTypeId
         - credits
         - priceCents
         - sortOrder
@@ -1377,8 +1397,6 @@ components:
     CreditBundleInput:
       type: object
       properties:
-        lessonTypeId:
-          type: number
         credits:
           type: number
           minimum: 1
@@ -1390,7 +1408,6 @@ components:
         isActive:
           type: boolean
       required:
-        - lessonTypeId
         - credits
         - priceCents
 
@@ -1765,10 +1782,6 @@ components:
       properties:
         id:
           type: number
-        lessonTypeId:
-          type: number
-        lessonTypeName:
-          type: string
         totalCredits:
           type: number
         usedCredits:
@@ -1780,8 +1793,6 @@ components:
           format: date-time
       required:
         - id
-        - lessonTypeId
-        - lessonTypeName
         - totalCredits
         - usedCredits
         - remainingCredits
@@ -2363,14 +2374,11 @@ components:
       properties:
         studentId:
           type: number
-        lessonTypeId:
-          type: number
         totalCredits:
           type: number
           minimum: 1
       required:
         - studentId
-        - lessonTypeId
         - totalCredits
 
     CalendarStatus:

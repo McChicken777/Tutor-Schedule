@@ -8,7 +8,6 @@
 
 export interface CreditBundle {
   id: number;
-  lessonTypeId: number;
   credits: number;
   priceCents: number;
   sortOrder: number;

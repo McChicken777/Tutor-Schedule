@@ -6,7 +6,7 @@ export const lessonTypesTable = pgTable("lesson_types", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   durationMinutes: integer("duration_minutes").notNull(),
-  priceCents: integer("price_cents").notNull(),
+  creditCost: integer("credit_cost").notNull().default(1),
   description: text("description").notNull(),
   isActive: boolean("is_active").notNull().default(true),
   isTrial: boolean("is_trial").notNull().default(false),

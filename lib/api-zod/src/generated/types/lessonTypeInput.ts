@@ -11,8 +11,8 @@ export interface LessonTypeInput {
   name: string;
   /** @minimum 15 */
   durationMinutes: number;
-  /** @minimum 0 */
-  priceCents: number;
+  /** @minimum 1 */
+  creditCost: number;
   description: string;
   isActive?: boolean;
   isTrial?: boolean;

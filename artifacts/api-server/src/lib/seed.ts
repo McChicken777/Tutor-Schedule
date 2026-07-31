@@ -14,7 +14,7 @@ export async function seed() {
       {
         name: "Trial Lesson",
         durationMinutes: 25,
-        priceCents: 0,
+        creditCost: 1,
         description: "A free 25-minute introductory session to see if we are the right fit.",
         isActive: true,
         isTrial: true,
@@ -22,21 +22,21 @@ export async function seed() {
       {
         name: "Standard Lesson",
         durationMinutes: 55,
-        priceCents: 4500,
+        creditCost: 1,
         description: "A focused 55-minute lesson tailored to your level and goals.",
         isActive: true,
       },
       {
         name: "Intensive Lesson",
         durationMinutes: 85,
-        priceCents: 6500,
+        creditCost: 2,
         description: "An 85-minute deep-dive session for rapid progress on specific skills.",
         isActive: true,
       },
       {
         name: "Conversation Practice",
         durationMinutes: 25,
-        priceCents: 2000,
+        creditCost: 1,
         description: "25 minutes of relaxed, guided conversation practice to build fluency.",
         isActive: true,
       },

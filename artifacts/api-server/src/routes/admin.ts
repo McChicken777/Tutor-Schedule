@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, ne, and, desc, asc, gte, lt, gt, sql, inArray } from "drizzle-orm";
+import { eq, ne, and, desc, asc, gte, lt, gt, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   usersTable,
@@ -336,21 +336,7 @@ router.patch("/admin/bookings/:id/complete", requireAdmin, async (req, res): Pro
 
 router.get("/admin/lesson-types", requireAdmin, async (_req, res): Promise<void> => {
   const types = await db.select().from(lessonTypesTable).orderBy(asc(lessonTypesTable.id));
-
-  const bundles = types.length
-    ? await db
-        .select()
-        .from(creditBundlesTable)
-        .where(inArray(creditBundlesTable.lessonTypeId, types.map((t) => t.id)))
-        .orderBy(asc(creditBundlesTable.sortOrder), asc(creditBundlesTable.credits))
-    : [];
-
-  res.json(
-    types.map((t) => ({
-      ...t,
-      creditBundles: bundles.filter((b) => b.lessonTypeId === t.id),
-    })),
-  );
+  res.json(types);
 });
 
 router.post("/admin/lesson-types", requireAdmin, async (req, res): Promise<void> => {
@@ -370,7 +356,7 @@ router.post("/admin/lesson-types", requireAdmin, async (req, res): Promise<void>
     .values({
       name: parsed.data.name,
       durationMinutes: parsed.data.durationMinutes,
-      priceCents: parsed.data.priceCents,
+      creditCost: parsed.data.creditCost,
       description: parsed.data.description,
       isActive: parsed.data.isActive ?? true,
       isTrial: parsed.data.isTrial ?? false,
@@ -407,7 +393,7 @@ router.patch("/admin/lesson-types/:id", requireAdmin, async (req, res): Promise<
   const updateData: any = {};
   if (parsed.data.name != null) updateData.name = parsed.data.name;
   if (parsed.data.durationMinutes != null) updateData.durationMinutes = parsed.data.durationMinutes;
-  if (parsed.data.priceCents != null) updateData.priceCents = parsed.data.priceCents;
+  if (parsed.data.creditCost != null) updateData.creditCost = parsed.data.creditCost;
   if (parsed.data.description != null) updateData.description = parsed.data.description;
   if (parsed.data.isActive != null) updateData.isActive = parsed.data.isActive;
   if (parsed.data.isTrial != null) updateData.isTrial = parsed.data.isTrial;
@@ -435,6 +421,14 @@ router.delete("/admin/lesson-types/:id", requireAdmin, async (req, res): Promise
   res.sendStatus(204);
 });
 
+router.get("/admin/credit-bundles", requireAdmin, async (_req, res): Promise<void> => {
+  const bundles = await db
+    .select()
+    .from(creditBundlesTable)
+    .orderBy(asc(creditBundlesTable.sortOrder), asc(creditBundlesTable.credits));
+  res.json(bundles);
+});
+
 router.post("/admin/credit-bundles", requireAdmin, async (req, res): Promise<void> => {
   const parsed = CreateCreditBundleBody.safeParse(req.body);
   if (!parsed.success) {
@@ -442,19 +436,9 @@ router.post("/admin/credit-bundles", requireAdmin, async (req, res): Promise<voi
     return;
   }
 
-  const [lessonType] = await db
-    .select({ id: lessonTypesTable.id })
-    .from(lessonTypesTable)
-    .where(eq(lessonTypesTable.id, parsed.data.lessonTypeId));
-  if (!lessonType) {
-    res.status(400).json({ error: "Lesson type not found" });
-    return;
-  }
-
   const [bundle] = await db
     .insert(creditBundlesTable)
     .values({
-      lessonTypeId: parsed.data.lessonTypeId,
       credits: parsed.data.credits,
       priceCents: parsed.data.priceCents,
       sortOrder: parsed.data.sortOrder ?? 0,
@@ -645,12 +629,8 @@ router.get("/admin/students/:id", requireAdmin, async (req, res): Promise<void> 
   }
 
   const packages = await db
-    .select({
-      pkg: lessonPackagesTable,
-      lessonType: lessonTypesTable,
-    })
+    .select()
     .from(lessonPackagesTable)
-    .innerJoin(lessonTypesTable, eq(lessonPackagesTable.lessonTypeId, lessonTypesTable.id))
     .where(eq(lessonPackagesTable.studentId, id));
 
   const bookings = await db
@@ -665,13 +645,11 @@ router.get("/admin/students/:id", requireAdmin, async (req, res): Promise<void> 
     email: student.email,
     displayName: student.displayName,
     packages: packages.map((p) => ({
-      id: p.pkg.id,
-      lessonTypeId: p.pkg.lessonTypeId,
-      lessonTypeName: p.lessonType.name,
-      totalCredits: p.pkg.totalCredits,
-      usedCredits: p.pkg.usedCredits,
-      remainingCredits: p.pkg.totalCredits - p.pkg.usedCredits,
-      purchasedAt: p.pkg.purchasedAt,
+      id: p.id,
+      totalCredits: p.totalCredits,
+      usedCredits: p.usedCredits,
+      remainingCredits: p.totalCredits - p.usedCredits,
+      purchasedAt: p.purchasedAt,
     })),
     bookings: bookings.map((r) => ({
       id: r.booking.id,
@@ -799,7 +777,7 @@ router.post("/admin/packages", requireAdmin, async (req, res): Promise<void> => 
     return;
   }
 
-  const { studentId, lessonTypeId, totalCredits } = parsed.data;
+  const { studentId, totalCredits } = parsed.data;
 
   const [student] = await db.select().from(usersTable).where(eq(usersTable.id, studentId));
   if (!student) {
@@ -807,21 +785,13 @@ router.post("/admin/packages", requireAdmin, async (req, res): Promise<void> => 
     return;
   }
 
-  const [lessonType] = await db.select().from(lessonTypesTable).where(eq(lessonTypesTable.id, lessonTypeId));
-  if (!lessonType) {
-    res.status(400).json({ error: "Lesson type not found" });
-    return;
-  }
-
   const [pkg] = await db
     .insert(lessonPackagesTable)
-    .values({ studentId, lessonTypeId, totalCredits, usedCredits: 0 })
+    .values({ studentId, totalCredits, usedCredits: 0 })
     .returning();
 
   res.status(201).json({
     id: pkg.id,
-    lessonTypeId: pkg.lessonTypeId,
-    lessonTypeName: lessonType.name,
     totalCredits: pkg.totalCredits,
     usedCredits: pkg.usedCredits,
     remainingCredits: pkg.totalCredits - pkg.usedCredits,

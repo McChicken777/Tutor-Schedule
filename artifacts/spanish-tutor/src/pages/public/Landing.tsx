@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { useGetSiteSettings, useListLessonTypes, useListTestimonials, useListFaqs } from "@workspace/api-client-react";
+import { useGetSiteSettings, useListLessonTypes, useListTestimonials, useListFaqs, useListCreditBundles } from "@workspace/api-client-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import ErrorState from "@/components/ErrorState";
@@ -10,6 +10,7 @@ export default function Landing() {
   const { data: lessonTypes } = useListLessonTypes();
   const { data: testimonials } = useListTestimonials();
   const { data: faqs } = useListFaqs();
+  const { data: creditBundles } = useListCreditBundles();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   if (settingsError) {
@@ -29,6 +30,11 @@ export default function Landing() {
   const activeLessonTypes = lessonTypes?.filter((lt) => lt.isActive) ?? [];
   const trialLessonType = activeLessonTypes.find((lt) => lt.isTrial);
   const trialAvailable = !!settings?.freeTrialEnabled && !!trialLessonType;
+  const activeBundles = (creditBundles ?? []).filter((b) => b.isActive);
+  const perCreditRate =
+    activeBundles.length > 0
+      ? Math.min(...activeBundles.map((b) => b.priceCents / b.credits)) / 100
+      : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -179,7 +185,11 @@ export default function Landing() {
                   <div className="flex items-center gap-6 shrink-0">
                     <div className="text-right">
                       <div className="text-2xl font-serif font-bold text-foreground">
-                        {lt.isTrial && settings?.freeTrialEnabled ? "Free" : `$${(lt.priceCents / 100).toFixed(2)}`}
+                        {lt.isTrial && settings?.freeTrialEnabled
+                          ? "Free"
+                          : perCreditRate !== null
+                            ? `from €${(perCreditRate * lt.creditCost).toFixed(2)}`
+                            : null}
                       </div>
                       <div className="text-sm text-muted-foreground">{lt.durationMinutes} min</div>
                     </div>

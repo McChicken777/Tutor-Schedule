@@ -331,6 +331,83 @@ export function useListLessonTypes<TData = Awaited<ReturnType<typeof listLessonT
 
 
 
+export const getListCreditBundlesUrl = () => {
+
+
+
+
+  return `/api/credit-bundles`
+}
+
+/**
+ * @summary List active credit bundles
+ */
+export const listCreditBundles = async ( options?: Parameters<typeof customFetch>[1]): Promise<CreditBundle[]> => {
+
+  return customFetch<CreditBundle[]>(getListCreditBundlesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCreditBundlesQueryKey = () => {
+    return [
+    `/api/credit-bundles`
+    ] as const;
+    }
+
+
+export const getListCreditBundlesQueryOptions = <TData = Awaited<ReturnType<typeof listCreditBundles>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreditBundles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCreditBundlesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCreditBundles>>> = ({ signal }) => listCreditBundles({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCreditBundles>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCreditBundlesQueryResult = NonNullable<Awaited<ReturnType<typeof listCreditBundles>>>
+export type ListCreditBundlesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List active credit bundles
+ */
+
+export function useListCreditBundles<TData = Awaited<ReturnType<typeof listCreditBundles>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreditBundles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCreditBundlesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetAvailableSlotsUrl = (params: GetAvailableSlotsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -2508,6 +2585,83 @@ export const useDeleteLessonType = <TError = ErrorType<unknown>,
       return useMutation(getDeleteLessonTypeMutationOptions(options));
     }
 
+export const getListAdminCreditBundlesUrl = () => {
+
+
+
+
+  return `/api/admin/credit-bundles`
+}
+
+/**
+ * @summary List all credit bundles (including inactive)
+ */
+export const listAdminCreditBundles = async ( options?: Parameters<typeof customFetch>[1]): Promise<CreditBundle[]> => {
+
+  return customFetch<CreditBundle[]>(getListAdminCreditBundlesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminCreditBundlesQueryKey = () => {
+    return [
+    `/api/admin/credit-bundles`
+    ] as const;
+    }
+
+
+export const getListAdminCreditBundlesQueryOptions = <TData = Awaited<ReturnType<typeof listAdminCreditBundles>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCreditBundles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminCreditBundlesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminCreditBundles>>> = ({ signal }) => listAdminCreditBundles({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminCreditBundles>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminCreditBundlesQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminCreditBundles>>>
+export type ListAdminCreditBundlesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all credit bundles (including inactive)
+ */
+
+export function useListAdminCreditBundles<TData = Awaited<ReturnType<typeof listAdminCreditBundles>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCreditBundles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminCreditBundlesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getCreateCreditBundleUrl = () => {
 
 
@@ -2517,7 +2671,7 @@ export const getCreateCreditBundleUrl = () => {
 }
 
 /**
- * @summary Create a purchasable credit bundle for a lesson type
+ * @summary Create a purchasable credit bundle
  */
 export const createCreditBundle = async (creditBundleInput: CreditBundleInput, options?: Parameters<typeof customFetch>[1]): Promise<CreditBundle> => {
 
@@ -2566,7 +2720,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CreateCreditBundleMutationError = ErrorType<unknown>
 
     /**
- * @summary Create a purchasable credit bundle for a lesson type
+ * @summary Create a purchasable credit bundle
  */
 export const useCreateCreditBundle = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCreditBundle>>, TError,{data: BodyType<CreditBundleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}

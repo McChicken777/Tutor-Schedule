@@ -7,7 +7,6 @@
  */
 
 export interface CreditBundleInput {
-  lessonTypeId: number;
   /** @minimum 1 */
   credits: number;
   /** @minimum 0 */

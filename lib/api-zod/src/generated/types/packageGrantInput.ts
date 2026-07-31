@@ -8,7 +8,6 @@
 
 export interface PackageGrantInput {
   studentId: number;
-  lessonTypeId: number;
   /** @minimum 1 */
   totalCredits: number;
 }

@@ -230,12 +230,8 @@ router.get("/student/dashboard", requireAuth, async (req, res): Promise<void> =>
     .limit(5);
 
   const packages = await db
-    .select({
-      pkg: lessonPackagesTable,
-      lessonType: lessonTypesTable,
-    })
+    .select()
     .from(lessonPackagesTable)
-    .innerJoin(lessonTypesTable, eq(lessonPackagesTable.lessonTypeId, lessonTypesTable.id))
     .where(eq(lessonPackagesTable.studentId, user.id));
 
   // Homework with pending feedback
@@ -257,7 +253,7 @@ router.get("/student/dashboard", requireAuth, async (req, res): Promise<void> =>
   ).length;
 
   const totalRemaining = packages.reduce(
-    (sum, p) => sum + (p.pkg.totalCredits - p.pkg.usedCredits),
+    (sum, p) => sum + (p.totalCredits - p.usedCredits),
     0,
   );
 
@@ -284,13 +280,11 @@ router.get("/student/dashboard", requireAuth, async (req, res): Promise<void> =>
     hasSeenTour: isTestAccount ? false : user.hasSeenTour,
     pendingHomeworkCount,
     packages: packages.map((p) => ({
-      id: p.pkg.id,
-      lessonTypeId: p.pkg.lessonTypeId,
-      lessonTypeName: p.lessonType.name,
-      totalCredits: p.pkg.totalCredits,
-      usedCredits: p.pkg.usedCredits,
-      remainingCredits: p.pkg.totalCredits - p.pkg.usedCredits,
-      purchasedAt: p.pkg.purchasedAt,
+      id: p.id,
+      totalCredits: p.totalCredits,
+      usedCredits: p.usedCredits,
+      remainingCredits: p.totalCredits - p.usedCredits,
+      purchasedAt: p.purchasedAt,
     })),
     recentHomework: recentHomework.map((r) =>
       mapHomeworkRow(r.hw, {
@@ -377,20 +371,15 @@ router.post("/student/bookings", requireAuth, async (req, res): Promise<void> =>
     packages = await db
       .select()
       .from(lessonPackagesTable)
-      .where(
-        and(
-          eq(lessonPackagesTable.studentId, user.id),
-          eq(lessonPackagesTable.lessonTypeId, lessonTypeId),
-        ),
-      );
+      .where(eq(lessonPackagesTable.studentId, user.id));
 
     const totalRemaining = packages.reduce(
       (sum, p) => sum + (p.totalCredits - p.usedCredits),
       0,
     );
 
-    if (totalRemaining <= 0) {
-      res.status(400).json({ error: "No remaining credits for this lesson type" });
+    if (totalRemaining < lessonType.creditCost) {
+      res.status(400).json({ error: "Not enough credits for this lesson type" });
       return;
     }
   }
@@ -427,14 +416,22 @@ router.post("/student/bookings", requireAuth, async (req, res): Promise<void> =>
     .returning();
 
   if (!lessonType.isTrial) {
-    // Deduct one credit from the package with most credits remaining
-    const pkg = packages.sort(
-      (a, b) => (b.totalCredits - b.usedCredits) - (a.totalCredits - a.usedCredits),
-    )[0];
-    await db
-      .update(lessonPackagesTable)
-      .set({ usedCredits: pkg.usedCredits + 1 })
-      .where(eq(lessonPackagesTable.id, pkg.id));
+    // Deduct creditCost credits FIFO across package rows, oldest first
+    let remainingToDeduct = lessonType.creditCost;
+    const sortedPackages = [...packages].sort(
+      (a, b) => a.purchasedAt.getTime() - b.purchasedAt.getTime(),
+    );
+    for (const pkg of sortedPackages) {
+      if (remainingToDeduct <= 0) break;
+      const available = pkg.totalCredits - pkg.usedCredits;
+      if (available <= 0) continue;
+      const deduction = Math.min(available, remainingToDeduct);
+      await db
+        .update(lessonPackagesTable)
+        .set({ usedCredits: pkg.usedCredits + deduction })
+        .where(eq(lessonPackagesTable.id, pkg.id));
+      remainingToDeduct -= deduction;
+    }
   }
 
   // Create empty homework record
@@ -547,19 +544,19 @@ router.patch("/student/bookings/:id/cancel", requireAuth, async (req, res): Prom
     const packages = await db
       .select()
       .from(lessonPackagesTable)
-      .where(
-        and(
-          eq(lessonPackagesTable.studentId, user.id),
-          eq(lessonPackagesTable.lessonTypeId, row.booking.lessonTypeId),
-        ),
-      )
+      .where(eq(lessonPackagesTable.studentId, user.id))
       .orderBy(desc(lessonPackagesTable.purchasedAt));
 
-    if (packages.length > 0 && packages[0].usedCredits > 0) {
+    let remainingToRefund = row.lessonType.creditCost;
+    for (const pkg of packages) {
+      if (remainingToRefund <= 0) break;
+      if (pkg.usedCredits <= 0) continue;
+      const refund = Math.min(pkg.usedCredits, remainingToRefund);
       await db
         .update(lessonPackagesTable)
-        .set({ usedCredits: packages[0].usedCredits - 1 })
-        .where(eq(lessonPackagesTable.id, packages[0].id));
+        .set({ usedCredits: pkg.usedCredits - refund })
+        .where(eq(lessonPackagesTable.id, pkg.id));
+      remainingToRefund -= refund;
     }
   }
 
@@ -809,24 +806,18 @@ router.get("/student/packages", requireAuth, async (req, res): Promise<void> => 
   const user = await getOrCreateUser(clerkUserId);
 
   const rows = await db
-    .select({
-      pkg: lessonPackagesTable,
-      lessonType: lessonTypesTable,
-    })
+    .select()
     .from(lessonPackagesTable)
-    .innerJoin(lessonTypesTable, eq(lessonPackagesTable.lessonTypeId, lessonTypesTable.id))
     .where(eq(lessonPackagesTable.studentId, user.id))
     .orderBy(desc(lessonPackagesTable.purchasedAt));
 
   res.json(
     rows.map((r) => ({
-      id: r.pkg.id,
-      lessonTypeId: r.pkg.lessonTypeId,
-      lessonTypeName: r.lessonType.name,
-      totalCredits: r.pkg.totalCredits,
-      usedCredits: r.pkg.usedCredits,
-      remainingCredits: r.pkg.totalCredits - r.pkg.usedCredits,
-      purchasedAt: r.pkg.purchasedAt,
+      id: r.id,
+      totalCredits: r.totalCredits,
+      usedCredits: r.usedCredits,
+      remainingCredits: r.totalCredits - r.usedCredits,
+      purchasedAt: r.purchasedAt,
     })),
   );
 });
