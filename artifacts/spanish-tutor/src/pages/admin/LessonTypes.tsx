@@ -2,10 +2,6 @@ import {
   useListAdminLessonTypes,
   useUpdateLessonType,
   useCreateLessonType,
-  useListAdminCreditBundles,
-  useCreateCreditBundle,
-  useUpdateCreditBundle,
-  useDeleteCreditBundle,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,130 +12,11 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  getListAdminCreditBundlesQueryKey,
-  getListCreditBundlesQueryKey,
   getListAdminLessonTypesQueryKey,
   getListLessonTypesQueryKey,
 } from "@workspace/api-client-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Trash2 } from "lucide-react";
-
-function CreditBundlesManager() {
-  const { data: bundles, isLoading, error, refetch } = useListAdminCreditBundles();
-  const qc = useQueryClient();
-  const { toast } = useToast();
-  const createBundleMutation = useCreateCreditBundle();
-  const updateBundleMutation = useUpdateCreditBundle();
-  const deleteBundleMutation = useDeleteCreditBundle();
-
-  const [rows, setRows] = useState<Record<number, { credits: number; priceCents: number }>>({});
-  const [newTier, setNewTier] = useState({ credits: 3, priceCents: 0 });
-
-  useEffect(() => {
-    setRows(Object.fromEntries((bundles ?? []).map((b) => [b.id, { credits: b.credits, priceCents: b.priceCents }])));
-  }, [bundles]);
-
-  const invalidate = () => {
-    qc.invalidateQueries({ queryKey: getListAdminCreditBundlesQueryKey() });
-    qc.invalidateQueries({ queryKey: getListCreditBundlesQueryKey() });
-  };
-
-  const handleSaveRow = (id: number) => {
-    const row = rows[id];
-    if (!row) return;
-    updateBundleMutation.mutate({ id, data: row }, {
-      onSuccess: () => {
-        toast({ title: "Package updated" });
-        invalidate();
-      }
-    });
-  };
-
-  const handleDeleteRow = (id: number) => {
-    deleteBundleMutation.mutate({ id }, {
-      onSuccess: () => {
-        toast({ title: "Package removed" });
-        invalidate();
-      }
-    });
-  };
-
-  const handleAddTier = () => {
-    createBundleMutation.mutate({ data: { credits: newTier.credits, priceCents: newTier.priceCents } }, {
-      onSuccess: () => {
-        toast({ title: "Package added" });
-        setNewTier({ credits: 3, priceCents: 0 });
-        invalidate();
-      }
-    });
-  };
-
-  return (
-    <div className="bg-card border border-border p-6 rounded-3xl mb-8">
-      <h2 className="text-xl font-bold text-foreground mb-1">Credit Packages</h2>
-      <p className="text-sm text-muted-foreground mb-4">
-        These are the only € prices in the app — students buy credits here and spend them on any lesson type.
-      </p>
-      {isLoading ? (
-        <Skeleton className="h-24 rounded-2xl" />
-      ) : error ? (
-        <ErrorState error={error} onRetry={refetch} />
-      ) : (
-        <div className="space-y-3">
-          {(bundles ?? []).map((b) => {
-            const row = rows[b.id] ?? { credits: b.credits, priceCents: b.priceCents };
-            return (
-              <div key={b.id} className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  className="w-24"
-                  value={row.credits}
-                  onChange={(e) => setRows({ ...rows, [b.id]: { ...row, credits: Number(e.target.value) } })}
-                  aria-label="Credits"
-                />
-                <span className="text-xs text-muted-foreground shrink-0">credits for €</span>
-                <Input
-                  type="number"
-                  className="w-24"
-                  value={row.priceCents / 100}
-                  onChange={(e) => setRows({ ...rows, [b.id]: { ...row, priceCents: Math.round(Number(e.target.value) * 100) } })}
-                  aria-label="Price"
-                />
-                <Button size="sm" variant="outline" onClick={() => handleSaveRow(b.id)} disabled={updateBundleMutation.isPending}>
-                  Save
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => handleDeleteRow(b.id)} disabled={deleteBundleMutation.isPending}>
-                  <Trash2 className="w-4 h-4 text-destructive" />
-                </Button>
-              </div>
-            );
-          })}
-          <div className="flex items-center gap-2 pt-3 border-t border-border">
-            <Input
-              type="number"
-              className="w-24"
-              value={newTier.credits}
-              onChange={(e) => setNewTier({ ...newTier, credits: Number(e.target.value) })}
-              aria-label="New tier credits"
-            />
-            <span className="text-xs text-muted-foreground shrink-0">credits for €</span>
-            <Input
-              type="number"
-              className="w-24"
-              value={newTier.priceCents / 100}
-              onChange={(e) => setNewTier({ ...newTier, priceCents: Math.round(Number(e.target.value) * 100) })}
-              aria-label="New tier price"
-            />
-            <Button size="sm" onClick={handleAddTier} disabled={createBundleMutation.isPending}>
-              Add package
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function AdminLessonTypes() {
   const { data: lessonTypes, isLoading, error, refetch } = useListAdminLessonTypes();
@@ -244,8 +121,6 @@ export default function AdminLessonTypes() {
           </DialogContent>
         </Dialog>
       </div>
-
-      <CreditBundlesManager />
 
       <Dialog open={editingId != null} onOpenChange={(open) => { if (!open) setEditingId(null); }}>
         <DialogContent>

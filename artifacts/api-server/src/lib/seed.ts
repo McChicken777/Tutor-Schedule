@@ -4,6 +4,7 @@ import {
   testimonialsTable,
   faqsTable,
   siteSettingsTable,
+  creditBundlesTable,
 } from "@workspace/db";
 
 export async function seed() {
@@ -42,6 +43,17 @@ export async function seed() {
       },
     ]);
     console.log("Seeded lesson types");
+  }
+
+  // Credit packages
+  const existingBundles = await db.select().from(creditBundlesTable);
+  if (existingBundles.length === 0) {
+    await db.insert(creditBundlesTable).values([
+      { credits: 3, priceCents: 4200, sortOrder: 0, isActive: true },
+      { credits: 10, priceCents: 13500, sortOrder: 1, isActive: true },
+      { credits: 20, priceCents: 25000, sortOrder: 2, isActive: true },
+    ]);
+    console.log("Seeded credit packages");
   }
 
   // Testimonials
