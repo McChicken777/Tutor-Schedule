@@ -5,6 +5,7 @@ import { useClerk, useUser } from "@clerk/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { LogOut, LayoutDashboard, Calendar, BookOpen, MessageCircle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import PurchaseCreditsDialog from "@/components/PurchaseCreditsDialog";
 import {
   useGetStudentDashboard,
   useCompleteTour,
@@ -29,6 +30,9 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
   const [tourStep, setTourStep] = useState(0);
   const tourActive = !!dashboard && !dashboard.hasSeenTour;
+  const [purchaseOpen, setPurchaseOpen] = useState(false);
+  const totalRemainingCredits = dashboard?.totalRemainingCredits ?? 0;
+  const isLowOnCredits = !!dashboard && totalRemainingCredits <= 1;
 
   const handleTourComplete = () => {
     completeTourMutation.mutate(undefined, {
@@ -54,6 +58,21 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
             <span className="font-serif text-xl font-bold text-foreground">Loquu</span>
           </Link>
         </div>
+
+        <button onClick={() => setPurchaseOpen(true)} className="w-full text-left px-6 pb-4 block">
+          <div
+            className={`rounded-xl border px-4 py-3 transition-colors ${
+              isLowOnCredits ? "bg-destructive/10 border-destructive/30" : "bg-primary/10 border-primary/20"
+            }`}
+          >
+            <p className={`text-xs ${isLowOnCredits ? "text-destructive" : "text-muted-foreground"}`}>
+              {isLowOnCredits ? "Low on credits" : "Credits Remaining"}
+            </p>
+            <p className={`text-2xl font-bold ${isLowOnCredits ? "text-destructive" : "text-primary"}`}>
+              {dashboard ? totalRemainingCredits : "–"}
+            </p>
+          </div>
+        </button>
 
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
           {navItems.map((item, index) => {
@@ -147,6 +166,8 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
       <main className="flex-1 flex flex-col max-w-full overflow-hidden">
         {children}
       </main>
+
+      <PurchaseCreditsDialog open={purchaseOpen} onOpenChange={setPurchaseOpen} />
     </div>
   );
 }

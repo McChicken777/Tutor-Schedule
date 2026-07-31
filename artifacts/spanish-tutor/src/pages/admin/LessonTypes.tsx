@@ -1,4 +1,12 @@
-import { useListAdminLessonTypes, useUpdateLessonType, useCreateLessonType } from "@workspace/api-client-react";
+import {
+  useListAdminLessonTypes,
+  useUpdateLessonType,
+  useCreateLessonType,
+  useCreateCreditBundle,
+  useUpdateCreditBundle,
+  useDeleteCreditBundle,
+  type CreditBundle,
+} from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,8 +16,113 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListAdminLessonTypesQueryKey, getListLessonTypesQueryKey } from "@workspace/api-client-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Trash2 } from "lucide-react";
+
+function CreditBundleManager({ lessonTypeId, bundles }: { lessonTypeId: number; bundles: CreditBundle[] }) {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const createBundleMutation = useCreateCreditBundle();
+  const updateBundleMutation = useUpdateCreditBundle();
+  const deleteBundleMutation = useDeleteCreditBundle();
+
+  const [rows, setRows] = useState<Record<number, { credits: number; priceCents: number }>>({});
+  const [newTier, setNewTier] = useState({ credits: 5, priceCents: 0 });
+
+  useEffect(() => {
+    setRows(Object.fromEntries(bundles.map((b) => [b.id, { credits: b.credits, priceCents: b.priceCents }])));
+  }, [bundles]);
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: getListAdminLessonTypesQueryKey() });
+    qc.invalidateQueries({ queryKey: getListLessonTypesQueryKey() });
+  };
+
+  const handleSaveRow = (id: number) => {
+    const row = rows[id];
+    if (!row) return;
+    updateBundleMutation.mutate({ id, data: row }, {
+      onSuccess: () => {
+        toast({ title: "Package updated" });
+        invalidate();
+      }
+    });
+  };
+
+  const handleDeleteRow = (id: number) => {
+    deleteBundleMutation.mutate({ id }, {
+      onSuccess: () => {
+        toast({ title: "Package removed" });
+        invalidate();
+      }
+    });
+  };
+
+  const handleAddTier = () => {
+    createBundleMutation.mutate({ data: { lessonTypeId, credits: newTier.credits, priceCents: newTier.priceCents } }, {
+      onSuccess: () => {
+        toast({ title: "Package added" });
+        setNewTier({ credits: 5, priceCents: 0 });
+        invalidate();
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-3 p-3 bg-accent/30 rounded-xl border border-border">
+      <p className="text-sm font-medium">Credit Packages</p>
+      {bundles.map((b) => {
+        const row = rows[b.id] ?? { credits: b.credits, priceCents: b.priceCents };
+        return (
+          <div key={b.id} className="flex items-center gap-2">
+            <Input
+              type="number"
+              className="w-20"
+              value={row.credits}
+              onChange={(e) => setRows({ ...rows, [b.id]: { ...row, credits: Number(e.target.value) } })}
+              aria-label="Credits"
+            />
+            <span className="text-xs text-muted-foreground shrink-0">credits for €</span>
+            <Input
+              type="number"
+              className="w-24"
+              value={row.priceCents / 100}
+              onChange={(e) => setRows({ ...rows, [b.id]: { ...row, priceCents: Math.round(Number(e.target.value) * 100) } })}
+              aria-label="Price"
+            />
+            <Button size="sm" variant="outline" onClick={() => handleSaveRow(b.id)} disabled={updateBundleMutation.isPending}>
+              Save
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => handleDeleteRow(b.id)} disabled={deleteBundleMutation.isPending}>
+              <Trash2 className="w-4 h-4 text-destructive" />
+            </Button>
+          </div>
+        );
+      })}
+      <div className="flex items-center gap-2 pt-1 border-t border-border">
+        <Input
+          type="number"
+          className="w-20"
+          value={newTier.credits}
+          onChange={(e) => setNewTier({ ...newTier, credits: Number(e.target.value) })}
+          aria-label="New tier credits"
+        />
+        <span className="text-xs text-muted-foreground shrink-0">credits for €</span>
+        <Input
+          type="number"
+          className="w-24"
+          value={newTier.priceCents / 100}
+          onChange={(e) => setNewTier({ ...newTier, priceCents: Math.round(Number(e.target.value) * 100) })}
+          aria-label="New tier price"
+        />
+        <Button size="sm" onClick={handleAddTier} disabled={createBundleMutation.isPending}>
+          Add tier
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminLessonTypes() {
   const { data: lessonTypes, isLoading, error, refetch } = useListAdminLessonTypes();
@@ -94,7 +207,7 @@ export default function AdminLessonTypes() {
                   <Input type="number" value={newLesson.durationMinutes} onChange={e => setNewLesson({...newLesson, durationMinutes: Number(e.target.value)})} />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Price ($)</label>
+                  <label className="text-sm font-medium mb-1 block">Price (€)</label>
                   <Input type="number" value={newLesson.priceCents / 100} onChange={e => setNewLesson({...newLesson, priceCents: Math.round(Number(e.target.value) * 100)})} />
                 </div>
               </div>
@@ -131,7 +244,7 @@ export default function AdminLessonTypes() {
                 <Input type="number" value={editForm.durationMinutes} onChange={e => setEditForm({...editForm, durationMinutes: Number(e.target.value)})} />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Price ($)</label>
+                <label className="text-sm font-medium mb-1 block">Price (€)</label>
                 <Input type="number" value={editForm.priceCents / 100} onChange={e => setEditForm({...editForm, priceCents: Math.round(Number(e.target.value) * 100)})} />
               </div>
             </div>
@@ -140,6 +253,12 @@ export default function AdminLessonTypes() {
               <Textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} />
             </div>
             <Button onClick={handleEditSave} disabled={updateMutation.isPending || !editForm.name} className="w-full">Save Changes</Button>
+            {editingId != null && (
+              <CreditBundleManager
+                lessonTypeId={editingId}
+                bundles={lessonTypes?.find(lt => lt.id === editingId)?.creditBundles ?? []}
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -164,7 +283,7 @@ export default function AdminLessonTypes() {
                 </div>
                 <Switch checked={lt.isActive} onCheckedChange={(v) => handleToggleActive(lt.id, v)} />
               </div>
-              <p className="text-primary font-medium mb-2">{lt.durationMinutes} minutes • ${(lt.priceCents/100).toFixed(2)}</p>
+              <p className="text-primary font-medium mb-2">{lt.durationMinutes} minutes • €{(lt.priceCents/100).toFixed(2)}</p>
               <p className="text-muted-foreground text-sm mb-4">{lt.description}</p>
               <div className="flex items-center justify-between pt-4 border-t border-border">
                 <span className="text-sm text-muted-foreground">Free trial lesson</span>

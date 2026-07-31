@@ -1,11 +1,12 @@
 import { Router, type IRouter } from "express";
-import { eq, ne, and, desc, asc, gte, lt, gt, sql } from "drizzle-orm";
+import { eq, ne, and, desc, asc, gte, lt, gt, sql, inArray } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   usersTable,
   bookingsTable,
   lessonTypesTable,
   lessonPackagesTable,
+  creditBundlesTable,
   homeworkTable,
   reviewsTable,
   testimonialsTable,
@@ -23,6 +24,10 @@ import {
   UpdateLessonTypeBody,
   UpdateLessonTypeParams,
   DeleteLessonTypeParams,
+  CreateCreditBundleBody,
+  UpdateCreditBundleBody,
+  UpdateCreditBundleParams,
+  DeleteCreditBundleParams,
   UpdateHomeworkBody,
   UpdateHomeworkParams,
   GetAdminStudentParams,
@@ -331,7 +336,21 @@ router.patch("/admin/bookings/:id/complete", requireAdmin, async (req, res): Pro
 
 router.get("/admin/lesson-types", requireAdmin, async (_req, res): Promise<void> => {
   const types = await db.select().from(lessonTypesTable).orderBy(asc(lessonTypesTable.id));
-  res.json(types);
+
+  const bundles = types.length
+    ? await db
+        .select()
+        .from(creditBundlesTable)
+        .where(inArray(creditBundlesTable.lessonTypeId, types.map((t) => t.id)))
+        .orderBy(asc(creditBundlesTable.sortOrder), asc(creditBundlesTable.credits))
+    : [];
+
+  res.json(
+    types.map((t) => ({
+      ...t,
+      creditBundles: bundles.filter((b) => b.lessonTypeId === t.id),
+    })),
+  );
 });
 
 router.post("/admin/lesson-types", requireAdmin, async (req, res): Promise<void> => {
@@ -413,6 +432,81 @@ router.delete("/admin/lesson-types/:id", requireAdmin, async (req, res): Promise
   }
 
   await db.delete(lessonTypesTable).where(eq(lessonTypesTable.id, id));
+  res.sendStatus(204);
+});
+
+router.post("/admin/credit-bundles", requireAdmin, async (req, res): Promise<void> => {
+  const parsed = CreateCreditBundleBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [lessonType] = await db
+    .select({ id: lessonTypesTable.id })
+    .from(lessonTypesTable)
+    .where(eq(lessonTypesTable.id, parsed.data.lessonTypeId));
+  if (!lessonType) {
+    res.status(400).json({ error: "Lesson type not found" });
+    return;
+  }
+
+  const [bundle] = await db
+    .insert(creditBundlesTable)
+    .values({
+      lessonTypeId: parsed.data.lessonTypeId,
+      credits: parsed.data.credits,
+      priceCents: parsed.data.priceCents,
+      sortOrder: parsed.data.sortOrder ?? 0,
+      isActive: parsed.data.isActive ?? true,
+    })
+    .returning();
+
+  res.status(201).json(bundle);
+});
+
+router.patch("/admin/credit-bundles/:id", requireAdmin, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+
+  const parsed = UpdateCreditBundleBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [existing] = await db.select().from(creditBundlesTable).where(eq(creditBundlesTable.id, id));
+  if (!existing) {
+    res.status(404).json({ error: "Credit bundle not found" });
+    return;
+  }
+
+  const updateData: any = {};
+  if (parsed.data.credits != null) updateData.credits = parsed.data.credits;
+  if (parsed.data.priceCents != null) updateData.priceCents = parsed.data.priceCents;
+  if (parsed.data.sortOrder != null) updateData.sortOrder = parsed.data.sortOrder;
+  if (parsed.data.isActive != null) updateData.isActive = parsed.data.isActive;
+
+  const [updated] = await db
+    .update(creditBundlesTable)
+    .set(updateData)
+    .where(eq(creditBundlesTable.id, id))
+    .returning();
+
+  res.json(updated);
+});
+
+router.delete("/admin/credit-bundles/:id", requireAdmin, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+
+  const [existing] = await db.select().from(creditBundlesTable).where(eq(creditBundlesTable.id, id));
+  if (!existing) {
+    res.status(404).json({ error: "Credit bundle not found" });
+    return;
+  }
+
+  await db.delete(creditBundlesTable).where(eq(creditBundlesTable.id, id));
   res.sendStatus(204);
 });
 

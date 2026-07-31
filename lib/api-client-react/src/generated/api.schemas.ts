@@ -9,6 +9,16 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface CreditBundle {
+  id: number;
+  lessonTypeId: number;
+  credits: number;
+  priceCents: number;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface LessonType {
   id: number;
   name: string;
@@ -18,6 +28,7 @@ export interface LessonType {
   isActive: boolean;
   isTrial: boolean;
   createdAt: string;
+  creditBundles: CreditBundle[];
 }
 
 export interface LessonTypeInput {
@@ -42,6 +53,25 @@ export interface LessonTypeUpdate {
   description?: string;
   isActive?: boolean;
   isTrial?: boolean;
+}
+
+export interface CreditBundleInput {
+  lessonTypeId: number;
+  /** @minimum 1 */
+  credits: number;
+  /** @minimum 0 */
+  priceCents: number;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+export interface CreditBundleUpdate {
+  /** @minimum 1 */
+  credits?: number;
+  /** @minimum 0 */
+  priceCents?: number;
+  sortOrder?: number;
+  isActive?: boolean;
 }
 
 export interface TimeSlot {

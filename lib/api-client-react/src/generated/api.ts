@@ -37,6 +37,9 @@ import type {
   CancellationInput,
   CompleteBookingInput,
   CompleteTour200,
+  CreditBundle,
+  CreditBundleInput,
+  CreditBundleUpdate,
   DisconnectCalendar200,
   FaqEntry,
   FaqInput,
@@ -2503,6 +2506,220 @@ export const useDeleteLessonType = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteLessonTypeMutationOptions(options));
+    }
+
+export const getCreateCreditBundleUrl = () => {
+
+
+
+
+  return `/api/admin/credit-bundles`
+}
+
+/**
+ * @summary Create a purchasable credit bundle for a lesson type
+ */
+export const createCreditBundle = async (creditBundleInput: CreditBundleInput, options?: Parameters<typeof customFetch>[1]): Promise<CreditBundle> => {
+
+  return customFetch<CreditBundle>(getCreateCreditBundleUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(creditBundleInput)
+  }
+);}
+
+
+
+
+
+export const getCreateCreditBundleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCreditBundle>>, TError,{data: BodyType<CreditBundleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCreditBundle>>, TError,{data: BodyType<CreditBundleInput>}, TContext> => {
+
+const mutationKey = ['createCreditBundle'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCreditBundle>>, {data: BodyType<CreditBundleInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createCreditBundle(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCreditBundleMutationResult = NonNullable<Awaited<ReturnType<typeof createCreditBundle>>>
+    export type CreateCreditBundleMutationBody = BodyType<CreditBundleInput>
+    export type CreateCreditBundleMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a purchasable credit bundle for a lesson type
+ */
+export const useCreateCreditBundle = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCreditBundle>>, TError,{data: BodyType<CreditBundleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCreditBundle>>,
+        TError,
+        {data: BodyType<CreditBundleInput>},
+        TContext
+      > => {
+      return useMutation(getCreateCreditBundleMutationOptions(options));
+    }
+
+export const getUpdateCreditBundleUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/credit-bundles/${id}`
+}
+
+/**
+ * @summary Update a credit bundle
+ */
+export const updateCreditBundle = async (id: number,
+    creditBundleUpdate: CreditBundleUpdate, options?: Parameters<typeof customFetch>[1]): Promise<CreditBundle> => {
+
+  return customFetch<CreditBundle>(getUpdateCreditBundleUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(creditBundleUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateCreditBundleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCreditBundle>>, TError,{id: number;data: BodyType<CreditBundleUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCreditBundle>>, TError,{id: number;data: BodyType<CreditBundleUpdate>}, TContext> => {
+
+const mutationKey = ['updateCreditBundle'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCreditBundle>>, {id: number;data: BodyType<CreditBundleUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateCreditBundle(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCreditBundleMutationResult = NonNullable<Awaited<ReturnType<typeof updateCreditBundle>>>
+    export type UpdateCreditBundleMutationBody = BodyType<CreditBundleUpdate>
+    export type UpdateCreditBundleMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a credit bundle
+ */
+export const useUpdateCreditBundle = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCreditBundle>>, TError,{id: number;data: BodyType<CreditBundleUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCreditBundle>>,
+        TError,
+        {id: number;data: BodyType<CreditBundleUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateCreditBundleMutationOptions(options));
+    }
+
+export const getDeleteCreditBundleUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/credit-bundles/${id}`
+}
+
+/**
+ * @summary Delete a credit bundle
+ */
+export const deleteCreditBundle = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteCreditBundleUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteCreditBundleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCreditBundle>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCreditBundle>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteCreditBundle'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCreditBundle>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteCreditBundle(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteCreditBundleMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCreditBundle>>>
+
+    export type DeleteCreditBundleMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a credit bundle
+ */
+export const useDeleteCreditBundle = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCreditBundle>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteCreditBundle>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteCreditBundleMutationOptions(options));
     }
 
 export const getListAdminHomeworkUrl = (params?: ListAdminHomeworkParams,) => {

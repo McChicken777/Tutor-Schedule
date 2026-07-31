@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, inArray } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   lessonTypesTable,
+  creditBundlesTable,
   testimonialsTable,
   faqsTable,
   siteSettingsTable,
@@ -20,6 +21,15 @@ router.get("/lesson-types", async (_req, res): Promise<void> => {
     .from(lessonTypesTable)
     .where(eq(lessonTypesTable.isActive, true))
     .orderBy(asc(lessonTypesTable.id));
+
+  const bundles = types.length
+    ? await db
+        .select()
+        .from(creditBundlesTable)
+        .where(inArray(creditBundlesTable.lessonTypeId, types.map((t) => t.id)))
+        .orderBy(asc(creditBundlesTable.credits))
+    : [];
+
   res.json(
     types.map((t) => ({
       id: t.id,
@@ -30,6 +40,7 @@ router.get("/lesson-types", async (_req, res): Promise<void> => {
       isActive: t.isActive,
       isTrial: t.isTrial,
       createdAt: t.createdAt,
+      creditBundles: bundles.filter((b) => b.lessonTypeId === t.id && b.isActive),
     })),
   );
 });

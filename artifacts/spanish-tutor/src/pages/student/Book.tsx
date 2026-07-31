@@ -13,6 +13,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle2, ArrowLeft, ArrowRight, Clock, Lock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import PurchaseCreditsDialog from "@/components/PurchaseCreditsDialog";
 
 export default function BookLesson() {
   const [, setLocation] = useLocation();
@@ -22,6 +23,7 @@ export default function BookLesson() {
   const [selectedLessonType, setSelectedLessonType] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [purchaseTypeId, setPurchaseTypeId] = useState<number | null>(null);
 
   const { data: dashboard } = useGetStudentDashboard();
   const { data: lessonTypes, isLoading: loadingTypes } = useListLessonTypes();
@@ -54,7 +56,13 @@ export default function BookLesson() {
   function lockReason(lt: (typeof activeLessonTypes)[number]): string {
     if (lt.isTrial) return "Trial already used";
     if (trialLessonTypeExists && dashboard?.trialAvailable) return "Complete your free trial first";
-    return "Message your teacher to unlock";
+    return "Out of credits";
+  }
+
+  function canBuyCredits(lt: (typeof activeLessonTypes)[number]): boolean {
+    if (lt.isTrial) return false;
+    if (trialLessonTypeExists && dashboard?.trialAvailable) return false;
+    return true;
   }
 
   const handleBook = () => {
@@ -98,16 +106,17 @@ export default function BookLesson() {
               {activeLessonTypes.map(lt => {
                 const bookable = isBookable(lt);
                 return (
-                  <button
+                  <div
                     key={lt.id}
+                    role="button"
+                    tabIndex={bookable ? 0 : -1}
                     onClick={() => bookable && setSelectedLessonType(lt.id)}
-                    disabled={!bookable}
                     className={`text-left p-6 rounded-3xl border-2 transition-all ${
                       !bookable
-                        ? "border-border bg-accent/30 opacity-60 cursor-not-allowed"
+                        ? "border-border bg-accent/30 opacity-90"
                         : selectedLessonType === lt.id
-                          ? "border-primary bg-primary/5 shadow-md"
-                          : "border-border bg-card hover:border-primary/50"
+                          ? "border-primary bg-primary/5 shadow-md cursor-pointer"
+                          : "border-border bg-card hover:border-primary/50 cursor-pointer"
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
@@ -117,16 +126,27 @@ export default function BookLesson() {
                       )}
                     </div>
                     <p className="text-primary font-medium mb-4">
-                      {lt.durationMinutes} minutes • {lt.isTrial ? "Free" : `$${(lt.priceCents / 100).toFixed(2)}`}
+                      {lt.durationMinutes} minutes • {lt.isTrial ? "Free" : `€${(lt.priceCents / 100).toFixed(2)}`}
                     </p>
                     <p className="text-muted-foreground text-sm mb-4">{lt.description}</p>
                     {!bookable && (
-                      <p className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-                        <Lock className="w-3.5 h-3.5" />
-                        {lockReason(lt)}
-                      </p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                          <Lock className="w-3.5 h-3.5" />
+                          {lockReason(lt)}
+                        </p>
+                        {canBuyCredits(lt) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => { e.stopPropagation(); setPurchaseTypeId(lt.id); }}
+                          >
+                            Buy credits
+                          </Button>
+                        )}
+                      </div>
                     )}
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -238,7 +258,7 @@ export default function BookLesson() {
               </div>
               <div className="text-right">
                 <div className="text-2xl font-serif font-bold">
-                  {selectedTypeDetails.isTrial ? "Free" : `$${(selectedTypeDetails.priceCents / 100).toFixed(2)}`}
+                  {selectedTypeDetails.isTrial ? "Free" : `€${(selectedTypeDetails.priceCents / 100).toFixed(2)}`}
                 </div>
               </div>
             </div>
@@ -273,6 +293,12 @@ export default function BookLesson() {
           </div>
         </div>
       )}
+
+      <PurchaseCreditsDialog
+        open={purchaseTypeId != null}
+        onOpenChange={(open) => { if (!open) setPurchaseTypeId(null); }}
+        initialLessonTypeId={purchaseTypeId ?? undefined}
+      />
     </div>
   );
 }

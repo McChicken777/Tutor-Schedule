@@ -667,6 +667,65 @@ paths:
         "204":
           description: Deleted
 
+  /admin/credit-bundles:
+    post:
+      operationId: createCreditBundle
+      tags: [admin]
+      summary: Create a purchasable credit bundle for a lesson type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreditBundleInput"
+      responses:
+        "201":
+          description: Created credit bundle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreditBundle"
+
+  /admin/credit-bundles/{id}:
+    patch:
+      operationId: updateCreditBundle
+      tags: [admin]
+      summary: Update a credit bundle
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreditBundleUpdate"
+      responses:
+        "200":
+          description: Updated credit bundle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreditBundle"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteCreditBundle
+      tags: [admin]
+      summary: Delete a credit bundle
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
   /admin/homework:
     get:
       operationId: listAdminHomework
@@ -1230,6 +1289,10 @@ components:
         createdAt:
           type: string
           format: date-time
+        creditBundles:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreditBundle"
       required:
         - id
         - name
@@ -1239,6 +1302,7 @@ components:
         - isActive
         - isTrial
         - createdAt
+        - creditBundles
 
     LessonTypeInput:
       type: object
@@ -1281,6 +1345,67 @@ components:
         isActive:
           type: boolean
         isTrial:
+          type: boolean
+
+    CreditBundle:
+      type: object
+      properties:
+        id:
+          type: number
+        lessonTypeId:
+          type: number
+        credits:
+          type: number
+        priceCents:
+          type: number
+        sortOrder:
+          type: number
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - lessonTypeId
+        - credits
+        - priceCents
+        - sortOrder
+        - isActive
+        - createdAt
+
+    CreditBundleInput:
+      type: object
+      properties:
+        lessonTypeId:
+          type: number
+        credits:
+          type: number
+          minimum: 1
+        priceCents:
+          type: number
+          minimum: 0
+        sortOrder:
+          type: number
+        isActive:
+          type: boolean
+      required:
+        - lessonTypeId
+        - credits
+        - priceCents
+
+    CreditBundleUpdate:
+      type: object
+      properties:
+        credits:
+          type: number
+          minimum: 1
+        priceCents:
+          type: number
+          minimum: 0
+        sortOrder:
+          type: number
+        isActive:
           type: boolean
 
     TimeSlot:

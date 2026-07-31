@@ -38,7 +38,16 @@ export const ListLessonTypesResponseItem = zod.object({
   "description": zod.string(),
   "isActive": zod.boolean(),
   "isTrial": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "creditBundles": zod.array(zod.object({
+  "id": zod.number(),
+  "lessonTypeId": zod.number(),
+  "credits": zod.number(),
+  "priceCents": zod.number(),
+  "sortOrder": zod.number(),
+  "isActive": zod.boolean(),
   "createdAt": zod.coerce.date()
+}))
 })
 export const ListLessonTypesResponse = zod.array(ListLessonTypesResponseItem)
 
@@ -693,7 +702,16 @@ export const ListAdminLessonTypesResponseItem = zod.object({
   "description": zod.string(),
   "isActive": zod.boolean(),
   "isTrial": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "creditBundles": zod.array(zod.object({
+  "id": zod.number(),
+  "lessonTypeId": zod.number(),
+  "credits": zod.number(),
+  "priceCents": zod.number(),
+  "sortOrder": zod.number(),
+  "isActive": zod.boolean(),
   "createdAt": zod.coerce.date()
+}))
 })
 export const ListAdminLessonTypesResponse = zod.array(ListAdminLessonTypesResponseItem)
 
@@ -725,7 +743,16 @@ export const CreateLessonTypeResponse = zod.object({
   "description": zod.string(),
   "isActive": zod.boolean(),
   "isTrial": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "creditBundles": zod.array(zod.object({
+  "id": zod.number(),
+  "lessonTypeId": zod.number(),
+  "credits": zod.number(),
+  "priceCents": zod.number(),
+  "sortOrder": zod.number(),
+  "isActive": zod.boolean(),
   "createdAt": zod.coerce.date()
+}))
 })
 
 
@@ -760,7 +787,16 @@ export const UpdateLessonTypeResponse = zod.object({
   "description": zod.string(),
   "isActive": zod.boolean(),
   "isTrial": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "creditBundles": zod.array(zod.object({
+  "id": zod.number(),
+  "lessonTypeId": zod.number(),
+  "credits": zod.number(),
+  "priceCents": zod.number(),
+  "sortOrder": zod.number(),
+  "isActive": zod.boolean(),
   "createdAt": zod.coerce.date()
+}))
 })
 
 
@@ -772,6 +808,73 @@ export const DeleteLessonTypeParams = zod.object({
 })
 
 export const DeleteLessonTypeResponse = zod.void()
+
+
+/**
+ * @summary Create a purchasable credit bundle for a lesson type
+ */
+
+export const createCreditBundleBodyPriceCentsMin = 0;
+
+
+
+export const CreateCreditBundleBody = zod.object({
+  "lessonTypeId": zod.number(),
+  "credits": zod.number().min(1),
+  "priceCents": zod.number().min(createCreditBundleBodyPriceCentsMin),
+  "sortOrder": zod.number().optional(),
+  "isActive": zod.boolean().optional()
+})
+
+export const CreateCreditBundleResponse = zod.object({
+  "id": zod.number(),
+  "lessonTypeId": zod.number(),
+  "credits": zod.number(),
+  "priceCents": zod.number(),
+  "sortOrder": zod.number(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a credit bundle
+ */
+export const UpdateCreditBundleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const updateCreditBundleBodyPriceCentsMin = 0;
+
+
+
+export const UpdateCreditBundleBody = zod.object({
+  "credits": zod.number().min(1).optional(),
+  "priceCents": zod.number().min(updateCreditBundleBodyPriceCentsMin).optional(),
+  "sortOrder": zod.number().optional(),
+  "isActive": zod.boolean().optional()
+})
+
+export const UpdateCreditBundleResponse = zod.object({
+  "id": zod.number(),
+  "lessonTypeId": zod.number(),
+  "credits": zod.number(),
+  "priceCents": zod.number(),
+  "sortOrder": zod.number(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a credit bundle
+ */
+export const DeleteCreditBundleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteCreditBundleResponse = zod.void()
 
 
 /**
