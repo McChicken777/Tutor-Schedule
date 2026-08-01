@@ -31,6 +31,7 @@ export default function AdminTestHomework() {
   const { toast } = useToast();
   const createMutation = useCreateTestHomework();
   const updateMutation = useUpdateTestHomework();
+  const deleteMutation = useDeleteTestHomework();
   const uploadMutation = useFileUpload();
 
   const params =
@@ -40,14 +41,27 @@ export default function AdminTestHomework() {
   const invalidateAll = () => qc.invalidateQueries({ queryKey: getListAdminTestHomeworkQueryKey() });
 
   const handleCreate = async () => {
+    let createdId: number | undefined;
     try {
       const created = await createMutation.mutateAsync({ data: { assignedText: newText } });
+      createdId = created.id;
       if (newFile) {
-        const uploaded = await uploadMutation.mutateAsync({
-          file: newFile,
-          context: "test-homework-assigned",
-          bookingId: created.id,
-        });
+        // Object storage's client can be slow to warm up right after a
+        // server restart; one retry absorbs that without bothering the user.
+        let uploaded;
+        try {
+          uploaded = await uploadMutation.mutateAsync({
+            file: newFile,
+            context: "test-homework-assigned",
+            bookingId: created.id,
+          });
+        } catch {
+          uploaded = await uploadMutation.mutateAsync({
+            file: newFile,
+            context: "test-homework-assigned",
+            bookingId: created.id,
+          });
+        }
         await updateMutation.mutateAsync({
           id: created.id,
           data: {
@@ -63,6 +77,10 @@ export default function AdminTestHomework() {
       setNewText("");
       setNewFile(null);
     } catch (err) {
+      if (createdId != null) {
+        await deleteMutation.mutateAsync({ id: createdId }).catch(() => {});
+        invalidateAll();
+      }
       toast({ title: "Failed to create", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
     }
   };
