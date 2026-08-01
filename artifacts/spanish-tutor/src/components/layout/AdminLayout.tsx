@@ -2,12 +2,15 @@ import { ReactNode, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { LogOut, Users, BookOpen, Settings, LayoutDashboard, Calendar, CalendarOff, FileText, MessageSquare, MessageCircle, HelpCircle, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAdminLogout, useGetAdminDashboard } from "@workspace/api-client-react";
+import PingDot from "@/components/ui/ping-dot";
+import { useAdminLogout, useGetAdminDashboard, useListAdminTestHomework } from "@workspace/api-client-react";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const logout = useAdminLogout();
   const { data: dashboard, error } = useGetAdminDashboard();
+  const { data: needsReviewList } = useListAdminTestHomework({ submitted: true, reviewed: false });
+  const hasNeedsReview = (needsReviewList?.length ?? 0) > 0;
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   // Without this, an expired/absent admin session leaves every admin page
@@ -67,6 +70,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               >
                 <item.icon className="w-5 h-5" />
                 <span className="flex-1">{item.label}</span>
+                {item.href === "/admin/test-homework" && hasNeedsReview && <PingDot />}
                 {badgeCount > 0 && (
                   <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-xs font-bold">
                     {badgeCount}

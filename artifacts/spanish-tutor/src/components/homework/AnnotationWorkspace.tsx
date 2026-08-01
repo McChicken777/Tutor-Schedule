@@ -27,36 +27,36 @@ interface AnnotationWorkspaceProps {
     assignedFiles: TestHomeworkFile[];
     submissionFiles: TestHomeworkFile[];
   };
-  initialSubmissionFileId?: number;
   onClose: () => void;
 }
 
-export default function AnnotationWorkspace({ hw, initialSubmissionFileId, onClose }: AnnotationWorkspaceProps) {
+export default function AnnotationWorkspace({ hw, onClose }: AnnotationWorkspaceProps) {
   const qc = useQueryClient();
   const { toast } = useToast();
   const uploadMutation = useFileUpload();
   const attachMutation = useAttachTestHomeworkFile();
   const relinkMutation = useRelinkTestHomeworkFile();
 
-  const [selectedSubmissionFileId, setSelectedSubmissionFileId] = useState<number | undefined>(
-    initialSubmissionFileId ?? hw.submissionFiles[0]?.id,
-  );
+  const [remainingIds, setRemainingIds] = useState<number[]>(() => hw.submissionFiles.map((f) => f.id));
   const [showOriginal, setShowOriginal] = useState(hw.assignedFiles.length > 0);
 
-  const selectedIndex = hw.submissionFiles.findIndex((f) => f.id === selectedSubmissionFileId);
-  const selectedFile = hw.submissionFiles[selectedIndex];
+  const currentFileId = remainingIds[0];
+  const currentFile = hw.submissionFiles.find((f) => f.id === currentFileId);
+  // Keyed off the full (non-shrinking) submission list so the original-file guess
+  // doesn't shift as files are saved-and-removed from the review queue.
+  const originalIndex = hw.submissionFiles.findIndex((f) => f.id === currentFileId);
 
   const resolvedOriginal =
-    (selectedFile?.linkedFileId != null ? hw.assignedFiles.find((f) => f.id === selectedFile.linkedFileId) : undefined) ??
-    hw.assignedFiles[selectedIndex] ??
+    (currentFile?.linkedFileId != null ? hw.assignedFiles.find((f) => f.id === currentFile.linkedFileId) : undefined) ??
+    hw.assignedFiles[originalIndex] ??
     hw.assignedFiles[0];
 
   const invalidate = () => qc.invalidateQueries({ queryKey: getListAdminTestHomeworkQueryKey() });
 
   const handleRelink = (assignedFileId: number) => {
-    if (!selectedSubmissionFileId) return;
+    if (!currentFileId) return;
     relinkMutation.mutate(
-      { id: hw.id, fileId: selectedSubmissionFileId, data: { linkedFileId: assignedFileId } },
+      { id: hw.id, fileId: currentFileId, data: { linkedFileId: assignedFileId } },
       {
         onSuccess: () => {
           invalidate();
@@ -66,7 +66,7 @@ export default function AnnotationWorkspace({ hw, initialSubmissionFileId, onClo
   };
 
   const handleAnnotationSave = async (blob: Blob, mimeType: string) => {
-    if (!selectedSubmissionFileId) return;
+    if (!currentFileId) return;
     try {
       const file = new File([blob], mimeType === "application/pdf" ? "annotated.pdf" : "annotated.png", { type: mimeType });
       const uploaded = await uploadMutation.mutateAsync({
@@ -81,39 +81,31 @@ export default function AnnotationWorkspace({ hw, initialSubmissionFileId, onClo
           key: uploaded.key,
           name: uploaded.fileName,
           mime: uploaded.mimeType,
-          linkedFileId: selectedSubmissionFileId,
+          linkedFileId: currentFileId,
         },
       });
-      toast({ title: "Marked-up file saved" });
       invalidate();
-      onClose();
+      const remaining = remainingIds.filter((id) => id !== currentFileId);
+      setRemainingIds(remaining);
+      if (remaining.length === 0) {
+        toast({ title: "All submitted files reviewed" });
+        onClose();
+      } else {
+        toast({ title: "Marked-up file saved", description: `${remaining.length} file${remaining.length === 1 ? "" : "s"} left to review.` });
+      }
     } catch (err) {
       toast({ title: "Failed to save annotation", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
     }
   };
 
-  if (!selectedFile) {
+  if (!currentFile) {
     return <div className="text-muted-foreground text-sm p-6 text-center">No submitted files to annotate.</div>;
   }
 
   return (
     <div className="flex flex-col gap-4">
       {hw.submissionFiles.length > 1 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground">Submitted file:</span>
-          {hw.submissionFiles.map((f, i) => (
-            <button
-              key={f.id}
-              onClick={() => setSelectedSubmissionFileId(f.id)}
-              title={f.name}
-              className={`px-3 py-1 rounded-md text-sm font-medium border transition ${
-                f.id === selectedSubmissionFileId ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-accent"
-              }`}
-            >
-              {i + 1}.
-            </button>
-          ))}
-        </div>
+        <p className="text-sm text-muted-foreground">{remainingIds.length} file{remainingIds.length === 1 ? "" : "s"} left to review.</p>
       )}
 
       <div className="flex flex-wrap items-center gap-3">
@@ -148,11 +140,12 @@ export default function AnnotationWorkspace({ hw, initialSubmissionFileId, onClo
         <div>
           {showOriginal && resolvedOriginal && <p className="text-xs font-medium text-muted-foreground mb-1.5">Student submission</p>}
           <AnnotationEditor
-            key={selectedSubmissionFileId}
-            fileUrl={`/api/files/test-homework-file/${selectedFile.id}`}
-            mimeType={selectedFile.mime}
+            key={currentFileId}
+            fileUrl={`/api/files/test-homework-file/${currentFile.id}`}
+            mimeType={currentFile.mime}
             onSave={handleAnnotationSave}
             onCancel={onClose}
+            saveLabel={remainingIds.length > 1 ? "Save this page" : "Save & finish"}
           />
         </div>
       </div>

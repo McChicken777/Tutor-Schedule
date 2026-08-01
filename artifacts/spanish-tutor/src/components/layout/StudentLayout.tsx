@@ -5,11 +5,13 @@ import { useClerk, useUser } from "@clerk/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { LogOut, LayoutDashboard, Calendar, BookOpen, MessageCircle, FileText, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import PingDot from "@/components/ui/ping-dot";
 import PurchaseCreditsDialog from "@/components/PurchaseCreditsDialog";
 import {
   useGetStudentDashboard,
   useCompleteTour,
   getGetStudentDashboardQueryKey,
+  useListStudentTestHomework,
 } from "@workspace/api-client-react";
 
 const TOUR_STEPS = [
@@ -26,6 +28,10 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   const { data: dashboard } = useGetStudentDashboard();
+  const { data: testHomeworkList } = useListStudentTestHomework();
+  const hasPendingTestHomework = (testHomeworkList ?? []).some(
+    (hw: any) => (hw.assignedText || (hw.assignedFiles?.length ?? 0) > 0) && !hw.submittedAt,
+  );
   const completeTourMutation = useCompleteTour();
   const qc = useQueryClient();
   const [tourStep, setTourStep] = useState(0);
@@ -92,7 +98,8 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
                   }`}
                 >
                   <item.icon className="w-5 h-5" />
-                  {item.label}
+                  <span className="flex-1">{item.label}</span>
+                  {item.href === "/test-homework" && hasPendingTestHomework && <PingDot />}
                 </Link>
                 {isTourStep && (
                   <div className="absolute z-50 top-full left-0 mt-2 md:top-0 md:left-full md:ml-3 md:mt-0 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-card p-5 shadow-xl text-left">

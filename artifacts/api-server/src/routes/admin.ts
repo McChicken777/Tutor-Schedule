@@ -729,10 +729,6 @@ router.post("/admin/test-homework/:id/files", requireAdmin, async (req, res): Pr
     sortOrder,
   });
 
-  if (parsed.data.slot === "review") {
-    await db.update(testHomeworkTable).set({ reviewedAt: new Date() }).where(eq(testHomeworkTable.id, id));
-  }
-
   const [updated] = await db.select().from(testHomeworkTable).where(eq(testHomeworkTable.id, id));
   const files = await getTestHomeworkFiles(id);
   res.status(201).json(mapTestHomework(updated, files));

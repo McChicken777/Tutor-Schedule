@@ -21,6 +21,7 @@ import { useFileUpload } from "@/hooks/use-file-upload";
 import MultiFilePicker from "@/components/homework/MultiFilePicker";
 import AnnotationWorkspace from "@/components/homework/AnnotationWorkspace";
 import ErrorState from "@/components/ErrorState";
+import PingDot from "@/components/ui/ping-dot";
 import { printFile } from "@/lib/printFile";
 import { FileText, Paperclip, PenLine, Trash2, Printer, X } from "lucide-react";
 
@@ -50,6 +51,8 @@ export default function AdminTestHomework() {
   const params =
     tab === "assigned" ? { submitted: false } : tab === "pending" ? { submitted: true, reviewed: false } : { reviewed: true };
   const { data: homeworkList, isLoading, error, refetch } = useListAdminTestHomework(params);
+  const { data: needsReviewList } = useListAdminTestHomework({ submitted: true, reviewed: false });
+  const hasNeedsReview = (needsReviewList?.length ?? 0) > 0;
 
   const invalidateAll = () => qc.invalidateQueries({ queryKey: getListAdminTestHomeworkQueryKey() });
 
@@ -117,7 +120,9 @@ export default function AdminTestHomework() {
       <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="w-full">
         <TabsList className="mb-8">
           <TabsTrigger value="assigned">Assigned</TabsTrigger>
-          <TabsTrigger value="pending">Needs Review</TabsTrigger>
+          <TabsTrigger value="pending" className="flex items-center gap-1.5">
+            Needs Review {hasNeedsReview && <PingDot />}
+          </TabsTrigger>
           <TabsTrigger value="reviewed">Reviewed</TabsTrigger>
         </TabsList>
 
@@ -280,21 +285,27 @@ function TestHomeworkCard({ hw }: { hw: any }) {
         </div>
 
         <div className="space-y-4">
-          <h4 className="font-medium text-foreground mb-2">Your Feedback</h4>
-          <Textarea
-            value={feedback}
-            onChange={(e) => setFeedback(e.target.value)}
-            placeholder="Write your feedback here..."
-            className="h-32"
-          />
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <Input value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="Grade (e.g. A, 90%, Great)" />
-            </div>
-            <Button onClick={handleSave} disabled={updateMutation.isPending}>
-              {hw.reviewedAt ? "Update" : "Submit Review"}
-            </Button>
-          </div>
+          {hw.submittedAt ? (
+            <>
+              <h4 className="font-medium text-foreground mb-2">Your Feedback</h4>
+              <Textarea
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="Write your feedback here..."
+                className="h-32"
+              />
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <Input value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="Grade (e.g. A, 90%, Great)" />
+                </div>
+                <Button onClick={handleSave} disabled={updateMutation.isPending}>
+                  {hw.reviewedAt ? "Update" : "Submit Review"}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">Feedback available once the student submits.</p>
+          )}
         </div>
       </div>
 

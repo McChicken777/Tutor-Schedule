@@ -1,18 +1,31 @@
 import { useEffect, useRef, useState } from "react";
 import { PDFDocument } from "pdf-lib";
 import { Button } from "@/components/ui/button";
-import { Eraser, ChevronLeft, ChevronRight, Loader2, Pen, Type } from "lucide-react";
+import { Eraser, ChevronLeft, ChevronRight, Loader2, Pen, Type, Move, Check, Trash2 } from "lucide-react";
 import { useFilePages } from "./useFilePages";
 
 const COLORS = ["#ef4444", "#2563eb", "#16a34a", "#111827"];
 const WIDTHS = [6, 12, 20];
 const TEXT_FONT_SIZE = 24;
+const MIN_FONT_SIZE = 12;
+const MAX_FONT_SIZE = 72;
 
 interface AnnotationEditorProps {
   fileUrl: string;
   mimeType: string;
   onSave: (blob: Blob, mimeType: string) => void | Promise<void>;
   onCancel: () => void;
+  saveLabel?: string;
+}
+
+interface TextAnnotation {
+  id: string;
+  pageIndex: number;
+  x: number;
+  y: number;
+  text: string;
+  color: string;
+  fontSize: number;
 }
 
 function getCanvasPos(e: React.PointerEvent | { clientX: number; clientY: number }, canvas: HTMLCanvasElement) {
@@ -23,19 +36,38 @@ function getCanvasPos(e: React.PointerEvent | { clientX: number; clientY: number
   };
 }
 
-export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }: AnnotationEditorProps) {
+function getScale(canvas: HTMLCanvasElement) {
+  return canvas.getBoundingClientRect().width / canvas.width;
+}
+
+function canvasToScreen(canvas: HTMLCanvasElement, wrapper: HTMLDivElement, x: number, y: number) {
+  const canvasRect = canvas.getBoundingClientRect();
+  const wrapperRect = wrapper.getBoundingClientRect();
+  const scale = canvasRect.width / canvas.width;
+  return {
+    left: canvasRect.left - wrapperRect.left + wrapper.scrollLeft + x * scale,
+    top: canvasRect.top - wrapperRect.top + wrapper.scrollTop + y * scale,
+    scale,
+  };
+}
+
+export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel, saveLabel }: AnnotationEditorProps) {
   const { isPdf, pages, pageIndex, setPageIndex, loading, error: loadError, originalsRef } = useFilePages(fileUrl, mimeType);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [color, setColor] = useState(COLORS[0]);
   const [strokeWidth, setStrokeWidth] = useState(WIDTHS[1]);
-  const [tool, setTool] = useState<"pen" | "text">("pen");
+  const [tool, setTool] = useState<"pen" | "text" | "move">("pen");
   const [textInput, setTextInput] = useState<{ x: number; y: number; left: number; top: number; value: string } | null>(null);
+  const [textAnnotations, setTextAnnotations] = useState<TextAnnotation[]>([]);
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const drawingRef = useRef(false);
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+  const draggingRef = useRef<{ id: string; startClientX: number; startClientY: number; startX: number; startY: number } | null>(null);
+  const idCounterRef = useRef(0);
 
   useEffect(() => {
     if (loadError) setError(loadError);
@@ -74,18 +106,17 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
     const canvas = pages[pageIndex];
     if (!canvas) return;
 
+    if (tool === "move") {
+      setSelectedAnnotationId(null);
+      return;
+    }
+
     if (tool === "text") {
       const wrapper = wrapperRef.current;
       if (!wrapper) return;
-      const wrapperRect = wrapper.getBoundingClientRect();
       const pos = getCanvasPos(e, canvas);
-      setTextInput({
-        x: pos.x,
-        y: pos.y,
-        left: e.clientX - wrapperRect.left + wrapper.scrollLeft,
-        top: e.clientY - wrapperRect.top + wrapper.scrollTop,
-        value: "",
-      });
+      const { left, top } = canvasToScreen(canvas, wrapper, pos.x, pos.y);
+      setTextInput({ x: pos.x, y: pos.y, left, top, value: "" });
       return;
     }
 
@@ -112,15 +143,53 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
 
   const commitTextInput = () => {
     if (!textInput) return;
-    const canvas = pages[pageIndex];
-    if (canvas && textInput.value.trim()) {
-      const ctx = canvas.getContext("2d")!;
-      ctx.fillStyle = color;
-      ctx.font = `${TEXT_FONT_SIZE}px sans-serif`;
-      ctx.textBaseline = "top";
-      ctx.fillText(textInput.value, textInput.x, textInput.y);
+    if (textInput.value.trim()) {
+      const id = `ann-${++idCounterRef.current}`;
+      setTextAnnotations((prev) => [
+        ...prev,
+        { id, pageIndex, x: textInput.x, y: textInput.y, text: textInput.value, color, fontSize: TEXT_FONT_SIZE },
+      ]);
+      setSelectedAnnotationId(id);
     }
     setTextInput(null);
+  };
+
+  const handleAnnotationPointerDown = (e: React.PointerEvent<HTMLDivElement>, a: TextAnnotation) => {
+    // Only intercept in the move tool — otherwise let the click bubble to the
+    // container so pen/text tools still work "through" an existing annotation.
+    if (tool !== "move") return;
+    e.stopPropagation();
+    e.preventDefault();
+    setSelectedAnnotationId(a.id);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    draggingRef.current = { id: a.id, startClientX: e.clientX, startClientY: e.clientY, startX: a.x, startY: a.y };
+  };
+
+  const handleAnnotationPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = draggingRef.current;
+    const canvas = pages[pageIndex];
+    if (!drag || !canvas) return;
+    const scale = getScale(canvas);
+    const dx = (e.clientX - drag.startClientX) / scale;
+    const dy = (e.clientY - drag.startClientY) / scale;
+    setTextAnnotations((prev) =>
+      prev.map((a) => (a.id === drag.id ? { ...a, x: drag.startX + dx, y: drag.startY + dy } : a)),
+    );
+  };
+
+  const handleAnnotationPointerUp = () => {
+    draggingRef.current = null;
+  };
+
+  const resizeAnnotation = (id: string, delta: number) => {
+    setTextAnnotations((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, fontSize: Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, a.fontSize + delta)) } : a)),
+    );
+  };
+
+  const deleteAnnotation = (id: string) => {
+    setTextAnnotations((prev) => prev.filter((a) => a.id !== id));
+    setSelectedAnnotationId((cur) => (cur === id ? null : cur));
   };
 
   const handleClearPage = () => {
@@ -130,6 +199,25 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
     const ctx = canvas.getContext("2d")!;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(original, 0, 0);
+    setTextAnnotations((prev) => prev.filter((a) => a.pageIndex !== pageIndex));
+    setSelectedAnnotationId(null);
+  };
+
+  const stampAnnotations = (source: HTMLCanvasElement, idx: number) => {
+    const anns = textAnnotations.filter((a) => a.pageIndex === idx);
+    if (anns.length === 0) return source;
+    const clone = document.createElement("canvas");
+    clone.width = source.width;
+    clone.height = source.height;
+    const ctx = clone.getContext("2d")!;
+    ctx.drawImage(source, 0, 0);
+    for (const a of anns) {
+      ctx.fillStyle = a.color;
+      ctx.font = `${a.fontSize}px sans-serif`;
+      ctx.textBaseline = "top";
+      ctx.fillText(a.text, a.x, a.y);
+    }
+    return clone;
   };
 
   const handleSave = async () => {
@@ -138,7 +226,8 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
     try {
       if (isPdf) {
         const pdfDoc = await PDFDocument.create();
-        for (const canvas of pages) {
+        for (let idx = 0; idx < pages.length; idx++) {
+          const canvas = stampAnnotations(pages[idx], idx);
           const dataUrl = canvas.toDataURL("image/png");
           const pngBytes = await fetch(dataUrl).then((r) => r.arrayBuffer());
           const pngImage = await pdfDoc.embedPng(pngBytes);
@@ -148,7 +237,7 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
         const bytes = await pdfDoc.save();
         await onSave(new Blob([bytes as BlobPart], { type: "application/pdf" }), "application/pdf");
       } else {
-        const canvas = pages[0];
+        const canvas = stampAnnotations(pages[0], 0);
         const blob: Blob = await new Promise((resolve, reject) => {
           canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Failed to export image"))), "image/png");
         });
@@ -160,6 +249,9 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
       setSaving(false);
     }
   };
+
+  const currentCanvas = pages[pageIndex];
+  const wrapper = wrapperRef.current;
 
   return (
     <div className="flex flex-col gap-4">
@@ -183,6 +275,15 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
           >
             <Type className="w-4 h-4" />
           </button>
+          <button
+            onClick={() => setTool("move")}
+            className={`flex items-center justify-center w-8 h-8 rounded-md border transition ${
+              tool === "move" ? "border-primary bg-primary/10" : "border-border hover:bg-accent"
+            }`}
+            aria-label="Move tool"
+          >
+            <Move className="w-4 h-4" />
+          </button>
           <div className="w-px h-6 bg-border mx-1" />
           {COLORS.map((c) => (
             <button
@@ -202,7 +303,7 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
                 strokeWidth === w ? "border-primary bg-primary/10" : "border-border hover:bg-accent"
               }`}
               aria-label={`Stroke width ${w}`}
-              disabled={tool === "text"}
+              disabled={tool !== "pen"}
             >
               <span className="rounded-full bg-foreground" style={{ width: w + 2, height: w + 2 }} />
             </button>
@@ -227,30 +328,88 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
-            className={tool === "text" ? "cursor-text" : "cursor-crosshair"}
+            className={tool === "text" ? "cursor-text" : tool === "move" ? "cursor-default" : "cursor-crosshair"}
           />
         )}
+
+        {!loading &&
+          !error &&
+          currentCanvas &&
+          wrapper &&
+          textAnnotations
+            .filter((a) => a.pageIndex === pageIndex)
+            .map((a) => {
+              const { left, top, scale } = canvasToScreen(currentCanvas, wrapper, a.x, a.y);
+              const selected = a.id === selectedAnnotationId;
+              return (
+                <div key={a.id} className="absolute" style={{ left, top }}>
+                  <div
+                    onPointerDown={(e) => handleAnnotationPointerDown(e, a)}
+                    onPointerMove={handleAnnotationPointerMove}
+                    onPointerUp={handleAnnotationPointerUp}
+                    className={`whitespace-pre px-1 rounded ${tool === "move" ? "cursor-move" : ""} ${
+                      selected ? "ring-2 ring-primary" : ""
+                    }`}
+                    style={{ color: a.color, fontSize: a.fontSize * scale }}
+                  >
+                    {a.text}
+                  </div>
+                  {selected && tool === "move" && (
+                    <div className="absolute -top-9 left-0 flex items-center gap-1 bg-card border border-border rounded-md shadow px-1 py-1 z-10">
+                      <button
+                        onClick={() => resizeAnnotation(a.id, -4)}
+                        className="w-6 h-6 flex items-center justify-center text-xs font-bold hover:bg-accent rounded"
+                        aria-label="Smaller text"
+                      >
+                        A-
+                      </button>
+                      <button
+                        onClick={() => resizeAnnotation(a.id, 4)}
+                        className="w-6 h-6 flex items-center justify-center text-xs font-bold hover:bg-accent rounded"
+                        aria-label="Larger text"
+                      >
+                        A+
+                      </button>
+                      <button
+                        onClick={() => deleteAnnotation(a.id)}
+                        className="w-6 h-6 flex items-center justify-center hover:bg-destructive/10 rounded"
+                        aria-label="Delete text"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
         {textInput && (
-          <input
-            autoFocus
-            value={textInput.value}
-            onChange={(e) => setTextInput({ ...textInput, value: e.target.value })}
-            onBlur={commitTextInput}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") commitTextInput();
-              if (e.key === "Escape") setTextInput(null);
-            }}
-            style={{
-              position: "absolute",
-              left: textInput.left,
-              top: textInput.top,
-              color,
-              fontSize: TEXT_FONT_SIZE * 0.75,
-              transform: "translateY(-50%)",
-            }}
-            className="bg-background/90 border border-dashed border-primary rounded px-1 outline-none"
-            placeholder="Type..."
-          />
+          <div
+            className="absolute flex items-center gap-1"
+            style={{ left: textInput.left, top: textInput.top, transform: "translateY(-50%)" }}
+          >
+            <input
+              autoFocus
+              value={textInput.value}
+              onChange={(e) => setTextInput({ ...textInput, value: e.target.value })}
+              onBlur={commitTextInput}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitTextInput();
+                if (e.key === "Escape") setTextInput(null);
+              }}
+              style={{ color, fontSize: TEXT_FONT_SIZE * 0.75 }}
+              className="bg-background/90 border border-dashed border-primary rounded px-1 outline-none"
+              placeholder="Type..."
+            />
+            <button
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={commitTextInput}
+              className="w-6 h-6 flex items-center justify-center bg-primary text-primary-foreground rounded-full shrink-0"
+              aria-label="Confirm text"
+            >
+              <Check className="w-3.5 h-3.5" />
+            </button>
+          </div>
         )}
       </div>
 
@@ -273,7 +432,7 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
           Cancel
         </Button>
         <Button onClick={handleSave} disabled={loading || saving || pages.length === 0}>
-          {saving ? "Saving..." : "Save Annotated File"}
+          {saving ? "Saving..." : (saveLabel ?? "Save Annotated File")}
         </Button>
       </div>
     </div>
