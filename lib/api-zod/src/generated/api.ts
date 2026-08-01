@@ -198,6 +198,7 @@ export const GetStudentDashboardResponse = zod.object({
   "trialAvailable": zod.boolean().describe('Whether this student can still book the free trial lesson (never booked it before, and one is configured\/enabled).'),
   "hasSeenTour": zod.boolean().describe('Whether this student has already seen (or skipped) the first-login onboarding tour.'),
   "pendingHomeworkCount": zod.number(),
+  "hasUnreadMessages": zod.boolean().describe('Whether the student has any unread messages from the tutor.'),
   "packages": zod.array(zod.object({
   "id": zod.number(),
   "totalCredits": zod.number(),

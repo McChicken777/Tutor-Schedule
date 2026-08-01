@@ -256,6 +256,11 @@ router.get("/student/dashboard", requireAuth, async (req, res): Promise<void> =>
     (h) => h.hw.submittedAt && !h.hw.reviewedAt,
   ).length;
 
+  const [{ count: unreadMessageCount }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(messagesTable)
+    .where(and(eq(messagesTable.studentId, user.id), eq(messagesTable.senderRole, "admin"), sql`${messagesTable.readAt} IS NULL`));
+
   const totalRemaining = packages.reduce(
     (sum, p) => sum + (p.totalCredits - p.usedCredits),
     0,
@@ -283,6 +288,7 @@ router.get("/student/dashboard", requireAuth, async (req, res): Promise<void> =>
     trialAvailable,
     hasSeenTour: isTestAccount ? false : user.hasSeenTour,
     pendingHomeworkCount,
+    hasUnreadMessages: unreadMessageCount > 0,
     packages: packages.map((p) => ({
       id: p.id,
       totalCredits: p.totalCredits,

@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { Paperclip, Camera, X, FileText, Image as ImageIcon } from "lucide-react";
+import { truncateFileName } from "@/lib/truncateFileName";
 
 interface MultiFilePickerProps {
   files: File[];
@@ -45,7 +46,7 @@ export default function MultiFilePicker({ files, onFilesChange, accept = "applic
           {files.map((file, index) => (
             <div key={`${file.name}-${index}`} className="flex items-center gap-2 bg-accent/60 rounded-lg px-3 py-1.5 text-sm">
               {file.type === "application/pdf" ? <FileText className="size-3.5" /> : <ImageIcon className="size-3.5" />}
-              <span className="max-w-[160px] truncate">{file.name}</span>
+              <span title={file.name}>{truncateFileName(file.name)}</span>
               <button type="button" onClick={() => handleRemove(index)} aria-label={`Remove ${file.name}`}>
                 <X className="size-3.5 text-muted-foreground hover:text-destructive" />
               </button>

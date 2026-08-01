@@ -15,7 +15,7 @@ interface FileViewerProps {
 export default function FileViewer({ fileUrl, mimeType }: FileViewerProps) {
   const { isPdf, pages, pageIndex, setPageIndex, loading, error } = useFilePages(fileUrl, mimeType);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(0.5);
 
   useEffect(() => {
     const container = containerRef.current;

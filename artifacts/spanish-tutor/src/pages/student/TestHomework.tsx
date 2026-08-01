@@ -17,7 +17,8 @@ import FileViewer from "@/components/homework/FileViewer";
 import ErrorState from "@/components/ErrorState";
 import PingDot from "@/components/ui/ping-dot";
 import { printFile } from "@/lib/printFile";
-import { FileText, MessageSquare, Printer } from "lucide-react";
+import { truncateFileName } from "@/lib/truncateFileName";
+import { FileText, MessageSquare, Printer, ChevronDown, ChevronUp } from "lucide-react";
 
 interface TestHomeworkFile {
   id: number;
@@ -62,8 +63,8 @@ function FileList({ files }: { files: TestHomeworkFile[] }) {
     <div className="flex flex-wrap gap-3">
       {files.map((f) => (
         <div key={f.id} className="inline-flex items-center bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium overflow-hidden">
-          <a href={`/api/files/test-homework-file/${f.id}`} target="_blank" rel="noreferrer" className="flex items-center px-3 py-1.5">
-            <FileText className="w-4 h-4 mr-2" /> {f.name}
+          <a href={`/api/files/test-homework-file/${f.id}`} target="_blank" rel="noreferrer" title={f.name} className="flex items-center px-3 py-1.5">
+            <FileText className="w-4 h-4 mr-2" /> {truncateFileName(f.name)}
           </a>
           <button
             className="px-2 py-1.5 hover:bg-accent-foreground/10"
@@ -79,29 +80,41 @@ function FileList({ files }: { files: TestHomeworkFile[] }) {
 }
 
 function ReviewFileGroup({ reviewFiles, assignedFiles }: { reviewFiles: TestHomeworkFile[]; assignedFiles: TestHomeworkFile[] }) {
+  const [expanded, setExpanded] = useState(false);
   if (reviewFiles.length === 0) return null;
   return (
-    <div className="space-y-4">
-      {reviewFiles.map((f) => {
-        const original = f.originalFileId != null ? assignedFiles.find((a) => a.id === f.originalFileId) : undefined;
-        return (
-          <div key={f.id}>
-            <div className={original ? "grid md:grid-cols-2 gap-4" : ""}>
-              {original && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Original assignment</p>
-                  <FileViewer fileUrl={`/api/files/test-homework-file/${original.id}`} mimeType={original.mime} />
+    <div>
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="flex items-center gap-1.5 text-sm font-medium text-secondary hover:underline"
+      >
+        {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        {expanded ? "Hide" : "Show"} marked-up file{reviewFiles.length === 1 ? "" : "s"} ({reviewFiles.length})
+      </button>
+      {expanded && (
+        <div className="space-y-4 mt-3">
+          {reviewFiles.map((f) => {
+            const original = f.originalFileId != null ? assignedFiles.find((a) => a.id === f.originalFileId) : undefined;
+            return (
+              <div key={f.id}>
+                <div className={original ? "grid md:grid-cols-2 gap-4" : ""}>
+                  {original && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1.5">Original assignment</p>
+                      <FileViewer fileUrl={`/api/files/test-homework-file/${original.id}`} mimeType={original.mime} />
+                    </div>
+                  )}
+                  <div>
+                    {original && <p className="text-xs font-medium text-muted-foreground mb-1.5">Tutor's marked-up version</p>}
+                    <FileViewer fileUrl={`/api/files/test-homework-file/${f.id}`} mimeType={f.mime} />
+                  </div>
                 </div>
-              )}
-              <div>
-                {original && <p className="text-xs font-medium text-muted-foreground mb-1.5">Tutor's marked-up version</p>}
-                <FileViewer fileUrl={`/api/files/test-homework-file/${f.id}`} mimeType={f.mime} />
+                <FileList files={[f]} />
               </div>
-            </div>
-            <FileList files={[f]} />
-          </div>
-        );
-      })}
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

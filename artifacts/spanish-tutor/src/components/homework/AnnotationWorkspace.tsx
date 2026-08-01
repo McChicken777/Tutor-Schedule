@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import AnnotationEditor from "./AnnotationEditor";
 import FileViewer from "./FileViewer";
+import { truncateFileName } from "@/lib/truncateFileName";
 import { Eye, EyeOff } from "lucide-react";
 
 interface TestHomeworkFile {
@@ -47,7 +48,20 @@ export default function AnnotationWorkspace({ hw, onClose }: AnnotationWorkspace
   // doesn't shift as files are saved-and-removed from the review queue.
   const originalIndex = hw.submissionFiles.findIndex((f) => f.id === currentFileId);
 
+  // Which original assigned file is shown alongside the editor. Only ever changes
+  // via an explicit relink (the dropdown) — it does NOT get recomputed as the
+  // submission-file queue advances, so it stays put across "Save this page" saves
+  // instead of jumping to a different guessed original for each new file.
+  const [selectedOriginalId, setSelectedOriginalId] = useState<number | undefined>(() => {
+    const initialFile = hw.submissionFiles[0];
+    const guess =
+      (initialFile?.linkedFileId != null ? hw.assignedFiles.find((f) => f.id === initialFile.linkedFileId) : undefined) ??
+      hw.assignedFiles[0];
+    return guess?.id;
+  });
+
   const resolvedOriginal =
+    hw.assignedFiles.find((f) => f.id === selectedOriginalId) ??
     (currentFile?.linkedFileId != null ? hw.assignedFiles.find((f) => f.id === currentFile.linkedFileId) : undefined) ??
     hw.assignedFiles[originalIndex] ??
     hw.assignedFiles[0];
@@ -56,6 +70,7 @@ export default function AnnotationWorkspace({ hw, onClose }: AnnotationWorkspace
 
   const handleRelink = (assignedFileId: number) => {
     if (!currentFileId) return;
+    setSelectedOriginalId(assignedFileId);
     relinkMutation.mutate(
       { id: hw.id, fileId: currentFileId, data: { linkedFileId: assignedFileId } },
       {
@@ -93,6 +108,7 @@ export default function AnnotationWorkspace({ hw, onClose }: AnnotationWorkspace
         toast({ title: "All submitted files reviewed" });
         onClose();
       } else {
+        setShowOriginal(hw.assignedFiles.length > 0);
         toast({ title: "Marked-up file saved", description: `${remaining.length} file${remaining.length === 1 ? "" : "s"} left to review.` });
       }
     } catch (err) {
@@ -124,8 +140,8 @@ export default function AnnotationWorkspace({ hw, onClose }: AnnotationWorkspace
             onChange={(e) => handleRelink(Number(e.target.value))}
           >
             {hw.assignedFiles.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name}
+              <option key={f.id} value={f.id} title={f.name}>
+                {truncateFileName(f.name)}
               </option>
             ))}
           </select>

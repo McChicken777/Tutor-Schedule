@@ -12,6 +12,7 @@ import {
   useCompleteTour,
   getGetStudentDashboardQueryKey,
   useListStudentTestHomework,
+  useListStudentHomework,
 } from "@workspace/api-client-react";
 
 const TOUR_STEPS = [
@@ -36,6 +37,12 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
       !!hw.reviewedAt && (!hw.studentReviewSeenAt || new Date(hw.studentReviewSeenAt).getTime() < new Date(hw.reviewedAt).getTime());
     return needsSubmission || needsReviewSeen;
   });
+  const { data: homeworkList } = useListStudentHomework();
+  const hasPendingHomework = (homeworkList ?? []).some((hw: any) => {
+    const hasAssignment = hw.assignedText || hw.assignedFileUrl || hw.assignedFileKey;
+    return hasAssignment && !hw.submittedAt;
+  });
+  const hasUnreadMessages = !!dashboard?.hasUnreadMessages;
   const completeTourMutation = useCompleteTour();
   const qc = useQueryClient();
   const [tourStep, setTourStep] = useState(0);
@@ -104,6 +111,8 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
                   <item.icon className="w-5 h-5" />
                   <span className="flex-1">{item.label}</span>
                   {item.href === "/test-homework" && hasPendingTestHomework && <PingDot />}
+                  {item.href === "/homework" && hasPendingHomework && <PingDot />}
+                  {item.href === "/messages" && hasUnreadMessages && <PingDot />}
                 </Link>
                 {isTourStep && (
                   <div className="absolute z-50 top-full left-0 mt-2 md:top-0 md:left-full md:ml-3 md:mt-0 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-card p-5 shadow-xl text-left">

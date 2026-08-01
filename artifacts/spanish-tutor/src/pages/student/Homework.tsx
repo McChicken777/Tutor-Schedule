@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import ErrorState from "@/components/ErrorState";
+import PingDot from "@/components/ui/ping-dot";
+import { truncateFileName } from "@/lib/truncateFileName";
 import { FileText, Download, Paperclip, MessageSquare, Bell } from "lucide-react";
 
 export default function StudentHomework() {
@@ -103,7 +105,10 @@ function HomeworkCard({ hw }: { hw: any }) {
     <div className={`bg-card border rounded-2xl p-6 ${hw.reminderActive ? "border-amber-500/40" : "border-border"}`}>
       <div className="flex justify-between items-start mb-4 pb-4 border-b border-border gap-4">
         <div>
-          <h3 className="font-bold text-foreground text-lg">{hw.lessonTypeName}</h3>
+          <h3 className="font-bold text-foreground text-lg flex items-center gap-2">
+            {hw.lessonTypeName}
+            {hasAssignment && !isSubmitted && <PingDot />}
+          </h3>
           <p className="text-muted-foreground text-sm">{format(new Date(hw.lessonDate), "MMM d, yyyy")}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -129,8 +134,8 @@ function HomeworkCard({ hw }: { hw: any }) {
               </a>
             )}
             {hw.assignedFileKey && (
-              <a href={`/api/files/homework/${hw.id}/assigned`} target="_blank" rel="noreferrer" className="inline-flex items-center px-3 py-1.5 bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium">
-                <FileText className="w-4 h-4 mr-2" /> {hw.assignedFileName || "View attachment"}
+              <a href={`/api/files/homework/${hw.id}/assigned`} target="_blank" rel="noreferrer" title={hw.assignedFileName || undefined} className="inline-flex items-center px-3 py-1.5 bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium">
+                <FileText className="w-4 h-4 mr-2" /> {hw.assignedFileName ? truncateFileName(hw.assignedFileName) : "View attachment"}
               </a>
             )}
           </div>
@@ -153,8 +158,8 @@ function HomeworkCard({ hw }: { hw: any }) {
                 </a>
               )}
               {hw.submittedFileKey && (
-                <a href={`/api/files/homework/${hw.id}/submission`} target="_blank" rel="noreferrer" className="inline-flex items-center px-3 py-1.5 bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium">
-                  <Paperclip className="w-4 h-4 mr-2" /> {hw.submittedFileName || "View attachment"}
+                <a href={`/api/files/homework/${hw.id}/submission`} target="_blank" rel="noreferrer" title={hw.submittedFileName || undefined} className="inline-flex items-center px-3 py-1.5 bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium">
+                  <Paperclip className="w-4 h-4 mr-2" /> {hw.submittedFileName ? truncateFileName(hw.submittedFileName) : "View attachment"}
                 </a>
               )}
             </div>

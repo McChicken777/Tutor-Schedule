@@ -13,19 +13,25 @@ import { getListAdminHomeworkQueryKey } from "@workspace/api-client-react";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import AnnotationEditor from "@/components/homework/AnnotationEditor";
 import ErrorState from "@/components/ErrorState";
+import PingDot from "@/components/ui/ping-dot";
+import { truncateFileName } from "@/lib/truncateFileName";
 import { FileText, Download, Paperclip, PenLine } from "lucide-react";
 
 export default function AdminHomework() {
   const [tab, setTab] = useState<"pending" | "reviewed">("pending");
   const { data: homeworkList, isLoading, error, refetch } = useListAdminHomework({ reviewed: tab === "reviewed" });
-  
+  const { data: needsReviewList } = useListAdminHomework({ reviewed: false });
+  const hasNeedsReview = (needsReviewList?.length ?? 0) > 0;
+
   return (
     <div className="p-6 md:p-10 bg-background min-h-full">
       <h1 className="text-3xl font-serif font-bold text-foreground mb-8">Homework Inbox</h1>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
         <TabsList className="mb-8">
-          <TabsTrigger value="pending">Needs Review</TabsTrigger>
+          <TabsTrigger value="pending" className="flex items-center gap-1.5">
+            Needs Review {hasNeedsReview && <PingDot />}
+          </TabsTrigger>
           <TabsTrigger value="reviewed">Reviewed</TabsTrigger>
         </TabsList>
 
@@ -135,8 +141,8 @@ export function HomeworkCard({ hw }: { hw: any }) {
               </a>
             )}
             {hw.submittedFileKey && (
-              <a href={`/api/files/homework/${hw.id}/submission`} target="_blank" rel="noreferrer" className="inline-flex items-center px-4 py-2 bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium">
-                <Paperclip className="w-4 h-4 mr-2" /> {hw.submittedFileName || "View file"}
+              <a href={`/api/files/homework/${hw.id}/submission`} target="_blank" rel="noreferrer" title={hw.submittedFileName || undefined} className="inline-flex items-center px-4 py-2 bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium">
+                <Paperclip className="w-4 h-4 mr-2" /> {hw.submittedFileName ? truncateFileName(hw.submittedFileName) : "View file"}
               </a>
             )}
             {canAnnotate && (

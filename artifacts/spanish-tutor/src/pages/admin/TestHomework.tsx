@@ -23,6 +23,7 @@ import AnnotationWorkspace from "@/components/homework/AnnotationWorkspace";
 import ErrorState from "@/components/ErrorState";
 import PingDot from "@/components/ui/ping-dot";
 import { printFile } from "@/lib/printFile";
+import { truncateFileName } from "@/lib/truncateFileName";
 import { FileText, Paperclip, PenLine, Trash2, Printer, X } from "lucide-react";
 
 type Tab = "assigned" | "pending" | "reviewed";
@@ -163,8 +164,8 @@ function FileList({
     <div className="flex flex-wrap gap-2 mb-4">
       {files.map((f) => (
         <div key={f.id} className="inline-flex items-center bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium overflow-hidden">
-          <a href={`/api/files/test-homework-file/${f.id}`} target="_blank" rel="noreferrer" className="flex items-center px-3 py-2">
-            <Paperclip className="w-4 h-4 mr-2" /> {f.name}
+          <a href={`/api/files/test-homework-file/${f.id}`} target="_blank" rel="noreferrer" title={f.name} className="flex items-center px-3 py-2">
+            <Paperclip className="w-4 h-4 mr-2" /> {truncateFileName(f.name)}
           </a>
           <button
             className="px-2 py-2 hover:bg-accent-foreground/10"

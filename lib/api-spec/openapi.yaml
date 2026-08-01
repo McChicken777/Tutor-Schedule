@@ -2270,6 +2270,9 @@ components:
           description: Whether this student has already seen (or skipped) the first-login onboarding tour.
         pendingHomeworkCount:
           type: number
+        hasUnreadMessages:
+          type: boolean
+          description: Whether the student has any unread messages from the tutor.
         packages:
           type: array
           items:
@@ -2284,6 +2287,7 @@ components:
         - trialAvailable
         - hasSeenTour
         - pendingHomeworkCount
+        - hasUnreadMessages
         - packages
         - recentHomework
 

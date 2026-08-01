@@ -452,6 +452,8 @@ export interface StudentDashboard {
   /** Whether this student has already seen (or skipped) the first-login onboarding tour. */
   hasSeenTour: boolean;
   pendingHomeworkCount: number;
+  /** Whether the student has any unread messages from the tutor. */
+  hasUnreadMessages: boolean;
   packages: LessonPackage[];
   recentHomework: AdminHomework[];
 }
