@@ -69,10 +69,13 @@ export async function seed() {
     { credits: 800, priceCents: 14720, sortOrder: 2, isActive: true },
   ];
   for (const bundle of desiredBundles) {
-    const [existing] = await db
+    const matches = await db
       .select()
       .from(creditBundlesTable)
-      .where(and(eq(creditBundlesTable.credits, bundle.credits), eq(creditBundlesTable.teacherId, teacher.id)));
+      .where(eq(creditBundlesTable.credits, bundle.credits));
+    // Matches un-backfilled rows (teacherId null) as well as this teacher's own,
+    // so seed() can't insert a duplicate while running ahead of the teacherId backfill.
+    const existing = matches.find((m) => m.teacherId === teacher.id || m.teacherId === null);
     if (existing) {
       await db
         .update(creditBundlesTable)
@@ -172,7 +175,10 @@ export async function seed() {
   }
 
   // Site settings
-  const existingSettings = await db.select().from(siteSettingsTable).where(eq(siteSettingsTable.teacherId, teacher.id));
+  const allSettings = await db.select().from(siteSettingsTable);
+  // Matches un-backfilled rows (teacherId null) as well as this teacher's own,
+  // so seed() can't insert a duplicate while running ahead of the teacherId backfill.
+  const existingSettings = allSettings.filter((s) => s.teacherId === teacher.id || s.teacherId === null);
   if (existingSettings.length === 0) {
     await db.insert(siteSettingsTable).values({
       teacherId: teacher.id,
