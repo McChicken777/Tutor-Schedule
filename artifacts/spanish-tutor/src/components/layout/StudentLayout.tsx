@@ -29,9 +29,13 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
 
   const { data: dashboard } = useGetStudentDashboard();
   const { data: testHomeworkList } = useListStudentTestHomework();
-  const hasPendingTestHomework = (testHomeworkList ?? []).some(
-    (hw: any) => (hw.assignedText || (hw.assignedFiles?.length ?? 0) > 0) && !hw.submittedAt,
-  );
+  const hasPendingTestHomework = (testHomeworkList ?? []).some((hw: any) => {
+    const hasAssignment = hw.assignedText || (hw.assignedFiles?.length ?? 0) > 0;
+    const needsSubmission = hasAssignment && !hw.submittedAt;
+    const needsReviewSeen =
+      !!hw.reviewedAt && (!hw.studentReviewSeenAt || new Date(hw.studentReviewSeenAt).getTime() < new Date(hw.reviewedAt).getTime());
+    return needsSubmission || needsReviewSeen;
+  });
   const completeTourMutation = useCompleteTour();
   const qc = useQueryClient();
   const [tourStep, setTourStep] = useState(0);

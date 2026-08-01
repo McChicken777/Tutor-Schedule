@@ -821,6 +821,26 @@ router.post("/student/test-homework/:id/submit", requireAuth, async (req, res): 
   res.status(200).json(mapTestHomework(hw, files));
 });
 
+router.post("/student/test-homework/:id/seen", requireAuth, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+
+  const [existing] = await db.select().from(testHomeworkTable).where(eq(testHomeworkTable.id, id));
+  if (!existing) {
+    res.status(404).json({ error: "Test homework not found" });
+    return;
+  }
+
+  const [hw] = await db
+    .update(testHomeworkTable)
+    .set({ studentReviewSeenAt: new Date() })
+    .where(eq(testHomeworkTable.id, id))
+    .returning();
+
+  const files = await db.select().from(testHomeworkFilesTable).where(eq(testHomeworkFilesTable.testHomeworkId, id));
+  res.status(200).json(mapTestHomework(hw, files));
+});
+
 router.post("/student/bookings/:id/review", requireAuth, async (req, res): Promise<void> => {
   const clerkUserId = (req as any).clerkUserId;
   const user = await getOrCreateUser(clerkUserId);

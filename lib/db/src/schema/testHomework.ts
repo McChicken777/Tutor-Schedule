@@ -10,6 +10,7 @@ export const testHomeworkTable = pgTable("test_homework", {
   grade: text("grade"),
   submittedAt: timestamp("submitted_at", { withTimezone: true }),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  studentReviewSeenAt: timestamp("student_review_seen_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

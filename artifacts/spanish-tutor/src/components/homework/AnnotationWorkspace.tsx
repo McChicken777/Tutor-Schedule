@@ -19,6 +19,7 @@ interface TestHomeworkFile {
   name: string;
   mime: string;
   linkedFileId: number | null;
+  originalFileId: number | null;
 }
 
 interface AnnotationWorkspaceProps {
@@ -82,6 +83,7 @@ export default function AnnotationWorkspace({ hw, onClose }: AnnotationWorkspace
           name: uploaded.fileName,
           mime: uploaded.mimeType,
           linkedFileId: currentFileId,
+          originalFileId: showOriginal && resolvedOriginal ? resolvedOriginal.id : null,
         },
       });
       invalidate();

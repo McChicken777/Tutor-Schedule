@@ -17,6 +17,11 @@ export interface TestHomeworkFile {
   url: string | null;
   /** @nullable */
   linkedFileId: number | null;
+  /**
+     * For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).
+     * @nullable
+     */
+  originalFileId: number | null;
   sortOrder: number;
   createdAt: Date;
 }

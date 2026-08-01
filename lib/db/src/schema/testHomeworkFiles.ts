@@ -12,6 +12,7 @@ export const testHomeworkFilesTable = pgTable("test_homework_files", {
   mime: text("mime").notNull(),
   url: text("url"),
   linkedFileId: integer("linked_file_id").references((): AnyPgColumn => testHomeworkFilesTable.id, { onDelete: "set null" }),
+  originalFileId: integer("original_file_id").references((): AnyPgColumn => testHomeworkFilesTable.id, { onDelete: "set null" }),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

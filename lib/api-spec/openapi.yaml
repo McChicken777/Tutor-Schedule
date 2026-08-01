@@ -419,6 +419,27 @@ paths:
         "404":
           description: Not found
 
+  /student/test-homework/{id}/seen:
+    post:
+      operationId: markTestHomeworkReviewSeen
+      tags: [student]
+      summary: "[Sandbox] Mark a test homework's tutor review as seen by the student"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Marked as seen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestHomework"
+        "404":
+          description: Not found
+
   /student/bookings/{id}/review:
     post:
       operationId: submitReview
@@ -1948,6 +1969,9 @@ components:
           type: ["string", "null"]
         linkedFileId:
           type: ["number", "null"]
+        originalFileId:
+          type: ["number", "null"]
+          description: "For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating)."
         sortOrder:
           type: number
         createdAt:
@@ -1961,6 +1985,7 @@ components:
         - mime
         - url
         - linkedFileId
+        - originalFileId
         - sortOrder
         - createdAt
 
@@ -1983,6 +2008,10 @@ components:
         reviewedAt:
           type: ["string", "null"]
           format: date-time
+        studentReviewSeenAt:
+          type: ["string", "null"]
+          format: date-time
+          description: "When the student last viewed a review that is at least as new as reviewedAt. Null (or older than reviewedAt) means there's unseen tutor feedback."
         createdAt:
           type: string
           format: date-time
@@ -2006,6 +2035,7 @@ components:
         - grade
         - submittedAt
         - reviewedAt
+        - studentReviewSeenAt
         - createdAt
         - assignedFiles
         - submissionFiles
@@ -2071,6 +2101,9 @@ components:
           type: string
         linkedFileId:
           type: number
+        originalFileId:
+          type: ["number", "null"]
+          description: "For a review file, the assigned file it should be shown alongside."
       required:
         - slot
         - key

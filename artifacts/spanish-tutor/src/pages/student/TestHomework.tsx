@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useListStudentTestHomework,
   useSubmitTestHomework,
+  useMarkTestHomeworkReviewSeen,
   getListStudentTestHomeworkQueryKey,
 } from "@workspace/api-client-react";
 import { format } from "date-fns";
@@ -12,7 +13,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import MultiFilePicker from "@/components/homework/MultiFilePicker";
+import FileViewer from "@/components/homework/FileViewer";
 import ErrorState from "@/components/ErrorState";
+import PingDot from "@/components/ui/ping-dot";
 import { printFile } from "@/lib/printFile";
 import { FileText, MessageSquare, Printer } from "lucide-react";
 
@@ -22,6 +25,7 @@ interface TestHomeworkFile {
   key: string;
   name: string;
   mime: string;
+  originalFileId: number | null;
 }
 
 export default function StudentTestHomework() {
@@ -74,11 +78,40 @@ function FileList({ files }: { files: TestHomeworkFile[] }) {
   );
 }
 
+function ReviewFileGroup({ reviewFiles, assignedFiles }: { reviewFiles: TestHomeworkFile[]; assignedFiles: TestHomeworkFile[] }) {
+  if (reviewFiles.length === 0) return null;
+  return (
+    <div className="space-y-4">
+      {reviewFiles.map((f) => {
+        const original = f.originalFileId != null ? assignedFiles.find((a) => a.id === f.originalFileId) : undefined;
+        return (
+          <div key={f.id}>
+            <div className={original ? "grid md:grid-cols-2 gap-4" : ""}>
+              {original && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Original assignment</p>
+                  <FileViewer fileUrl={`/api/files/test-homework-file/${original.id}`} mimeType={original.mime} />
+                </div>
+              )}
+              <div>
+                {original && <p className="text-xs font-medium text-muted-foreground mb-1.5">Tutor's marked-up version</p>}
+                <FileViewer fileUrl={`/api/files/test-homework-file/${f.id}`} mimeType={f.mime} />
+              </div>
+            </div>
+            <FileList files={[f]} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function HomeworkCard({ hw }: { hw: any }) {
   const qc = useQueryClient();
   const { toast } = useToast();
   const submitMutation = useSubmitTestHomework();
   const uploadMutation = useFileUpload();
+  const seenMutation = useMarkTestHomeworkReviewSeen();
 
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -90,6 +123,21 @@ function HomeworkCard({ hw }: { hw: any }) {
   const hasAssignment = hw.assignedText || assignedFiles.length > 0;
   const isSubmitted = !!hw.submittedAt;
   const isReviewed = !!hw.reviewedAt;
+  const needsReviewSeen =
+    isReviewed && (!hw.studentReviewSeenAt || new Date(hw.studentReviewSeenAt).getTime() < new Date(hw.reviewedAt).getTime());
+
+  useEffect(() => {
+    if (!needsReviewSeen || seenMutation.isPending) return;
+    seenMutation.mutate(
+      { id: hw.id },
+      {
+        onSuccess: () => {
+          qc.invalidateQueries({ queryKey: getListStudentTestHomeworkQueryKey() });
+        },
+      },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needsReviewSeen, hw.id]);
 
   const status = isReviewed ? "Reviewed" : isSubmitted ? "Submitted" : "Not started";
   const statusClass = isReviewed
@@ -135,7 +183,10 @@ function HomeworkCard({ hw }: { hw: any }) {
     <div className="bg-card border border-border rounded-2xl p-6">
       <div className="flex justify-between items-start mb-4 pb-4 border-b border-border gap-4">
         <div>
-          <h3 className="font-bold text-foreground text-lg">Test Homework #{hw.id}</h3>
+          <h3 className="font-bold text-foreground text-lg flex items-center gap-2">
+            Test Homework #{hw.id}
+            {needsReviewSeen && <PingDot />}
+          </h3>
         </div>
         <span className={`px-3 py-1 rounded-md text-sm font-medium ${statusClass}`}>{status}</span>
       </div>
@@ -170,7 +221,7 @@ function HomeworkCard({ hw }: { hw: any }) {
               <div className="bg-secondary/5 p-4 rounded-xl border border-secondary/20 space-y-2">
                 <p className="text-foreground whitespace-pre-wrap">{hw.tutorFeedback}</p>
                 {hw.grade && <p className="font-bold text-secondary">Grade: {hw.grade}</p>}
-                <FileList files={reviewFiles} />
+                <ReviewFileGroup reviewFiles={reviewFiles} assignedFiles={assignedFiles} />
               </div>
             </div>
           ) : (

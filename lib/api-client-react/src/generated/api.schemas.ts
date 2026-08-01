@@ -251,6 +251,11 @@ export interface TestHomeworkFile {
   url: string | null;
   /** @nullable */
   linkedFileId: number | null;
+  /**
+     * For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).
+     * @nullable
+     */
+  originalFileId: number | null;
   sortOrder: number;
   createdAt: string;
 }
@@ -269,6 +274,11 @@ export interface TestHomework {
   submittedAt: string | null;
   /** @nullable */
   reviewedAt: string | null;
+  /**
+     * When the student last viewed a review that is at least as new as reviewedAt. Null (or older than reviewedAt) means there's unseen tutor feedback.
+     * @nullable
+     */
+  studentReviewSeenAt: string | null;
   createdAt: string;
   assignedFiles: TestHomeworkFile[];
   submissionFiles: TestHomeworkFile[];
@@ -316,6 +326,11 @@ export interface AttachTestHomeworkFileInput {
   mime: string;
   url?: string;
   linkedFileId?: number;
+  /**
+     * For a review file, the assigned file it should be shown alongside.
+     * @nullable
+     */
+  originalFileId?: number | null;
 }
 
 export interface RelinkTestHomeworkFileInput {

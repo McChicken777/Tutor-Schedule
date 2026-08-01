@@ -1635,6 +1635,77 @@ export const useSubmitTestHomework = <TError = ErrorType<void>,
       return useMutation(getSubmitTestHomeworkMutationOptions(options));
     }
 
+export const getMarkTestHomeworkReviewSeenUrl = (id: number,) => {
+
+
+
+
+  return `/api/student/test-homework/${id}/seen`
+}
+
+/**
+ * @summary [Sandbox] Mark a test homework's tutor review as seen by the student
+ */
+export const markTestHomeworkReviewSeen = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<TestHomework> => {
+
+  return customFetch<TestHomework>(getMarkTestHomeworkReviewSeenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getMarkTestHomeworkReviewSeenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markTestHomeworkReviewSeen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markTestHomeworkReviewSeen>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['markTestHomeworkReviewSeen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markTestHomeworkReviewSeen>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  markTestHomeworkReviewSeen(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkTestHomeworkReviewSeenMutationResult = NonNullable<Awaited<ReturnType<typeof markTestHomeworkReviewSeen>>>
+
+    export type MarkTestHomeworkReviewSeenMutationError = ErrorType<void>
+
+    /**
+ * @summary [Sandbox] Mark a test homework's tutor review as seen by the student
+ */
+export const useMarkTestHomeworkReviewSeen = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markTestHomeworkReviewSeen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markTestHomeworkReviewSeen>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getMarkTestHomeworkReviewSeenMutationOptions(options));
+    }
+
 export const getSubmitReviewUrl = (id: number,) => {
 
 

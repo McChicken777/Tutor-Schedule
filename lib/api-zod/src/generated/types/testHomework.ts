@@ -21,6 +21,11 @@ export interface TestHomework {
   submittedAt: Date | null;
   /** @nullable */
   reviewedAt: Date | null;
+  /**
+     * When the student last viewed a review that is at least as new as reviewedAt. Null (or older than reviewedAt) means there's unseen tutor feedback.
+     * @nullable
+     */
+  studentReviewSeenAt: Date | null;
   createdAt: Date;
   assignedFiles: TestHomeworkFile[];
   submissionFiles: TestHomeworkFile[];

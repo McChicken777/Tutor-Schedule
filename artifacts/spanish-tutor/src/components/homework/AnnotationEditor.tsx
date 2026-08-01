@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { PDFDocument } from "pdf-lib";
 import { Button } from "@/components/ui/button";
-import { Eraser, ChevronLeft, ChevronRight, Loader2, Pen, Type, Move, Check, Trash2 } from "lucide-react";
+import { Eraser, Undo2, ChevronLeft, ChevronRight, Loader2, Pen, Type, Move, Check, Trash2 } from "lucide-react";
 import { useFilePages } from "./useFilePages";
 
 const COLORS = ["#ef4444", "#2563eb", "#16a34a", "#111827"];
 const WIDTHS = [6, 12, 20];
-const TEXT_FONT_SIZE = 24;
 const MIN_FONT_SIZE = 12;
-const MAX_FONT_SIZE = 72;
+const MAX_FONT_SIZE = 108;
+const MAX_UNDO_HISTORY = 20;
 
 interface AnnotationEditorProps {
   fileUrl: string;
@@ -27,6 +27,10 @@ interface TextAnnotation {
   color: string;
   fontSize: number;
 }
+
+type UndoEntry =
+  | { type: "canvas"; pageIndex: number; imageData: ImageData }
+  | { type: "annotations"; annotations: TextAnnotation[] };
 
 function getCanvasPos(e: React.PointerEvent | { clientX: number; clientY: number }, canvas: HTMLCanvasElement) {
   const rect = canvas.getBoundingClientRect();
@@ -61,6 +65,7 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel, 
   const [textInput, setTextInput] = useState<{ x: number; y: number; left: number; top: number; value: string } | null>(null);
   const [textAnnotations, setTextAnnotations] = useState<TextAnnotation[]>([]);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
+  const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -85,6 +90,28 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel, 
     canvas.style.margin = "0 auto";
     container.appendChild(canvas);
   }, [pages, pageIndex]);
+
+  const pushUndo = (entry: UndoEntry) => {
+    setUndoStack((prev) => {
+      const next = [...prev, entry];
+      return next.length > MAX_UNDO_HISTORY ? next.slice(next.length - MAX_UNDO_HISTORY) : next;
+    });
+  };
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+    const entry = undoStack[undoStack.length - 1];
+    if (entry.type === "canvas") {
+      const canvas = pages[entry.pageIndex];
+      if (canvas) {
+        const ctx = canvas.getContext("2d")!;
+        ctx.putImageData(entry.imageData, 0, 0);
+      }
+    } else {
+      setTextAnnotations(entry.annotations);
+    }
+    setUndoStack((prev) => prev.slice(0, -1));
+  };
 
   const draw = (canvas: HTMLCanvasElement, from: { x: number; y: number }, to: { x: number; y: number }) => {
     const ctx = canvas.getContext("2d")!;
@@ -120,6 +147,9 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel, 
       return;
     }
 
+    const ctx = canvas.getContext("2d")!;
+    pushUndo({ type: "canvas", pageIndex, imageData: ctx.getImageData(0, 0, canvas.width, canvas.height) });
+
     drawingRef.current = true;
     const pos = getCanvasPos(e, canvas);
     lastPointRef.current = pos;
@@ -145,9 +175,10 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel, 
     if (!textInput) return;
     if (textInput.value.trim()) {
       const id = `ann-${++idCounterRef.current}`;
+      pushUndo({ type: "annotations", annotations: textAnnotations });
       setTextAnnotations((prev) => [
         ...prev,
-        { id, pageIndex, x: textInput.x, y: textInput.y, text: textInput.value, color, fontSize: TEXT_FONT_SIZE },
+        { id, pageIndex, x: textInput.x, y: textInput.y, text: textInput.value, color, fontSize: MAX_FONT_SIZE },
       ]);
       setSelectedAnnotationId(id);
     }
@@ -160,6 +191,7 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel, 
     if (tool !== "move") return;
     e.stopPropagation();
     e.preventDefault();
+    pushUndo({ type: "annotations", annotations: textAnnotations });
     setSelectedAnnotationId(a.id);
     e.currentTarget.setPointerCapture(e.pointerId);
     draggingRef.current = { id: a.id, startClientX: e.clientX, startClientY: e.clientY, startX: a.x, startY: a.y };
@@ -182,12 +214,14 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel, 
   };
 
   const resizeAnnotation = (id: string, delta: number) => {
+    pushUndo({ type: "annotations", annotations: textAnnotations });
     setTextAnnotations((prev) =>
       prev.map((a) => (a.id === id ? { ...a, fontSize: Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, a.fontSize + delta)) } : a)),
     );
   };
 
   const deleteAnnotation = (id: string) => {
+    pushUndo({ type: "annotations", annotations: textAnnotations });
     setTextAnnotations((prev) => prev.filter((a) => a.id !== id));
     setSelectedAnnotationId((cur) => (cur === id ? null : cur));
   };
@@ -309,9 +343,14 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel, 
             </button>
           ))}
         </div>
-        <Button variant="outline" size="sm" onClick={handleClearPage} disabled={loading || pages.length === 0}>
-          <Eraser className="w-4 h-4 mr-1" /> Clear {isPdf && pages.length > 1 ? "page" : ""}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleUndo} disabled={undoStack.length === 0}>
+            <Undo2 className="w-4 h-4 mr-1" /> Undo
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleClearPage} disabled={loading || pages.length === 0}>
+            <Eraser className="w-4 h-4 mr-1" /> Clear {isPdf && pages.length > 1 ? "page" : ""}
+          </Button>
+        </div>
       </div>
 
       <div ref={wrapperRef} className="relative bg-accent/20 border border-border rounded-xl p-3 max-h-[60vh] overflow-auto">
@@ -397,7 +436,7 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel, 
                 if (e.key === "Enter") commitTextInput();
                 if (e.key === "Escape") setTextInput(null);
               }}
-              style={{ color, fontSize: TEXT_FONT_SIZE * 0.75 }}
+              style={{ color, fontSize: MAX_FONT_SIZE * 0.75 }}
               className="bg-background/90 border border-dashed border-primary rounded px-1 outline-none"
               placeholder="Type..."
             />

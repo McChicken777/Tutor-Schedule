@@ -9,6 +9,7 @@ function mapFile(f: TestHomeworkFile) {
     mime: f.mime,
     url: f.url ?? null,
     linkedFileId: f.linkedFileId ?? null,
+    originalFileId: f.originalFileId ?? null,
     sortOrder: f.sortOrder,
     createdAt: f.createdAt,
   };
@@ -29,6 +30,7 @@ export function mapTestHomework(hw: TestHomework, files: TestHomeworkFile[] = []
     grade: hw.grade ?? null,
     submittedAt: hw.submittedAt ?? null,
     reviewedAt: hw.reviewedAt ?? null,
+    studentReviewSeenAt: hw.studentReviewSeenAt ?? null,
     createdAt: hw.createdAt,
     assignedFiles: bySlot("assigned"),
     submissionFiles: bySlot("submission"),

@@ -34,6 +34,7 @@ interface TestHomeworkFile {
   name: string;
   mime: string;
   linkedFileId: number | null;
+  originalFileId: number | null;
 }
 
 export default function AdminTestHomework() {

@@ -14,4 +14,9 @@ export interface AttachTestHomeworkFileInput {
   mime: string;
   url?: string;
   linkedFileId?: number;
+  /**
+     * For a review file, the assigned file it should be shown alongside.
+     * @nullable
+     */
+  originalFileId?: number | null;
 }

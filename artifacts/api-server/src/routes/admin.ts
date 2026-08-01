@@ -726,6 +726,7 @@ router.post("/admin/test-homework/:id/files", requireAdmin, async (req, res): Pr
     mime: parsed.data.mime,
     url: parsed.data.url,
     linkedFileId: parsed.data.linkedFileId,
+    originalFileId: parsed.data.originalFileId,
     sortOrder,
   });
 
