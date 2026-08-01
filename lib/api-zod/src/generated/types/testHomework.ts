@@ -5,35 +5,14 @@
  * Spanish Tutor Booking Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { TestHomeworkFile } from './testHomeworkFile';
 
 export interface TestHomework {
   id: number;
   /** @nullable */
   assignedText: string | null;
   /** @nullable */
-  assignedFileUrl: string | null;
-  /** @nullable */
-  assignedFileKey: string | null;
-  /** @nullable */
-  assignedFileName: string | null;
-  /** @nullable */
-  assignedFileMime: string | null;
-  /** @nullable */
   submittedText: string | null;
-  /** @nullable */
-  fileUrl: string | null;
-  /** @nullable */
-  submittedFileKey: string | null;
-  /** @nullable */
-  submittedFileName: string | null;
-  /** @nullable */
-  submittedFileMime: string | null;
-  /** @nullable */
-  reviewedFileKey: string | null;
-  /** @nullable */
-  reviewedFileName: string | null;
-  /** @nullable */
-  reviewedFileMime: string | null;
   /** @nullable */
   tutorFeedback: string | null;
   /** @nullable */
@@ -43,4 +22,7 @@ export interface TestHomework {
   /** @nullable */
   reviewedAt: Date | null;
   createdAt: Date;
+  assignedFiles: TestHomeworkFile[];
+  submissionFiles: TestHomeworkFile[];
+  reviewFiles: TestHomeworkFile[];
 }

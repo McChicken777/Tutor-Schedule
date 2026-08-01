@@ -28,6 +28,7 @@ import type {
   AdminLoginInput,
   AdminStudent,
   AdminStudentDetail,
+  AttachTestHomeworkFileInput,
   AvailabilityOverride,
   Booking,
   BookingDetail,
@@ -63,6 +64,7 @@ import type {
   MessageInput,
   MessageThread,
   PackageGrantInput,
+  RelinkTestHomeworkFileInput,
   RescheduleInput,
   Review,
   ReviewInput,
@@ -3484,6 +3486,225 @@ export const useDeleteTestHomework = <TError = ErrorType<void>,
       return useMutation(getDeleteTestHomeworkMutationOptions(options));
     }
 
+export const getAttachTestHomeworkFileUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/test-homework/${id}/files`
+}
+
+/**
+ * @summary [Sandbox] Attach an assigned or review file to a test homework row
+ */
+export const attachTestHomeworkFile = async (id: number,
+    attachTestHomeworkFileInput: AttachTestHomeworkFileInput, options?: Parameters<typeof customFetch>[1]): Promise<TestHomework> => {
+
+  return customFetch<TestHomework>(getAttachTestHomeworkFileUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(attachTestHomeworkFileInput)
+  }
+);}
+
+
+
+
+
+export const getAttachTestHomeworkFileMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof attachTestHomeworkFile>>, TError,{id: number;data: BodyType<AttachTestHomeworkFileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof attachTestHomeworkFile>>, TError,{id: number;data: BodyType<AttachTestHomeworkFileInput>}, TContext> => {
+
+const mutationKey = ['attachTestHomeworkFile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof attachTestHomeworkFile>>, {id: number;data: BodyType<AttachTestHomeworkFileInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  attachTestHomeworkFile(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AttachTestHomeworkFileMutationResult = NonNullable<Awaited<ReturnType<typeof attachTestHomeworkFile>>>
+    export type AttachTestHomeworkFileMutationBody = BodyType<AttachTestHomeworkFileInput>
+    export type AttachTestHomeworkFileMutationError = ErrorType<void>
+
+    /**
+ * @summary [Sandbox] Attach an assigned or review file to a test homework row
+ */
+export const useAttachTestHomeworkFile = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof attachTestHomeworkFile>>, TError,{id: number;data: BodyType<AttachTestHomeworkFileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof attachTestHomeworkFile>>,
+        TError,
+        {id: number;data: BodyType<AttachTestHomeworkFileInput>},
+        TContext
+      > => {
+      return useMutation(getAttachTestHomeworkFileMutationOptions(options));
+    }
+
+export const getDeleteTestHomeworkFileUrl = (id: number,
+    fileId: number,) => {
+
+
+
+
+  return `/api/admin/test-homework/${id}/files/${fileId}`
+}
+
+/**
+ * @summary [Sandbox] Delete one attached test homework file
+ */
+export const deleteTestHomeworkFile = async (id: number,
+    fileId: number, options?: Parameters<typeof customFetch>[1]): Promise<TestHomework> => {
+
+  return customFetch<TestHomework>(getDeleteTestHomeworkFileUrl(id,fileId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteTestHomeworkFileMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTestHomeworkFile>>, TError,{id: number;fileId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteTestHomeworkFile>>, TError,{id: number;fileId: number}, TContext> => {
+
+const mutationKey = ['deleteTestHomeworkFile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteTestHomeworkFile>>, {id: number;fileId: number}> = (props) => {
+          const {id,fileId} = props ?? {};
+
+          return  deleteTestHomeworkFile(id,fileId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteTestHomeworkFileMutationResult = NonNullable<Awaited<ReturnType<typeof deleteTestHomeworkFile>>>
+
+    export type DeleteTestHomeworkFileMutationError = ErrorType<void>
+
+    /**
+ * @summary [Sandbox] Delete one attached test homework file
+ */
+export const useDeleteTestHomeworkFile = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTestHomeworkFile>>, TError,{id: number;fileId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteTestHomeworkFile>>,
+        TError,
+        {id: number;fileId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteTestHomeworkFileMutationOptions(options));
+    }
+
+export const getRelinkTestHomeworkFileUrl = (id: number,
+    fileId: number,) => {
+
+
+
+
+  return `/api/admin/test-homework/${id}/files/${fileId}`
+}
+
+/**
+ * @summary [Sandbox] Re-pair a submission/review file with a different original/submission file
+ */
+export const relinkTestHomeworkFile = async (id: number,
+    fileId: number,
+    relinkTestHomeworkFileInput: RelinkTestHomeworkFileInput, options?: Parameters<typeof customFetch>[1]): Promise<TestHomework> => {
+
+  return customFetch<TestHomework>(getRelinkTestHomeworkFileUrl(id,fileId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(relinkTestHomeworkFileInput)
+  }
+);}
+
+
+
+
+
+export const getRelinkTestHomeworkFileMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof relinkTestHomeworkFile>>, TError,{id: number;fileId: number;data: BodyType<RelinkTestHomeworkFileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof relinkTestHomeworkFile>>, TError,{id: number;fileId: number;data: BodyType<RelinkTestHomeworkFileInput>}, TContext> => {
+
+const mutationKey = ['relinkTestHomeworkFile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof relinkTestHomeworkFile>>, {id: number;fileId: number;data: BodyType<RelinkTestHomeworkFileInput>}> = (props) => {
+          const {id,fileId,data} = props ?? {};
+
+          return  relinkTestHomeworkFile(id,fileId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RelinkTestHomeworkFileMutationResult = NonNullable<Awaited<ReturnType<typeof relinkTestHomeworkFile>>>
+    export type RelinkTestHomeworkFileMutationBody = BodyType<RelinkTestHomeworkFileInput>
+    export type RelinkTestHomeworkFileMutationError = ErrorType<void>
+
+    /**
+ * @summary [Sandbox] Re-pair a submission/review file with a different original/submission file
+ */
+export const useRelinkTestHomeworkFile = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof relinkTestHomeworkFile>>, TError,{id: number;fileId: number;data: BodyType<RelinkTestHomeworkFileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof relinkTestHomeworkFile>>,
+        TError,
+        {id: number;fileId: number;data: BodyType<RelinkTestHomeworkFileInput>},
+        TContext
+      > => {
+      return useMutation(getRelinkTestHomeworkFileMutationOptions(options));
+    }
+
 export const getListAdminStudentsUrl = () => {
 
 
@@ -5274,22 +5495,20 @@ export function useGetHomeworkFile<TData = Awaited<ReturnType<typeof getHomework
 
 
 
-export const getGetTestHomeworkFileUrl = (id: number,
-    which: 'assigned' | 'submission' | 'review',) => {
+export const getGetTestHomeworkFileUrl = (fileId: number,) => {
 
 
 
 
-  return `/api/files/test-homework/${id}/${which}`
+  return `/api/files/test-homework-file/${fileId}`
 }
 
 /**
- * @summary [Sandbox] Download/view a test homework file (assigned, submission, or review) via a private proxy
+ * @summary [Sandbox] Download/view a single test homework file via a private proxy
  */
-export const getTestHomeworkFile = async (id: number,
-    which: 'assigned' | 'submission' | 'review', options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+export const getTestHomeworkFile = async (fileId: number, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
 
-  return customFetch<Blob>(getGetTestHomeworkFileUrl(id,which),
+  return customFetch<Blob>(getGetTestHomeworkFileUrl(fileId),
   {
     ...options,
     method: 'GET'
@@ -5302,31 +5521,29 @@ export const getTestHomeworkFile = async (id: number,
 
 
 
-export const getGetTestHomeworkFileQueryKey = (id: number,
-    which: 'assigned' | 'submission' | 'review',) => {
+export const getGetTestHomeworkFileQueryKey = (fileId: number,) => {
     return [
-    `/api/files/test-homework/${id}/${which}`
+    `/api/files/test-homework-file/${fileId}`
     ] as const;
     }
 
 
-export const getGetTestHomeworkFileQueryOptions = <TData = Awaited<ReturnType<typeof getTestHomeworkFile>>, TError = ErrorType<void>>(id: number,
-    which: 'assigned' | 'submission' | 'review', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTestHomeworkFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetTestHomeworkFileQueryOptions = <TData = Awaited<ReturnType<typeof getTestHomeworkFile>>, TError = ErrorType<void>>(fileId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTestHomeworkFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetTestHomeworkFileQueryKey(id,which);
+  const queryKey =  queryOptions?.queryKey ?? getGetTestHomeworkFileQueryKey(fileId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTestHomeworkFile>>> = ({ signal }) => getTestHomeworkFile(id,which, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTestHomeworkFile>>> = ({ signal }) => getTestHomeworkFile(fileId, { signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && which !== null && which !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTestHomeworkFile>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, enabled: fileId !== null && fileId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTestHomeworkFile>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type GetTestHomeworkFileQueryResult = NonNullable<Awaited<ReturnType<typeof getTestHomeworkFile>>>
@@ -5334,16 +5551,15 @@ export type GetTestHomeworkFileQueryError = ErrorType<void>
 
 
 /**
- * @summary [Sandbox] Download/view a test homework file (assigned, submission, or review) via a private proxy
+ * @summary [Sandbox] Download/view a single test homework file via a private proxy
  */
 
 export function useGetTestHomeworkFile<TData = Awaited<ReturnType<typeof getTestHomeworkFile>>, TError = ErrorType<void>>(
- id: number,
-    which: 'assigned' | 'submission' | 'review', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTestHomeworkFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ fileId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTestHomeworkFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetTestHomeworkFileQueryOptions(id,which,options)
+  const queryOptions = getGetTestHomeworkFileQueryOptions(fileId,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

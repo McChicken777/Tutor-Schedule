@@ -7,13 +7,22 @@ import {
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFileUpload } from "@/hooks/use-file-upload";
+import MultiFilePicker from "@/components/homework/MultiFilePicker";
 import ErrorState from "@/components/ErrorState";
-import { FileText, Download, Paperclip, MessageSquare } from "lucide-react";
+import { printFile } from "@/lib/printFile";
+import { FileText, MessageSquare, Printer } from "lucide-react";
+
+interface TestHomeworkFile {
+  id: number;
+  slot: string;
+  key: string;
+  name: string;
+  mime: string;
+}
 
 export default function StudentTestHomework() {
   const { data: homeworkList, isLoading, error, refetch } = useListStudentTestHomework();
@@ -43,6 +52,28 @@ export default function StudentTestHomework() {
   );
 }
 
+function FileList({ files }: { files: TestHomeworkFile[] }) {
+  if (files.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-3">
+      {files.map((f) => (
+        <div key={f.id} className="inline-flex items-center bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium overflow-hidden">
+          <a href={`/api/files/test-homework-file/${f.id}`} target="_blank" rel="noreferrer" className="flex items-center px-3 py-1.5">
+            <FileText className="w-4 h-4 mr-2" /> {f.name}
+          </a>
+          <button
+            className="px-2 py-1.5 hover:bg-accent-foreground/10"
+            onClick={() => printFile(`/api/files/test-homework-file/${f.id}`)}
+            aria-label={`Print ${f.name}`}
+          >
+            <Printer className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function HomeworkCard({ hw }: { hw: any }) {
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -50,10 +81,13 @@ function HomeworkCard({ hw }: { hw: any }) {
   const uploadMutation = useFileUpload();
 
   const [text, setText] = useState("");
-  const [url, setUrl] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
 
-  const hasAssignment = hw.assignedText || hw.assignedFileUrl || hw.assignedFileKey;
+  const assignedFiles: TestHomeworkFile[] = hw.assignedFiles ?? [];
+  const submissionFiles: TestHomeworkFile[] = hw.submissionFiles ?? [];
+  const reviewFiles: TestHomeworkFile[] = hw.reviewFiles ?? [];
+
+  const hasAssignment = hw.assignedText || assignedFiles.length > 0;
   const isSubmitted = !!hw.submittedAt;
   const isReviewed = !!hw.reviewedAt;
 
@@ -65,38 +99,36 @@ function HomeworkCard({ hw }: { hw: any }) {
       : "bg-accent text-muted-foreground";
 
   const handleSubmit = async () => {
-    let uploaded: Awaited<ReturnType<typeof uploadMutation.mutateAsync>> | undefined;
-    if (file) {
-      try {
-        uploaded = await uploadMutation.mutateAsync({
-          file,
-          context: "test-homework-submission",
-          bookingId: hw.id,
-        });
-      } catch (err) {
-        toast({ title: "File upload failed", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
-        return;
+    try {
+      const uploaded = [];
+      for (const file of files) {
+        uploaded.push(
+          await uploadMutation.mutateAsync({
+            file,
+            context: "test-homework-submission",
+            bookingId: hw.id,
+          }),
+        );
       }
-    }
 
-    submitMutation.mutate(
-      {
-        id: hw.id,
-        data: {
-          submittedText: text,
-          fileUrl: url,
-          fileKey: uploaded?.key,
-          fileName: uploaded?.fileName,
-          fileMime: uploaded?.mimeType,
+      submitMutation.mutate(
+        {
+          id: hw.id,
+          data: {
+            submittedText: text,
+            files: uploaded.map((u) => ({ key: u.key, name: u.fileName, mime: u.mimeType })),
+          },
         },
-      },
-      {
-        onSuccess: () => {
-          toast({ title: "Homework submitted for review" });
-          qc.invalidateQueries({ queryKey: getListStudentTestHomeworkQueryKey() });
+        {
+          onSuccess: () => {
+            toast({ title: "Homework submitted for review" });
+            qc.invalidateQueries({ queryKey: getListStudentTestHomeworkQueryKey() });
+          },
         },
-      },
-    );
+      );
+    } catch (err) {
+      toast({ title: "File upload failed", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+    }
   };
 
   return (
@@ -114,18 +146,7 @@ function HomeworkCard({ hw }: { hw: any }) {
           {hw.assignedText && (
             <p className="bg-primary/5 p-4 rounded-xl text-foreground whitespace-pre-wrap mb-2">{hw.assignedText}</p>
           )}
-          <div className="flex flex-wrap gap-3">
-            {hw.assignedFileUrl && (
-              <a href={hw.assignedFileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-primary hover:underline text-sm">
-                <Download className="w-4 h-4 mr-1" /> Link
-              </a>
-            )}
-            {hw.assignedFileKey && (
-              <a href={`/api/files/test-homework/${hw.id}/assigned`} target="_blank" rel="noreferrer" className="inline-flex items-center px-3 py-1.5 bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium">
-                <FileText className="w-4 h-4 mr-2" /> {hw.assignedFileName || "View attachment"}
-              </a>
-            )}
-          </div>
+          <FileList files={assignedFiles} />
         </div>
       ) : (
         <p className="text-muted-foreground mb-6 pb-6 border-b border-border">No homework assigned yet.</p>
@@ -138,18 +159,7 @@ function HomeworkCard({ hw }: { hw: any }) {
             {hw.submittedText && (
               <p className="bg-accent/50 p-4 rounded-xl text-muted-foreground whitespace-pre-wrap mb-2">{hw.submittedText}</p>
             )}
-            <div className="flex flex-wrap gap-3">
-              {hw.fileUrl && (
-                <a href={hw.fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-primary hover:underline text-sm">
-                  <Download className="w-4 h-4 mr-1" /> Link
-                </a>
-              )}
-              {hw.submittedFileKey && (
-                <a href={`/api/files/test-homework/${hw.id}/submission`} target="_blank" rel="noreferrer" className="inline-flex items-center px-3 py-1.5 bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium">
-                  <Paperclip className="w-4 h-4 mr-2" /> {hw.submittedFileName || "View attachment"}
-                </a>
-              )}
-            </div>
+            <FileList files={submissionFiles} />
           </div>
 
           {isReviewed ? (
@@ -157,14 +167,10 @@ function HomeworkCard({ hw }: { hw: any }) {
               <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-secondary" /> Tutor Feedback
               </h4>
-              <div className="bg-secondary/5 p-4 rounded-xl border border-secondary/20">
-                <p className="text-foreground whitespace-pre-wrap mb-2">{hw.tutorFeedback}</p>
-                {hw.grade && <p className="font-bold text-secondary mb-2">Grade: {hw.grade}</p>}
-                {hw.reviewedFileKey && (
-                  <a href={`/api/files/test-homework/${hw.id}/review`} target="_blank" rel="noreferrer" className="inline-flex items-center text-secondary hover:underline text-sm">
-                    <FileText className="w-4 h-4 mr-1" /> View marked-up version
-                  </a>
-                )}
+              <div className="bg-secondary/5 p-4 rounded-xl border border-secondary/20 space-y-2">
+                <p className="text-foreground whitespace-pre-wrap">{hw.tutorFeedback}</p>
+                {hw.grade && <p className="font-bold text-secondary">Grade: {hw.grade}</p>}
+                <FileList files={reviewFiles} />
               </div>
             </div>
           ) : (
@@ -180,24 +186,10 @@ function HomeworkCard({ hw }: { hw: any }) {
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
-          <Input
-            placeholder="Link to file (Google Doc, PDF URL, etc.)"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-          />
-          <label className="flex items-center gap-2 border border-dashed border-border rounded-md px-3 py-2 text-sm text-muted-foreground cursor-pointer hover:bg-accent/50 transition">
-            <Paperclip className="size-4" />
-            {file ? file.name : "Attach PDF or image, up to 15MB"}
-            <input
-              type="file"
-              accept="application/pdf,image/*"
-              className="hidden"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
-          </label>
+          <MultiFilePicker files={files} onFilesChange={setFiles} allowCamera />
           <Button
             onClick={handleSubmit}
-            disabled={submitMutation.isPending || uploadMutation.isPending || (!text && !url && !file)}
+            disabled={submitMutation.isPending || uploadMutation.isPending || (!text && files.length === 0)}
           >
             {uploadMutation.isPending ? "Uploading..." : submitMutation.isPending ? "Sending..." : "Send for Review"}
           </Button>

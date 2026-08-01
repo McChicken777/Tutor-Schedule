@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { clerkClient } from "@clerk/express";
-import { eq, ne, lt, gt, and, asc, desc, sql } from "drizzle-orm";
+import { eq, ne, lt, gt, and, asc, desc, sql, inArray } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   usersTable,
@@ -9,6 +9,7 @@ import {
   lessonPackagesTable,
   homeworkTable,
   testHomeworkTable,
+  testHomeworkFilesTable,
   reviewsTable,
   messagesTable,
   siteSettingsTable,
@@ -759,7 +760,17 @@ router.get("/student/homework", requireAuth, async (req, res): Promise<void> => 
 
 router.get("/student/test-homework", requireAuth, async (_req, res): Promise<void> => {
   const rows = await db.select().from(testHomeworkTable).orderBy(desc(testHomeworkTable.createdAt));
-  res.json(rows.map(mapTestHomework));
+  const ids = rows.map((r) => r.id);
+  const filesByHwId = new Map<number, (typeof testHomeworkFilesTable.$inferSelect)[]>();
+  if (ids.length > 0) {
+    const files = await db.select().from(testHomeworkFilesTable).where(inArray(testHomeworkFilesTable.testHomeworkId, ids));
+    for (const file of files) {
+      const list = filesByHwId.get(file.testHomeworkId) ?? [];
+      list.push(file);
+      filesByHwId.set(file.testHomeworkId, list);
+    }
+  }
+  res.json(rows.map((row) => mapTestHomework(row, filesByHwId.get(row.id) ?? [])));
 });
 
 router.post("/student/test-homework/:id/submit", requireAuth, async (req, res): Promise<void> => {
@@ -782,16 +793,32 @@ router.post("/student/test-homework/:id/submit", requireAuth, async (req, res): 
     .update(testHomeworkTable)
     .set({
       submittedText: parsed.data.submittedText ?? existing.submittedText,
-      fileUrl: parsed.data.fileUrl ?? existing.fileUrl,
-      submittedFileKey: parsed.data.fileKey ?? existing.submittedFileKey,
-      submittedFileName: parsed.data.fileName ?? existing.submittedFileName,
-      submittedFileMime: parsed.data.fileMime ?? existing.submittedFileMime,
       submittedAt: new Date(),
     })
     .where(eq(testHomeworkTable.id, id))
     .returning();
 
-  res.status(200).json(mapTestHomework(hw));
+  const existingSubmissionCount = (await db.select().from(testHomeworkFilesTable).where(eq(testHomeworkFilesTable.testHomeworkId, id))).filter(
+    (f) => f.slot === "submission",
+  ).length;
+
+  if (parsed.data.files.length > 0) {
+    await db.insert(testHomeworkFilesTable).values(
+      parsed.data.files.map((file, index) => ({
+        testHomeworkId: id,
+        slot: "submission" as const,
+        key: file.key,
+        name: file.name,
+        mime: file.mime,
+        url: file.url,
+        linkedFileId: file.linkedFileId,
+        sortOrder: existingSubmissionCount + index,
+      })),
+    );
+  }
+
+  const files = await db.select().from(testHomeworkFilesTable).where(eq(testHomeworkFilesTable.testHomeworkId, id));
+  res.status(200).json(mapTestHomework(hw, files));
 });
 
 router.post("/student/bookings/:id/review", requireAuth, async (req, res): Promise<void> => {

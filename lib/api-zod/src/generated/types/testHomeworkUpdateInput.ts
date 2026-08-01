@@ -11,13 +11,6 @@
  */
 export interface TestHomeworkUpdateInput {
   assignedText?: string;
-  assignedFileUrl?: string;
-  assignedFileKey?: string;
-  assignedFileName?: string;
-  assignedFileMime?: string;
   tutorFeedback?: string;
   grade?: string;
-  reviewedFileKey?: string;
-  reviewedFileName?: string;
-  reviewedFileMime?: string;
 }

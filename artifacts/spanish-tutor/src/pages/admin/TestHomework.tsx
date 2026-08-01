@@ -4,6 +4,8 @@ import {
   useCreateTestHomework,
   useUpdateTestHomework,
   useDeleteTestHomework,
+  useAttachTestHomeworkFile,
+  useDeleteTestHomeworkFile,
 } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -16,22 +18,33 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListAdminTestHomeworkQueryKey } from "@workspace/api-client-react";
 import { useFileUpload } from "@/hooks/use-file-upload";
-import AnnotationEditor from "@/components/homework/AnnotationEditor";
+import MultiFilePicker from "@/components/homework/MultiFilePicker";
+import AnnotationWorkspace from "@/components/homework/AnnotationWorkspace";
 import ErrorState from "@/components/ErrorState";
-import { FileText, Download, Paperclip, PenLine, Trash2 } from "lucide-react";
+import { printFile } from "@/lib/printFile";
+import { FileText, Paperclip, PenLine, Trash2, Printer, X } from "lucide-react";
 
 type Tab = "assigned" | "pending" | "reviewed";
+
+interface TestHomeworkFile {
+  id: number;
+  slot: string;
+  key: string;
+  name: string;
+  mime: string;
+  linkedFileId: number | null;
+}
 
 export default function AdminTestHomework() {
   const [tab, setTab] = useState<Tab>("assigned");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newText, setNewText] = useState("");
-  const [newFile, setNewFile] = useState<File | null>(null);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
   const qc = useQueryClient();
   const { toast } = useToast();
   const createMutation = useCreateTestHomework();
-  const updateMutation = useUpdateTestHomework();
   const deleteMutation = useDeleteTestHomework();
+  const attachMutation = useAttachTestHomeworkFile();
   const uploadMutation = useFileUpload();
 
   const params =
@@ -45,37 +58,22 @@ export default function AdminTestHomework() {
     try {
       const created = await createMutation.mutateAsync({ data: { assignedText: newText } });
       createdId = created.id;
-      if (newFile) {
-        // Object storage's client can be slow to warm up right after a
-        // server restart; one retry absorbs that without bothering the user.
-        let uploaded;
-        try {
-          uploaded = await uploadMutation.mutateAsync({
-            file: newFile,
-            context: "test-homework-assigned",
-            bookingId: created.id,
-          });
-        } catch {
-          uploaded = await uploadMutation.mutateAsync({
-            file: newFile,
-            context: "test-homework-assigned",
-            bookingId: created.id,
-          });
-        }
-        await updateMutation.mutateAsync({
+      for (const file of newFiles) {
+        const uploaded = await uploadMutation.mutateAsync({
+          file,
+          context: "test-homework-assigned",
+          bookingId: created.id,
+        });
+        await attachMutation.mutateAsync({
           id: created.id,
-          data: {
-            assignedFileKey: uploaded.key,
-            assignedFileName: uploaded.fileName,
-            assignedFileMime: uploaded.mimeType,
-          },
+          data: { slot: "assigned", key: uploaded.key, name: uploaded.fileName, mime: uploaded.mimeType },
         });
       }
       toast({ title: "Test homework created" });
       invalidateAll();
       setIsCreateOpen(false);
       setNewText("");
-      setNewFile(null);
+      setNewFiles([]);
     } catch (err) {
       if (createdId != null) {
         await deleteMutation.mutateAsync({ id: createdId }).catch(() => {});
@@ -101,10 +99,14 @@ export default function AdminTestHomework() {
                 <Textarea value={newText} onChange={(e) => setNewText(e.target.value)} className="h-32" placeholder="What should the student do?" />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Attachment (optional)</label>
-                <Input type="file" onChange={(e) => setNewFile(e.target.files?.[0] ?? null)} />
+                <label className="text-sm font-medium mb-1 block">Attachments (optional)</label>
+                <MultiFilePicker files={newFiles} onFilesChange={setNewFiles} />
               </div>
-              <Button onClick={handleCreate} disabled={createMutation.isPending || uploadMutation.isPending || (!newText && !newFile)} className="w-full">
+              <Button
+                onClick={handleCreate}
+                disabled={createMutation.isPending || uploadMutation.isPending || attachMutation.isPending || (!newText && newFiles.length === 0)}
+                className="w-full"
+              >
                 Create
               </Button>
             </div>
@@ -143,12 +145,45 @@ export default function AdminTestHomework() {
   );
 }
 
+function FileList({
+  files,
+  onDelete,
+}: {
+  files: TestHomeworkFile[];
+  onDelete?: (fileId: number) => void;
+}) {
+  if (files.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-2 mb-4">
+      {files.map((f) => (
+        <div key={f.id} className="inline-flex items-center bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium overflow-hidden">
+          <a href={`/api/files/test-homework-file/${f.id}`} target="_blank" rel="noreferrer" className="flex items-center px-3 py-2">
+            <Paperclip className="w-4 h-4 mr-2" /> {f.name}
+          </a>
+          <button
+            className="px-2 py-2 hover:bg-accent-foreground/10"
+            onClick={() => printFile(`/api/files/test-homework-file/${f.id}`)}
+            aria-label={`Print ${f.name}`}
+          >
+            <Printer className="w-3.5 h-3.5" />
+          </button>
+          {onDelete && (
+            <button className="px-2 py-2 hover:bg-destructive/10" onClick={() => onDelete(f.id)} aria-label={`Remove ${f.name}`}>
+              <X className="w-3.5 h-3.5 text-destructive" />
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function TestHomeworkCard({ hw }: { hw: any }) {
   const qc = useQueryClient();
   const { toast } = useToast();
   const updateMutation = useUpdateTestHomework();
   const deleteMutation = useDeleteTestHomework();
-  const uploadMutation = useFileUpload();
+  const deleteFileMutation = useDeleteTestHomeworkFile();
 
   const [feedback, setFeedback] = useState(hw.tutorFeedback || "");
   const [grade, setGrade] = useState(hw.grade || "");
@@ -180,40 +215,21 @@ function TestHomeworkCard({ hw }: { hw: any }) {
     );
   };
 
-  const handleAnnotationSave = async (blob: Blob, mimeType: string) => {
-    try {
-      const file = new File([blob], mimeType === "application/pdf" ? "annotated.pdf" : "annotated.png", { type: mimeType });
-      const uploaded = await uploadMutation.mutateAsync({
-        file,
-        context: "test-homework-review",
-        bookingId: hw.id,
-      });
-      updateMutation.mutate(
-        {
-          id: hw.id,
-          data: {
-            tutorFeedback: feedback,
-            grade,
-            reviewedFileKey: uploaded.key,
-            reviewedFileName: uploaded.fileName,
-            reviewedFileMime: uploaded.mimeType,
-          },
+  const handleDeleteFile = (fileId: number) => {
+    deleteFileMutation.mutate(
+      { id: hw.id, fileId },
+      {
+        onSuccess: () => {
+          invalidate();
         },
-        {
-          onSuccess: () => {
-            toast({ title: "Marked-up file saved" });
-            invalidate();
-            setAnnotating(false);
-          },
-        },
-      );
-    } catch (err) {
-      toast({ title: "Failed to save annotation", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
-    }
+      },
+    );
   };
 
-  const submittedFileMime = hw.submittedFileMime as string | undefined;
-  const canAnnotate = !!hw.submittedFileKey && (submittedFileMime === "application/pdf" || submittedFileMime?.startsWith("image/"));
+  const assignedFiles: TestHomeworkFile[] = hw.assignedFiles ?? [];
+  const submissionFiles: TestHomeworkFile[] = hw.submissionFiles ?? [];
+  const reviewFiles: TestHomeworkFile[] = hw.reviewFiles ?? [];
+  const canAnnotate = submissionFiles.some((f) => f.mime === "application/pdf" || f.mime.startsWith("image/"));
 
   return (
     <div className="bg-card border border-border rounded-2xl p-6">
@@ -240,16 +256,7 @@ function TestHomeworkCard({ hw }: { hw: any }) {
           {hw.assignedText && (
             <div className="bg-accent/50 p-4 rounded-xl text-sm whitespace-pre-wrap mb-4">{hw.assignedText}</div>
           )}
-          {hw.assignedFileKey && (
-            <a
-              href={`/api/files/test-homework/${hw.id}/assigned`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center px-4 py-2 bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium mb-4"
-            >
-              <Paperclip className="w-4 h-4 mr-2" /> {hw.assignedFileName || "View file"}
-            </a>
-          )}
+          <FileList files={assignedFiles} onDelete={handleDeleteFile} />
 
           <h4 className="font-medium text-foreground mb-2 flex items-center gap-2 mt-4">
             <FileText className="w-4 h-4 text-primary" /> Submission
@@ -257,27 +264,18 @@ function TestHomeworkCard({ hw }: { hw: any }) {
           {hw.submittedText && (
             <div className="bg-accent/50 p-4 rounded-xl text-sm whitespace-pre-wrap mb-4">{hw.submittedText}</div>
           )}
-          <div className="flex flex-wrap gap-2">
-            {hw.fileUrl && (
-              <a href={hw.fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center px-4 py-2 bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium">
-                <Download className="w-4 h-4 mr-2" /> View Attachment
-              </a>
-            )}
-            {hw.submittedFileKey && (
-              <a href={`/api/files/test-homework/${hw.id}/submission`} target="_blank" rel="noreferrer" className="inline-flex items-center px-4 py-2 bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium">
-                <Paperclip className="w-4 h-4 mr-2" /> {hw.submittedFileName || "View file"}
-              </a>
-            )}
-            {canAnnotate && (
-              <Button variant="outline" size="sm" onClick={() => setAnnotating(true)}>
-                <PenLine className="w-4 h-4 mr-2" /> Annotate
-              </Button>
-            )}
-          </div>
-          {hw.reviewedFileKey && (
-            <a href={`/api/files/test-homework/${hw.id}/review`} target="_blank" rel="noreferrer" className="inline-flex items-center text-secondary hover:underline text-sm mt-3">
-              <FileText className="w-4 h-4 mr-1" /> View marked-up version
-            </a>
+          <FileList files={submissionFiles} />
+          {canAnnotate && (
+            <Button variant="outline" size="sm" onClick={() => setAnnotating(true)} className="mb-4">
+              <PenLine className="w-4 h-4 mr-2" /> Annotate
+            </Button>
+          )}
+
+          {reviewFiles.length > 0 && (
+            <>
+              <h4 className="font-medium text-foreground mb-2 mt-2">Marked-up version</h4>
+              <FileList files={reviewFiles} onDelete={handleDeleteFile} />
+            </>
           )}
         </div>
 
@@ -301,18 +299,11 @@ function TestHomeworkCard({ hw }: { hw: any }) {
       </div>
 
       <Dialog open={annotating} onOpenChange={setAnnotating}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-5xl">
           <DialogHeader>
             <DialogTitle>Annotate Submission</DialogTitle>
           </DialogHeader>
-          {annotating && (
-            <AnnotationEditor
-              fileUrl={`/api/files/test-homework/${hw.id}/submission`}
-              mimeType={submittedFileMime || "application/pdf"}
-              onSave={handleAnnotationSave}
-              onCancel={() => setAnnotating(false)}
-            />
-          )}
+          {annotating && <AnnotationWorkspace hw={hw} onClose={() => setAnnotating(false)} />}
         </DialogContent>
       </Dialog>
     </div>

@@ -946,6 +946,89 @@ paths:
         "404":
           description: Not found
 
+  /admin/test-homework/{id}/files:
+    post:
+      operationId: attachTestHomeworkFile
+      tags: [admin]
+      summary: "[Sandbox] Attach an assigned or review file to a test homework row"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttachTestHomeworkFileInput"
+      responses:
+        "201":
+          description: Updated test homework
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestHomework"
+        "404":
+          description: Not found
+
+  /admin/test-homework/{id}/files/{fileId}:
+    delete:
+      operationId: deleteTestHomeworkFile
+      tags: [admin]
+      summary: "[Sandbox] Delete one attached test homework file"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Updated test homework
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestHomework"
+        "404":
+          description: Not found
+    patch:
+      operationId: relinkTestHomeworkFile
+      tags: [admin]
+      summary: "[Sandbox] Re-pair a submission/review file with a different original/submission file"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RelinkTestHomeworkFileInput"
+      responses:
+        "200":
+          description: Updated test homework
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestHomework"
+        "404":
+          description: Not found
+
   /admin/students:
     get:
       operationId: listAdminStudents
@@ -1418,23 +1501,17 @@ paths:
         "404":
           description: Not found
 
-  /files/test-homework/{id}/{which}:
+  /files/test-homework-file/{fileId}:
     get:
       operationId: getTestHomeworkFile
       tags: [uploads]
-      summary: "[Sandbox] Download/view a test homework file (assigned, submission, or review) via a private proxy"
+      summary: "[Sandbox] Download/view a single test homework file via a private proxy"
       parameters:
-        - name: id
+        - name: fileId
           in: path
           required: true
           schema:
             type: number
-        - name: which
-          in: path
-          required: true
-          schema:
-            type: string
-            enum: [assigned, submission, review]
       responses:
         "200":
           description: File contents
@@ -1853,6 +1930,40 @@ components:
         reviewedFileMime:
           type: string
 
+    TestHomeworkFile:
+      type: object
+      properties:
+        id:
+          type: number
+        slot:
+          type: string
+          enum: [assigned, submission, review]
+        key:
+          type: string
+        name:
+          type: string
+        mime:
+          type: string
+        url:
+          type: ["string", "null"]
+        linkedFileId:
+          type: ["number", "null"]
+        sortOrder:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - slot
+        - key
+        - name
+        - mime
+        - url
+        - linkedFileId
+        - sortOrder
+        - createdAt
+
     TestHomework:
       type: object
       properties:
@@ -1860,29 +1971,7 @@ components:
           type: number
         assignedText:
           type: ["string", "null"]
-        assignedFileUrl:
-          type: ["string", "null"]
-        assignedFileKey:
-          type: ["string", "null"]
-        assignedFileName:
-          type: ["string", "null"]
-        assignedFileMime:
-          type: ["string", "null"]
         submittedText:
-          type: ["string", "null"]
-        fileUrl:
-          type: ["string", "null"]
-        submittedFileKey:
-          type: ["string", "null"]
-        submittedFileName:
-          type: ["string", "null"]
-        submittedFileMime:
-          type: ["string", "null"]
-        reviewedFileKey:
-          type: ["string", "null"]
-        reviewedFileName:
-          type: ["string", "null"]
-        reviewedFileMime:
           type: ["string", "null"]
         tutorFeedback:
           type: ["string", "null"]
@@ -1897,39 +1986,35 @@ components:
         createdAt:
           type: string
           format: date-time
+        assignedFiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestHomeworkFile"
+        submissionFiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestHomeworkFile"
+        reviewFiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestHomeworkFile"
       required:
         - id
         - assignedText
-        - assignedFileUrl
-        - assignedFileKey
-        - assignedFileName
-        - assignedFileMime
         - submittedText
-        - fileUrl
-        - submittedFileKey
-        - submittedFileName
-        - submittedFileMime
-        - reviewedFileKey
-        - reviewedFileName
-        - reviewedFileMime
         - tutorFeedback
         - grade
         - submittedAt
         - reviewedAt
         - createdAt
+        - assignedFiles
+        - submissionFiles
+        - reviewFiles
 
     TestHomeworkCreateInput:
       type: object
       properties:
         assignedText:
-          type: string
-        assignedFileUrl:
-          type: string
-        assignedFileKey:
-          type: string
-        assignedFileName:
-          type: string
-        assignedFileMime:
           type: string
 
     TestHomeworkUpdateInput:
@@ -1938,23 +2023,9 @@ components:
       properties:
         assignedText:
           type: string
-        assignedFileUrl:
-          type: string
-        assignedFileKey:
-          type: string
-        assignedFileName:
-          type: string
-        assignedFileMime:
-          type: string
         tutorFeedback:
           type: string
         grade:
-          type: string
-        reviewedFileKey:
-          type: string
-        reviewedFileName:
-          type: string
-        reviewedFileMime:
           type: string
 
     TestHomeworkSubmitInput:
@@ -1962,14 +2033,57 @@ components:
       properties:
         submittedText:
           type: string
-        fileUrl:
+        files:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              name:
+                type: string
+              mime:
+                type: string
+              url:
+                type: string
+              linkedFileId:
+                type: number
+            required:
+              - key
+              - name
+              - mime
+      required:
+        - files
+
+    AttachTestHomeworkFileInput:
+      type: object
+      properties:
+        slot:
           type: string
-        fileKey:
+          enum: [assigned, review]
+        key:
           type: string
-        fileName:
+        name:
           type: string
-        fileMime:
+        mime:
           type: string
+        url:
+          type: string
+        linkedFileId:
+          type: number
+      required:
+        - slot
+        - key
+        - name
+        - mime
+
+    RelinkTestHomeworkFileInput:
+      type: object
+      properties:
+        linkedFileId:
+          type: ["number", "null"]
+      required:
+        - linkedFileId
 
     UploadedFile:
       type: object

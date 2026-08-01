@@ -1,4 +1,5 @@
 import { Client } from "@replit/object-storage";
+import { randomUUID } from "crypto";
 
 const client = new Client({ bucketId: process.env.OBJECT_STORAGE_BUCKET_ID });
 
@@ -22,7 +23,8 @@ export type UploadContext =
 
 export function buildKey(bookingId: number, context: UploadContext, fileName: string): string {
   const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-  return `${context}/${bookingId}/${Date.now()}-${safeName}`;
+  const suffix = randomUUID().slice(0, 8);
+  return `${context}/${bookingId}/${Date.now()}-${suffix}-${safeName}`;
 }
 
 export async function putObject(key: string, buffer: Buffer): Promise<void> {

@@ -482,23 +482,45 @@ export const ListStudentHomeworkResponse = zod.array(ListStudentHomeworkResponse
 export const ListStudentTestHomeworkResponseItem = zod.object({
   "id": zod.number(),
   "assignedText": zod.string().nullable(),
-  "assignedFileUrl": zod.string().nullable(),
-  "assignedFileKey": zod.string().nullable(),
-  "assignedFileName": zod.string().nullable(),
-  "assignedFileMime": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
-  "fileUrl": zod.string().nullable(),
-  "submittedFileKey": zod.string().nullable(),
-  "submittedFileName": zod.string().nullable(),
-  "submittedFileMime": zod.string().nullable(),
-  "reviewedFileKey": zod.string().nullable(),
-  "reviewedFileName": zod.string().nullable(),
-  "reviewedFileMime": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "assignedFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
   "createdAt": zod.coerce.date()
+})),
+  "submissionFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "reviewFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+}))
 })
 export const ListStudentTestHomeworkResponse = zod.array(ListStudentTestHomeworkResponseItem)
 
@@ -512,32 +534,57 @@ export const SubmitTestHomeworkParams = zod.object({
 
 export const SubmitTestHomeworkBody = zod.object({
   "submittedText": zod.string().optional(),
-  "fileUrl": zod.string().optional(),
-  "fileKey": zod.string().optional(),
-  "fileName": zod.string().optional(),
-  "fileMime": zod.string().optional()
+  "files": zod.array(zod.object({
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().optional(),
+  "linkedFileId": zod.number().optional()
+}))
 })
 
 export const SubmitTestHomeworkResponse = zod.object({
   "id": zod.number(),
   "assignedText": zod.string().nullable(),
-  "assignedFileUrl": zod.string().nullable(),
-  "assignedFileKey": zod.string().nullable(),
-  "assignedFileName": zod.string().nullable(),
-  "assignedFileMime": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
-  "fileUrl": zod.string().nullable(),
-  "submittedFileKey": zod.string().nullable(),
-  "submittedFileName": zod.string().nullable(),
-  "submittedFileMime": zod.string().nullable(),
-  "reviewedFileKey": zod.string().nullable(),
-  "reviewedFileName": zod.string().nullable(),
-  "reviewedFileMime": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "assignedFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
   "createdAt": zod.coerce.date()
+})),
+  "submissionFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "reviewFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+}))
 })
 
 
@@ -1010,33 +1057,51 @@ export const UpdateHomeworkResponse = zod.object({
  * @summary [Sandbox] Create/assign a test homework row
  */
 export const CreateTestHomeworkBody = zod.object({
-  "assignedText": zod.string().optional(),
-  "assignedFileUrl": zod.string().optional(),
-  "assignedFileKey": zod.string().optional(),
-  "assignedFileName": zod.string().optional(),
-  "assignedFileMime": zod.string().optional()
+  "assignedText": zod.string().optional()
 })
 
 export const CreateTestHomeworkResponse = zod.object({
   "id": zod.number(),
   "assignedText": zod.string().nullable(),
-  "assignedFileUrl": zod.string().nullable(),
-  "assignedFileKey": zod.string().nullable(),
-  "assignedFileName": zod.string().nullable(),
-  "assignedFileMime": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
-  "fileUrl": zod.string().nullable(),
-  "submittedFileKey": zod.string().nullable(),
-  "submittedFileName": zod.string().nullable(),
-  "submittedFileMime": zod.string().nullable(),
-  "reviewedFileKey": zod.string().nullable(),
-  "reviewedFileName": zod.string().nullable(),
-  "reviewedFileMime": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "assignedFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
   "createdAt": zod.coerce.date()
+})),
+  "submissionFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "reviewFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+}))
 })
 
 
@@ -1051,23 +1116,45 @@ export const ListAdminTestHomeworkQueryParams = zod.object({
 export const ListAdminTestHomeworkResponseItem = zod.object({
   "id": zod.number(),
   "assignedText": zod.string().nullable(),
-  "assignedFileUrl": zod.string().nullable(),
-  "assignedFileKey": zod.string().nullable(),
-  "assignedFileName": zod.string().nullable(),
-  "assignedFileMime": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
-  "fileUrl": zod.string().nullable(),
-  "submittedFileKey": zod.string().nullable(),
-  "submittedFileName": zod.string().nullable(),
-  "submittedFileMime": zod.string().nullable(),
-  "reviewedFileKey": zod.string().nullable(),
-  "reviewedFileName": zod.string().nullable(),
-  "reviewedFileMime": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "assignedFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
   "createdAt": zod.coerce.date()
+})),
+  "submissionFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "reviewFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+}))
 })
 export const ListAdminTestHomeworkResponse = zod.array(ListAdminTestHomeworkResponseItem)
 
@@ -1081,37 +1168,52 @@ export const UpdateTestHomeworkParams = zod.object({
 
 export const UpdateTestHomeworkBody = zod.object({
   "assignedText": zod.string().optional(),
-  "assignedFileUrl": zod.string().optional(),
-  "assignedFileKey": zod.string().optional(),
-  "assignedFileName": zod.string().optional(),
-  "assignedFileMime": zod.string().optional(),
   "tutorFeedback": zod.string().optional(),
-  "grade": zod.string().optional(),
-  "reviewedFileKey": zod.string().optional(),
-  "reviewedFileName": zod.string().optional(),
-  "reviewedFileMime": zod.string().optional()
+  "grade": zod.string().optional()
 }).describe('Dual-purpose — re-editing the assignment and\/or grading the submission. All fields optional.')
 
 export const UpdateTestHomeworkResponse = zod.object({
   "id": zod.number(),
   "assignedText": zod.string().nullable(),
-  "assignedFileUrl": zod.string().nullable(),
-  "assignedFileKey": zod.string().nullable(),
-  "assignedFileName": zod.string().nullable(),
-  "assignedFileMime": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
-  "fileUrl": zod.string().nullable(),
-  "submittedFileKey": zod.string().nullable(),
-  "submittedFileName": zod.string().nullable(),
-  "submittedFileMime": zod.string().nullable(),
-  "reviewedFileKey": zod.string().nullable(),
-  "reviewedFileName": zod.string().nullable(),
-  "reviewedFileMime": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "assignedFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
   "createdAt": zod.coerce.date()
+})),
+  "submissionFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "reviewFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+}))
 })
 
 
@@ -1123,6 +1225,177 @@ export const DeleteTestHomeworkParams = zod.object({
 })
 
 export const DeleteTestHomeworkResponse = zod.void()
+
+
+/**
+ * @summary [Sandbox] Attach an assigned or review file to a test homework row
+ */
+export const AttachTestHomeworkFileParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AttachTestHomeworkFileBody = zod.object({
+  "slot": zod.enum(['assigned', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().optional(),
+  "linkedFileId": zod.number().optional()
+})
+
+export const AttachTestHomeworkFileResponse = zod.object({
+  "id": zod.number(),
+  "assignedText": zod.string().nullable(),
+  "submittedText": zod.string().nullable(),
+  "tutorFeedback": zod.string().nullable(),
+  "grade": zod.string().nullable(),
+  "submittedAt": zod.coerce.date().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "assignedFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "submissionFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "reviewFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary [Sandbox] Delete one attached test homework file
+ */
+export const DeleteTestHomeworkFileParams = zod.object({
+  "id": zod.coerce.number(),
+  "fileId": zod.coerce.number()
+})
+
+export const DeleteTestHomeworkFileResponse = zod.object({
+  "id": zod.number(),
+  "assignedText": zod.string().nullable(),
+  "submittedText": zod.string().nullable(),
+  "tutorFeedback": zod.string().nullable(),
+  "grade": zod.string().nullable(),
+  "submittedAt": zod.coerce.date().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "assignedFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "submissionFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "reviewFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary [Sandbox] Re-pair a submission/review file with a different original/submission file
+ */
+export const RelinkTestHomeworkFileParams = zod.object({
+  "id": zod.coerce.number(),
+  "fileId": zod.coerce.number()
+})
+
+export const RelinkTestHomeworkFileBody = zod.object({
+  "linkedFileId": zod.number().nullable()
+})
+
+export const RelinkTestHomeworkFileResponse = zod.object({
+  "id": zod.number(),
+  "assignedText": zod.string().nullable(),
+  "submittedText": zod.string().nullable(),
+  "tutorFeedback": zod.string().nullable(),
+  "grade": zod.string().nullable(),
+  "submittedAt": zod.coerce.date().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "assignedFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "submissionFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "reviewFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+}))
+})
 
 
 /**
@@ -1656,11 +1929,10 @@ export const GetHomeworkFileResponse = zod.unknown()
 
 
 /**
- * @summary [Sandbox] Download/view a test homework file (assigned, submission, or review) via a private proxy
+ * @summary [Sandbox] Download/view a single test homework file via a private proxy
  */
 export const GetTestHomeworkFileParams = zod.object({
-  "id": zod.coerce.number(),
-  "which": zod.enum(['assigned', 'submission', 'review'])
+  "fileId": zod.coerce.number()
 })
 
 export const GetTestHomeworkFileResponse = zod.unknown()

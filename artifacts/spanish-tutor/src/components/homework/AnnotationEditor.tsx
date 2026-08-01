@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import * as pdfjsLib from "pdfjs-dist";
-import pdfjsWorkerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
 import { PDFDocument } from "pdf-lib";
 import { Button } from "@/components/ui/button";
-import { Eraser, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
+import { Eraser, ChevronLeft, ChevronRight, Loader2, Pen, Type } from "lucide-react";
+import { useFilePages } from "./useFilePages";
 
 const COLORS = ["#ef4444", "#2563eb", "#16a34a", "#111827"];
 const WIDTHS = [2, 4, 8];
+const TEXT_FONT_SIZE = 24;
 
 interface AnnotationEditorProps {
   fileUrl: string;
@@ -17,7 +15,7 @@ interface AnnotationEditorProps {
   onCancel: () => void;
 }
 
-function getCanvasPos(e: React.PointerEvent, canvas: HTMLCanvasElement) {
+function getCanvasPos(e: React.PointerEvent | { clientX: number; clientY: number }, canvas: HTMLCanvasElement) {
   const rect = canvas.getBoundingClientRect();
   return {
     x: ((e.clientX - rect.left) * canvas.width) / rect.width,
@@ -26,86 +24,21 @@ function getCanvasPos(e: React.PointerEvent, canvas: HTMLCanvasElement) {
 }
 
 export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }: AnnotationEditorProps) {
-  const isPdf = mimeType === "application/pdf";
-  const [pages, setPages] = useState<HTMLCanvasElement[]>([]);
-  const [pageIndex, setPageIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const { isPdf, pages, pageIndex, setPageIndex, loading, error: loadError, originalsRef } = useFilePages(fileUrl, mimeType);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [color, setColor] = useState(COLORS[0]);
   const [strokeWidth, setStrokeWidth] = useState(WIDTHS[1]);
+  const [tool, setTool] = useState<"pen" | "text">("pen");
+  const [textInput, setTextInput] = useState<{ x: number; y: number; left: number; top: number; value: string } | null>(null);
 
-  const originalsRef = useRef<HTMLCanvasElement[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const drawingRef = useRef(false);
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const work: HTMLCanvasElement[] = [];
-        const originals: HTMLCanvasElement[] = [];
-
-        if (isPdf) {
-          const doc = await pdfjsLib.getDocument({ url: fileUrl, withCredentials: true }).promise;
-          for (let i = 1; i <= doc.numPages; i++) {
-            const page = await doc.getPage(i);
-            const viewport = page.getViewport({ scale: 1.5 });
-            const canvas = document.createElement("canvas");
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
-            await page.render({ canvasContext: canvas.getContext("2d")!, viewport, canvas }).promise;
-
-            const original = document.createElement("canvas");
-            original.width = canvas.width;
-            original.height = canvas.height;
-            original.getContext("2d")!.drawImage(canvas, 0, 0);
-
-            work.push(canvas);
-            originals.push(original);
-          }
-        } else {
-          const img = new Image();
-          await new Promise<void>((resolve, reject) => {
-            img.onload = () => resolve();
-            img.onerror = () => reject(new Error("Could not load this image for annotation."));
-            img.src = fileUrl;
-          });
-          const canvas = document.createElement("canvas");
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          canvas.getContext("2d")!.drawImage(img, 0, 0);
-
-          const original = document.createElement("canvas");
-          original.width = canvas.width;
-          original.height = canvas.height;
-          original.getContext("2d")!.drawImage(canvas, 0, 0);
-
-          work.push(canvas);
-          originals.push(original);
-        }
-
-        if (!cancelled) {
-          originalsRef.current = originals;
-          setPages(work);
-          setPageIndex(0);
-        }
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load file for annotation.");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [fileUrl, isPdf]);
+    if (loadError) setError(loadError);
+  }, [loadError]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -135,6 +68,22 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     const canvas = pages[pageIndex];
     if (!canvas) return;
+
+    if (tool === "text") {
+      const container = containerRef.current;
+      if (!container) return;
+      const containerRect = container.getBoundingClientRect();
+      const pos = getCanvasPos(e, canvas);
+      setTextInput({
+        x: pos.x,
+        y: pos.y,
+        left: e.clientX - containerRect.left,
+        top: e.clientY - containerRect.top,
+        value: "",
+      });
+      return;
+    }
+
     drawingRef.current = true;
     const pos = getCanvasPos(e, canvas);
     lastPointRef.current = pos;
@@ -142,7 +91,7 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!drawingRef.current) return;
+    if (tool !== "pen" || !drawingRef.current) return;
     const canvas = pages[pageIndex];
     if (!canvas) return;
     const pos = getCanvasPos(e, canvas);
@@ -154,6 +103,19 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
   const handlePointerUp = () => {
     drawingRef.current = false;
     lastPointRef.current = null;
+  };
+
+  const commitTextInput = () => {
+    if (!textInput) return;
+    const canvas = pages[pageIndex];
+    if (canvas && textInput.value.trim()) {
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = color;
+      ctx.font = `${TEXT_FONT_SIZE}px sans-serif`;
+      ctx.textBaseline = "top";
+      ctx.fillText(textInput.value, textInput.x, textInput.y);
+    }
+    setTextInput(null);
   };
 
   const handleClearPage = () => {
@@ -198,6 +160,25 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTool("pen")}
+            className={`flex items-center justify-center w-8 h-8 rounded-md border transition ${
+              tool === "pen" ? "border-primary bg-primary/10" : "border-border hover:bg-accent"
+            }`}
+            aria-label="Pen tool"
+          >
+            <Pen className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setTool("text")}
+            className={`flex items-center justify-center w-8 h-8 rounded-md border transition ${
+              tool === "text" ? "border-primary bg-primary/10" : "border-border hover:bg-accent"
+            }`}
+            aria-label="Text tool"
+          >
+            <Type className="w-4 h-4" />
+          </button>
+          <div className="w-px h-6 bg-border mx-1" />
           {COLORS.map((c) => (
             <button
               key={c}
@@ -216,6 +197,7 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
                 strokeWidth === w ? "border-primary bg-primary/10" : "border-border hover:bg-accent"
               }`}
               aria-label={`Stroke width ${w}`}
+              disabled={tool === "text"}
             >
               <span className="rounded-full bg-foreground" style={{ width: w + 2, height: w + 2 }} />
             </button>
@@ -226,7 +208,7 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
         </Button>
       </div>
 
-      <div className="bg-accent/20 border border-border rounded-xl p-3 max-h-[60vh] overflow-auto">
+      <div className="relative bg-accent/20 border border-border rounded-xl p-3 max-h-[60vh] overflow-auto">
         {loading ? (
           <div className="flex items-center justify-center h-64 text-muted-foreground gap-2">
             <Loader2 className="w-5 h-5 animate-spin" /> Loading file...
@@ -240,7 +222,29 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
-            className="cursor-crosshair"
+            className={tool === "text" ? "cursor-text" : "cursor-crosshair"}
+          />
+        )}
+        {textInput && (
+          <input
+            autoFocus
+            value={textInput.value}
+            onChange={(e) => setTextInput({ ...textInput, value: e.target.value })}
+            onBlur={commitTextInput}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitTextInput();
+              if (e.key === "Escape") setTextInput(null);
+            }}
+            style={{
+              position: "absolute",
+              left: textInput.left,
+              top: textInput.top,
+              color,
+              fontSize: TEXT_FONT_SIZE * 0.75,
+              transform: "translateY(-50%)",
+            }}
+            className="bg-background/90 border border-dashed border-primary rounded px-1 outline-none"
+            placeholder="Type..."
           />
         )}
       </div>

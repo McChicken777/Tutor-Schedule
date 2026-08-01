@@ -232,34 +232,35 @@ export interface HomeworkFeedbackInput {
   reviewedFileMime?: string;
 }
 
+export type TestHomeworkFileSlot = typeof TestHomeworkFileSlot[keyof typeof TestHomeworkFileSlot];
+
+
+export const TestHomeworkFileSlot = {
+  assigned: 'assigned',
+  submission: 'submission',
+  review: 'review',
+} as const;
+
+export interface TestHomeworkFile {
+  id: number;
+  slot: TestHomeworkFileSlot;
+  key: string;
+  name: string;
+  mime: string;
+  /** @nullable */
+  url: string | null;
+  /** @nullable */
+  linkedFileId: number | null;
+  sortOrder: number;
+  createdAt: string;
+}
+
 export interface TestHomework {
   id: number;
   /** @nullable */
   assignedText: string | null;
   /** @nullable */
-  assignedFileUrl: string | null;
-  /** @nullable */
-  assignedFileKey: string | null;
-  /** @nullable */
-  assignedFileName: string | null;
-  /** @nullable */
-  assignedFileMime: string | null;
-  /** @nullable */
   submittedText: string | null;
-  /** @nullable */
-  fileUrl: string | null;
-  /** @nullable */
-  submittedFileKey: string | null;
-  /** @nullable */
-  submittedFileName: string | null;
-  /** @nullable */
-  submittedFileMime: string | null;
-  /** @nullable */
-  reviewedFileKey: string | null;
-  /** @nullable */
-  reviewedFileName: string | null;
-  /** @nullable */
-  reviewedFileMime: string | null;
   /** @nullable */
   tutorFeedback: string | null;
   /** @nullable */
@@ -269,14 +270,13 @@ export interface TestHomework {
   /** @nullable */
   reviewedAt: string | null;
   createdAt: string;
+  assignedFiles: TestHomeworkFile[];
+  submissionFiles: TestHomeworkFile[];
+  reviewFiles: TestHomeworkFile[];
 }
 
 export interface TestHomeworkCreateInput {
   assignedText?: string;
-  assignedFileUrl?: string;
-  assignedFileKey?: string;
-  assignedFileName?: string;
-  assignedFileMime?: string;
 }
 
 /**
@@ -284,23 +284,43 @@ export interface TestHomeworkCreateInput {
  */
 export interface TestHomeworkUpdateInput {
   assignedText?: string;
-  assignedFileUrl?: string;
-  assignedFileKey?: string;
-  assignedFileName?: string;
-  assignedFileMime?: string;
   tutorFeedback?: string;
   grade?: string;
-  reviewedFileKey?: string;
-  reviewedFileName?: string;
-  reviewedFileMime?: string;
 }
+
+export type TestHomeworkSubmitInputFilesItem = {
+  key: string;
+  name: string;
+  mime: string;
+  url?: string;
+  linkedFileId?: number;
+};
 
 export interface TestHomeworkSubmitInput {
   submittedText?: string;
-  fileUrl?: string;
-  fileKey?: string;
-  fileName?: string;
-  fileMime?: string;
+  files: TestHomeworkSubmitInputFilesItem[];
+}
+
+export type AttachTestHomeworkFileInputSlot = typeof AttachTestHomeworkFileInputSlot[keyof typeof AttachTestHomeworkFileInputSlot];
+
+
+export const AttachTestHomeworkFileInputSlot = {
+  assigned: 'assigned',
+  review: 'review',
+} as const;
+
+export interface AttachTestHomeworkFileInput {
+  slot: AttachTestHomeworkFileInputSlot;
+  key: string;
+  name: string;
+  mime: string;
+  url?: string;
+  linkedFileId?: number;
+}
+
+export interface RelinkTestHomeworkFileInput {
+  /** @nullable */
+  linkedFileId: number | null;
 }
 
 export interface UploadedFile {

@@ -5,6 +5,7 @@ export * from "./lessonPackages";
 export * from "./creditBundles";
 export * from "./homework";
 export * from "./testHomework";
+export * from "./testHomeworkFiles";
 export * from "./reviews";
 export * from "./testimonials";
 export * from "./faqs";

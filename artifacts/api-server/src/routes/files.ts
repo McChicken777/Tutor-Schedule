@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { getAuth } from "@clerk/express";
 import { eq, and } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { homeworkTable, bookingsTable, usersTable, testHomeworkTable } from "@workspace/db";
+import { homeworkTable, bookingsTable, usersTable, testHomeworkFilesTable } from "@workspace/db";
 import { getObject } from "../lib/objectStorage";
 
 const router: IRouter = Router();
@@ -67,18 +67,17 @@ router.get("/files/homework/:homeworkId/:which", async (req, res): Promise<void>
   res.send(buffer);
 });
 
-router.get("/files/test-homework/:id/:which", async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
-  const which = req.params.which as keyof typeof WHICH_TO_FIELDS;
+router.get("/files/test-homework-file/:fileId", async (req, res): Promise<void> => {
+  const fileId = Number(req.params.fileId);
 
-  if (!Number.isFinite(id) || !WHICH_TO_FIELDS[which]) {
+  if (!Number.isFinite(fileId)) {
     res.status(404).json({ error: "Not found" });
     return;
   }
 
-  const [hw] = await db.select().from(testHomeworkTable).where(eq(testHomeworkTable.id, id));
+  const [file] = await db.select().from(testHomeworkFilesTable).where(eq(testHomeworkFilesTable.id, fileId));
 
-  if (!hw) {
+  if (!file) {
     res.status(404).json({ error: "Not found" });
     return;
   }
@@ -93,19 +92,9 @@ router.get("/files/test-homework/:id/:which", async (req, res): Promise<void> =>
     }
   }
 
-  const fields = WHICH_TO_FIELDS[which];
-  const key = hw[fields.key] as string | null;
-  const name = hw[fields.name] as string | null;
-  const mime = hw[fields.mime] as string | null;
-
-  if (!key) {
-    res.status(404).json({ error: "No file for this test homework/which combination" });
-    return;
-  }
-
-  const buffer = await getObject(key);
-  res.setHeader("Content-Type", mime ?? "application/octet-stream");
-  res.setHeader("Content-Disposition", `inline; filename="${(name ?? "file").replace(/"/g, "")}"`);
+  const buffer = await getObject(file.key);
+  res.setHeader("Content-Type", file.mime ?? "application/octet-stream");
+  res.setHeader("Content-Disposition", `inline; filename="${(file.name ?? "file").replace(/"/g, "")}"`);
   res.send(buffer);
 });
 
