@@ -8,6 +8,7 @@ import {
   lessonPackagesTable,
   creditBundlesTable,
   homeworkTable,
+  testHomeworkTable,
   reviewsTable,
   testimonialsTable,
   faqsTable,
@@ -30,6 +31,10 @@ import {
   DeleteCreditBundleParams,
   UpdateHomeworkBody,
   UpdateHomeworkParams,
+  CreateTestHomeworkBody,
+  UpdateTestHomeworkBody,
+  UpdateTestHomeworkParams,
+  DeleteTestHomeworkParams,
   GetAdminStudentParams,
   GrantPackageBody,
   CreateTestimonialBody,
@@ -51,6 +56,7 @@ import { isCalendarConnected, getCalendarEmail, deleteCalendarEvent, createOAuth
 import { google } from "googleapis";
 import { calendarTokensTable } from "@workspace/db";
 import { mapHomeworkRow } from "../lib/homeworkMapper";
+import { mapTestHomework } from "../lib/testHomeworkMapper";
 
 const router: IRouter = Router();
 
@@ -582,6 +588,98 @@ router.patch("/admin/homework/:id", requireAdmin, async (req, res): Promise<void
       lessonDate: row?.booking.startTime ?? new Date(),
     }),
   );
+});
+
+// ─── Test Homework (sandbox) ────────────────────────────────────────────────
+
+router.post("/admin/test-homework", requireAdmin, async (req, res): Promise<void> => {
+  const parsed = CreateTestHomeworkBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [created] = await db.insert(testHomeworkTable).values(parsed.data).returning();
+  res.status(201).json(mapTestHomework(created));
+});
+
+router.get("/admin/test-homework", requireAdmin, async (req, res): Promise<void> => {
+  const { reviewed, submitted } = req.query;
+  const conditions: any[] = [];
+
+  if (submitted === "true") {
+    conditions.push(sql`${testHomeworkTable.submittedAt} IS NOT NULL`);
+  } else if (submitted === "false") {
+    conditions.push(sql`${testHomeworkTable.submittedAt} IS NULL`);
+  }
+
+  if (reviewed === "true") {
+    conditions.push(sql`${testHomeworkTable.reviewedAt} IS NOT NULL`);
+  } else if (reviewed === "false") {
+    conditions.push(sql`${testHomeworkTable.reviewedAt} IS NULL`);
+  }
+
+  const rows = await db
+    .select()
+    .from(testHomeworkTable)
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(desc(testHomeworkTable.createdAt));
+
+  res.json(rows.map(mapTestHomework));
+});
+
+router.patch("/admin/test-homework/:id", requireAdmin, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+
+  const parsed = UpdateTestHomeworkBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [existing] = await db.select().from(testHomeworkTable).where(eq(testHomeworkTable.id, id));
+  if (!existing) {
+    res.status(404).json({ error: "Test homework not found" });
+    return;
+  }
+
+  const updateData: any = {};
+  if (parsed.data.assignedText != null) updateData.assignedText = parsed.data.assignedText;
+  if (parsed.data.assignedFileUrl != null) updateData.assignedFileUrl = parsed.data.assignedFileUrl;
+  if (parsed.data.assignedFileKey != null) updateData.assignedFileKey = parsed.data.assignedFileKey;
+  if (parsed.data.assignedFileName != null) updateData.assignedFileName = parsed.data.assignedFileName;
+  if (parsed.data.assignedFileMime != null) updateData.assignedFileMime = parsed.data.assignedFileMime;
+  if (parsed.data.tutorFeedback != null) updateData.tutorFeedback = parsed.data.tutorFeedback;
+  if (parsed.data.grade != null) updateData.grade = parsed.data.grade;
+  if (parsed.data.reviewedFileKey != null) updateData.reviewedFileKey = parsed.data.reviewedFileKey;
+  if (parsed.data.reviewedFileName != null) updateData.reviewedFileName = parsed.data.reviewedFileName;
+  if (parsed.data.reviewedFileMime != null) updateData.reviewedFileMime = parsed.data.reviewedFileMime;
+  if (parsed.data.tutorFeedback != null || parsed.data.grade != null || parsed.data.reviewedFileKey != null) {
+    updateData.reviewedAt = new Date();
+  }
+
+  const [updated] = await db
+    .update(testHomeworkTable)
+    .set(updateData)
+    .where(eq(testHomeworkTable.id, id))
+    .returning();
+
+  res.json(mapTestHomework(updated));
+});
+
+router.delete("/admin/test-homework/:id", requireAdmin, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+
+  const [existing] = await db.select().from(testHomeworkTable).where(eq(testHomeworkTable.id, id));
+  if (!existing) {
+    res.status(404).json({ error: "Test homework not found" });
+    return;
+  }
+
+  await db.delete(testHomeworkTable).where(eq(testHomeworkTable.id, id));
+  res.sendStatus(204);
 });
 
 // ─── Students ─────────────────────────────────────────────────────────────────

@@ -377,6 +377,48 @@ paths:
                 items:
                   $ref: "#/components/schemas/AdminHomework"
 
+  /student/test-homework:
+    get:
+      operationId: listStudentTestHomework
+      tags: [student]
+      summary: "[Sandbox] List all test homework rows"
+      responses:
+        "200":
+          description: All test homework
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestHomework"
+
+  /student/test-homework/{id}/submit:
+    post:
+      operationId: submitTestHomework
+      tags: [student]
+      summary: "[Sandbox] Submit a test homework row"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestHomeworkSubmitInput"
+      responses:
+        "200":
+          description: Test homework submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestHomework"
+        "404":
+          description: Not found
+
   /student/bookings/{id}/review:
     post:
       operationId: submitReview
@@ -812,6 +854,95 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminHomework"
+        "404":
+          description: Not found
+
+  /admin/test-homework:
+    post:
+      operationId: createTestHomework
+      tags: [admin]
+      summary: "[Sandbox] Create/assign a test homework row"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestHomeworkCreateInput"
+      responses:
+        "201":
+          description: Test homework created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestHomework"
+        "401":
+          description: Unauthorized
+    get:
+      operationId: listAdminTestHomework
+      tags: [admin]
+      summary: "[Sandbox] List all test homework rows"
+      parameters:
+        - name: reviewed
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: submitted
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: All test homework
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestHomework"
+        "401":
+          description: Unauthorized
+
+  /admin/test-homework/{id}:
+    patch:
+      operationId: updateTestHomework
+      tags: [admin]
+      summary: "[Sandbox] Edit assignment or add tutor feedback/grade to test homework"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestHomeworkUpdateInput"
+      responses:
+        "200":
+          description: Updated test homework
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestHomework"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteTestHomework
+      tags: [admin]
+      summary: "[Sandbox] Delete a test homework row"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
         "404":
           description: Not found
 
@@ -1287,6 +1418,36 @@ paths:
         "404":
           description: Not found
 
+  /files/test-homework/{id}/{which}:
+    get:
+      operationId: getTestHomeworkFile
+      tags: [uploads]
+      summary: "[Sandbox] Download/view a test homework file (assigned, submission, or review) via a private proxy"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: which
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [assigned, submission, review]
+      responses:
+        "200":
+          description: File contents
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not found
+
 components:
   schemas:
     HealthStatus:
@@ -1692,6 +1853,124 @@ components:
         reviewedFileMime:
           type: string
 
+    TestHomework:
+      type: object
+      properties:
+        id:
+          type: number
+        assignedText:
+          type: ["string", "null"]
+        assignedFileUrl:
+          type: ["string", "null"]
+        assignedFileKey:
+          type: ["string", "null"]
+        assignedFileName:
+          type: ["string", "null"]
+        assignedFileMime:
+          type: ["string", "null"]
+        submittedText:
+          type: ["string", "null"]
+        fileUrl:
+          type: ["string", "null"]
+        submittedFileKey:
+          type: ["string", "null"]
+        submittedFileName:
+          type: ["string", "null"]
+        submittedFileMime:
+          type: ["string", "null"]
+        reviewedFileKey:
+          type: ["string", "null"]
+        reviewedFileName:
+          type: ["string", "null"]
+        reviewedFileMime:
+          type: ["string", "null"]
+        tutorFeedback:
+          type: ["string", "null"]
+        grade:
+          type: ["string", "null"]
+        submittedAt:
+          type: ["string", "null"]
+          format: date-time
+        reviewedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - assignedText
+        - assignedFileUrl
+        - assignedFileKey
+        - assignedFileName
+        - assignedFileMime
+        - submittedText
+        - fileUrl
+        - submittedFileKey
+        - submittedFileName
+        - submittedFileMime
+        - reviewedFileKey
+        - reviewedFileName
+        - reviewedFileMime
+        - tutorFeedback
+        - grade
+        - submittedAt
+        - reviewedAt
+        - createdAt
+
+    TestHomeworkCreateInput:
+      type: object
+      properties:
+        assignedText:
+          type: string
+        assignedFileUrl:
+          type: string
+        assignedFileKey:
+          type: string
+        assignedFileName:
+          type: string
+        assignedFileMime:
+          type: string
+
+    TestHomeworkUpdateInput:
+      type: object
+      description: Dual-purpose — re-editing the assignment and/or grading the submission. All fields optional.
+      properties:
+        assignedText:
+          type: string
+        assignedFileUrl:
+          type: string
+        assignedFileKey:
+          type: string
+        assignedFileName:
+          type: string
+        assignedFileMime:
+          type: string
+        tutorFeedback:
+          type: string
+        grade:
+          type: string
+        reviewedFileKey:
+          type: string
+        reviewedFileName:
+          type: string
+        reviewedFileMime:
+          type: string
+
+    TestHomeworkSubmitInput:
+      type: object
+      properties:
+        submittedText:
+          type: string
+        fileUrl:
+          type: string
+        fileKey:
+          type: string
+        fileName:
+          type: string
+        fileMime:
+          type: string
+
     UploadedFile:
       type: object
       properties:
@@ -1717,7 +1996,7 @@ components:
           type: string
         context:
           type: string
-          enum: [homework-assigned, homework-submission, homework-review]
+          enum: [homework-assigned, homework-submission, homework-review, test-homework-assigned, test-homework-submission, test-homework-review]
         bookingId:
           type: number
       required:

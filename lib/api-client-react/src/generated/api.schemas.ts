@@ -232,6 +232,77 @@ export interface HomeworkFeedbackInput {
   reviewedFileMime?: string;
 }
 
+export interface TestHomework {
+  id: number;
+  /** @nullable */
+  assignedText: string | null;
+  /** @nullable */
+  assignedFileUrl: string | null;
+  /** @nullable */
+  assignedFileKey: string | null;
+  /** @nullable */
+  assignedFileName: string | null;
+  /** @nullable */
+  assignedFileMime: string | null;
+  /** @nullable */
+  submittedText: string | null;
+  /** @nullable */
+  fileUrl: string | null;
+  /** @nullable */
+  submittedFileKey: string | null;
+  /** @nullable */
+  submittedFileName: string | null;
+  /** @nullable */
+  submittedFileMime: string | null;
+  /** @nullable */
+  reviewedFileKey: string | null;
+  /** @nullable */
+  reviewedFileName: string | null;
+  /** @nullable */
+  reviewedFileMime: string | null;
+  /** @nullable */
+  tutorFeedback: string | null;
+  /** @nullable */
+  grade: string | null;
+  /** @nullable */
+  submittedAt: string | null;
+  /** @nullable */
+  reviewedAt: string | null;
+  createdAt: string;
+}
+
+export interface TestHomeworkCreateInput {
+  assignedText?: string;
+  assignedFileUrl?: string;
+  assignedFileKey?: string;
+  assignedFileName?: string;
+  assignedFileMime?: string;
+}
+
+/**
+ * Dual-purpose — re-editing the assignment and/or grading the submission. All fields optional.
+ */
+export interface TestHomeworkUpdateInput {
+  assignedText?: string;
+  assignedFileUrl?: string;
+  assignedFileKey?: string;
+  assignedFileName?: string;
+  assignedFileMime?: string;
+  tutorFeedback?: string;
+  grade?: string;
+  reviewedFileKey?: string;
+  reviewedFileName?: string;
+  reviewedFileMime?: string;
+}
+
+export interface TestHomeworkSubmitInput {
+  submittedText?: string;
+  fileUrl?: string;
+  fileKey?: string;
+  fileName?: string;
+  fileMime?: string;
+}
+
 export interface UploadedFile {
   key: string;
   fileName: string;
@@ -246,6 +317,9 @@ export const UploadFileInputContext = {
   'homework-assigned': 'homework-assigned',
   'homework-submission': 'homework-submission',
   'homework-review': 'homework-review',
+  'test-homework-assigned': 'test-homework-assigned',
+  'test-homework-submission': 'test-homework-submission',
+  'test-homework-review': 'test-homework-review',
 } as const;
 
 /**
@@ -615,6 +689,11 @@ studentId?: number;
 /**
  * Defaults to true (existing behavior — only submitted homework). Set to false to include assigned-but-unsubmitted homework too.
  */
+submitted?: boolean;
+};
+
+export type ListAdminTestHomeworkParams = {
+reviewed?: boolean;
 submitted?: boolean;
 };
 

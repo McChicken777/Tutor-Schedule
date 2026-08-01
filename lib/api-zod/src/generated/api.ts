@@ -477,6 +477,71 @@ export const ListStudentHomeworkResponse = zod.array(ListStudentHomeworkResponse
 
 
 /**
+ * @summary [Sandbox] List all test homework rows
+ */
+export const ListStudentTestHomeworkResponseItem = zod.object({
+  "id": zod.number(),
+  "assignedText": zod.string().nullable(),
+  "assignedFileUrl": zod.string().nullable(),
+  "assignedFileKey": zod.string().nullable(),
+  "assignedFileName": zod.string().nullable(),
+  "assignedFileMime": zod.string().nullable(),
+  "submittedText": zod.string().nullable(),
+  "fileUrl": zod.string().nullable(),
+  "submittedFileKey": zod.string().nullable(),
+  "submittedFileName": zod.string().nullable(),
+  "submittedFileMime": zod.string().nullable(),
+  "reviewedFileKey": zod.string().nullable(),
+  "reviewedFileName": zod.string().nullable(),
+  "reviewedFileMime": zod.string().nullable(),
+  "tutorFeedback": zod.string().nullable(),
+  "grade": zod.string().nullable(),
+  "submittedAt": zod.coerce.date().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
+export const ListStudentTestHomeworkResponse = zod.array(ListStudentTestHomeworkResponseItem)
+
+
+/**
+ * @summary [Sandbox] Submit a test homework row
+ */
+export const SubmitTestHomeworkParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SubmitTestHomeworkBody = zod.object({
+  "submittedText": zod.string().optional(),
+  "fileUrl": zod.string().optional(),
+  "fileKey": zod.string().optional(),
+  "fileName": zod.string().optional(),
+  "fileMime": zod.string().optional()
+})
+
+export const SubmitTestHomeworkResponse = zod.object({
+  "id": zod.number(),
+  "assignedText": zod.string().nullable(),
+  "assignedFileUrl": zod.string().nullable(),
+  "assignedFileKey": zod.string().nullable(),
+  "assignedFileName": zod.string().nullable(),
+  "assignedFileMime": zod.string().nullable(),
+  "submittedText": zod.string().nullable(),
+  "fileUrl": zod.string().nullable(),
+  "submittedFileKey": zod.string().nullable(),
+  "submittedFileName": zod.string().nullable(),
+  "submittedFileMime": zod.string().nullable(),
+  "reviewedFileKey": zod.string().nullable(),
+  "reviewedFileName": zod.string().nullable(),
+  "reviewedFileMime": zod.string().nullable(),
+  "tutorFeedback": zod.string().nullable(),
+  "grade": zod.string().nullable(),
+  "submittedAt": zod.coerce.date().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Submit a review for a completed lesson
  */
 export const SubmitReviewParams = zod.object({
@@ -939,6 +1004,125 @@ export const UpdateHomeworkResponse = zod.object({
   "reviewedAt": zod.coerce.date().nullable(),
   "reminderActive": zod.boolean()
 })
+
+
+/**
+ * @summary [Sandbox] Create/assign a test homework row
+ */
+export const CreateTestHomeworkBody = zod.object({
+  "assignedText": zod.string().optional(),
+  "assignedFileUrl": zod.string().optional(),
+  "assignedFileKey": zod.string().optional(),
+  "assignedFileName": zod.string().optional(),
+  "assignedFileMime": zod.string().optional()
+})
+
+export const CreateTestHomeworkResponse = zod.object({
+  "id": zod.number(),
+  "assignedText": zod.string().nullable(),
+  "assignedFileUrl": zod.string().nullable(),
+  "assignedFileKey": zod.string().nullable(),
+  "assignedFileName": zod.string().nullable(),
+  "assignedFileMime": zod.string().nullable(),
+  "submittedText": zod.string().nullable(),
+  "fileUrl": zod.string().nullable(),
+  "submittedFileKey": zod.string().nullable(),
+  "submittedFileName": zod.string().nullable(),
+  "submittedFileMime": zod.string().nullable(),
+  "reviewedFileKey": zod.string().nullable(),
+  "reviewedFileName": zod.string().nullable(),
+  "reviewedFileMime": zod.string().nullable(),
+  "tutorFeedback": zod.string().nullable(),
+  "grade": zod.string().nullable(),
+  "submittedAt": zod.coerce.date().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary [Sandbox] List all test homework rows
+ */
+export const ListAdminTestHomeworkQueryParams = zod.object({
+  "reviewed": zod.coerce.boolean().optional(),
+  "submitted": zod.coerce.boolean().optional()
+})
+
+export const ListAdminTestHomeworkResponseItem = zod.object({
+  "id": zod.number(),
+  "assignedText": zod.string().nullable(),
+  "assignedFileUrl": zod.string().nullable(),
+  "assignedFileKey": zod.string().nullable(),
+  "assignedFileName": zod.string().nullable(),
+  "assignedFileMime": zod.string().nullable(),
+  "submittedText": zod.string().nullable(),
+  "fileUrl": zod.string().nullable(),
+  "submittedFileKey": zod.string().nullable(),
+  "submittedFileName": zod.string().nullable(),
+  "submittedFileMime": zod.string().nullable(),
+  "reviewedFileKey": zod.string().nullable(),
+  "reviewedFileName": zod.string().nullable(),
+  "reviewedFileMime": zod.string().nullable(),
+  "tutorFeedback": zod.string().nullable(),
+  "grade": zod.string().nullable(),
+  "submittedAt": zod.coerce.date().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
+export const ListAdminTestHomeworkResponse = zod.array(ListAdminTestHomeworkResponseItem)
+
+
+/**
+ * @summary [Sandbox] Edit assignment or add tutor feedback/grade to test homework
+ */
+export const UpdateTestHomeworkParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateTestHomeworkBody = zod.object({
+  "assignedText": zod.string().optional(),
+  "assignedFileUrl": zod.string().optional(),
+  "assignedFileKey": zod.string().optional(),
+  "assignedFileName": zod.string().optional(),
+  "assignedFileMime": zod.string().optional(),
+  "tutorFeedback": zod.string().optional(),
+  "grade": zod.string().optional(),
+  "reviewedFileKey": zod.string().optional(),
+  "reviewedFileName": zod.string().optional(),
+  "reviewedFileMime": zod.string().optional()
+}).describe('Dual-purpose — re-editing the assignment and\/or grading the submission. All fields optional.')
+
+export const UpdateTestHomeworkResponse = zod.object({
+  "id": zod.number(),
+  "assignedText": zod.string().nullable(),
+  "assignedFileUrl": zod.string().nullable(),
+  "assignedFileKey": zod.string().nullable(),
+  "assignedFileName": zod.string().nullable(),
+  "assignedFileMime": zod.string().nullable(),
+  "submittedText": zod.string().nullable(),
+  "fileUrl": zod.string().nullable(),
+  "submittedFileKey": zod.string().nullable(),
+  "submittedFileName": zod.string().nullable(),
+  "submittedFileMime": zod.string().nullable(),
+  "reviewedFileKey": zod.string().nullable(),
+  "reviewedFileName": zod.string().nullable(),
+  "reviewedFileMime": zod.string().nullable(),
+  "tutorFeedback": zod.string().nullable(),
+  "grade": zod.string().nullable(),
+  "submittedAt": zod.coerce.date().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary [Sandbox] Delete a test homework row
+ */
+export const DeleteTestHomeworkParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteTestHomeworkResponse = zod.void()
 
 
 /**
@@ -1448,7 +1632,7 @@ export const DisconnectCalendarResponse = zod.object({
  */
 export const UploadFileBody = zod.object({
   "file": zod.string(),
-  "context": zod.enum(['homework-assigned', 'homework-submission', 'homework-review']),
+  "context": zod.enum(['homework-assigned', 'homework-submission', 'homework-review', 'test-homework-assigned', 'test-homework-submission', 'test-homework-review']),
   "bookingId": zod.number()
 }).describe('Multipart form fields for POST \/uploads. The \"file\" field carries the binary upload; multer parses it server-side rather than this schema.')
 
@@ -1469,5 +1653,16 @@ export const GetHomeworkFileParams = zod.object({
 })
 
 export const GetHomeworkFileResponse = zod.unknown()
+
+
+/**
+ * @summary [Sandbox] Download/view a test homework file (assigned, submission, or review) via a private proxy
+ */
+export const GetTestHomeworkFileParams = zod.object({
+  "id": zod.coerce.number(),
+  "which": zod.enum(['assigned', 'submission', 'review'])
+})
+
+export const GetTestHomeworkFileResponse = zod.unknown()
 
 

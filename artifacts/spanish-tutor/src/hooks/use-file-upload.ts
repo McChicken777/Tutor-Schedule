@@ -1,6 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
 
-export type UploadContext = "homework-assigned" | "homework-submission" | "homework-review";
+export type UploadContext =
+  | "homework-assigned"
+  | "homework-submission"
+  | "homework-review"
+  | "test-homework-assigned"
+  | "test-homework-submission"
+  | "test-homework-review";
 
 export interface UploadedFile {
   key: string;

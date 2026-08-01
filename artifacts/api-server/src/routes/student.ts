@@ -8,6 +8,7 @@ import {
   lessonTypesTable,
   lessonPackagesTable,
   homeworkTable,
+  testHomeworkTable,
   reviewsTable,
   messagesTable,
   siteSettingsTable,
@@ -23,6 +24,8 @@ import {
   GetHomeworkParams,
   SubmitHomeworkBody,
   SubmitHomeworkParams,
+  SubmitTestHomeworkBody,
+  SubmitTestHomeworkParams,
   SubmitReviewBody,
   SubmitReviewParams,
   ListStudentBookingsQueryParams,
@@ -35,6 +38,7 @@ import {
   getFreeBusySlots,
 } from "../lib/calendar";
 import { mapHomeworkFields, mapHomeworkRow } from "../lib/homeworkMapper";
+import { mapTestHomework } from "../lib/testHomeworkMapper";
 
 const router: IRouter = Router();
 
@@ -751,6 +755,43 @@ router.get("/student/homework", requireAuth, async (req, res): Promise<void> => 
       }),
     ),
   );
+});
+
+router.get("/student/test-homework", requireAuth, async (_req, res): Promise<void> => {
+  const rows = await db.select().from(testHomeworkTable).orderBy(desc(testHomeworkTable.createdAt));
+  res.json(rows.map(mapTestHomework));
+});
+
+router.post("/student/test-homework/:id/submit", requireAuth, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+
+  const parsed = SubmitTestHomeworkBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [existing] = await db.select().from(testHomeworkTable).where(eq(testHomeworkTable.id, id));
+  if (!existing) {
+    res.status(404).json({ error: "Test homework not found" });
+    return;
+  }
+
+  const [hw] = await db
+    .update(testHomeworkTable)
+    .set({
+      submittedText: parsed.data.submittedText ?? existing.submittedText,
+      fileUrl: parsed.data.fileUrl ?? existing.fileUrl,
+      submittedFileKey: parsed.data.fileKey ?? existing.submittedFileKey,
+      submittedFileName: parsed.data.fileName ?? existing.submittedFileName,
+      submittedFileMime: parsed.data.fileMime ?? existing.submittedFileMime,
+      submittedAt: new Date(),
+    })
+    .where(eq(testHomeworkTable.id, id))
+    .returning();
+
+  res.status(200).json(mapTestHomework(hw));
 });
 
 router.post("/student/bookings/:id/review", requireAuth, async (req, res): Promise<void> => {

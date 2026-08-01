@@ -13,4 +13,7 @@ export const UploadFileInputContext = {
   'homework-assigned': 'homework-assigned',
   'homework-submission': 'homework-submission',
   'homework-review': 'homework-review',
+  'test-homework-assigned': 'test-homework-assigned',
+  'test-homework-submission': 'test-homework-submission',
+  'test-homework-review': 'test-homework-review',
 } as const;

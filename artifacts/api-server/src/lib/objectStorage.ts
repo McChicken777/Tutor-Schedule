@@ -12,7 +12,13 @@ export const ALLOWED_MIME_TYPES = [
 
 export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 
-export type UploadContext = "homework-assigned" | "homework-submission" | "homework-review";
+export type UploadContext =
+  | "homework-assigned"
+  | "homework-submission"
+  | "homework-review"
+  | "test-homework-assigned"
+  | "test-homework-submission"
+  | "test-homework-review";
 
 export function buildKey(bookingId: number, context: UploadContext, fileName: string): string {
   const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");

@@ -4,6 +4,7 @@ export * from "./bookings";
 export * from "./lessonPackages";
 export * from "./creditBundles";
 export * from "./homework";
+export * from "./testHomework";
 export * from "./reviews";
 export * from "./testimonials";
 export * from "./faqs";

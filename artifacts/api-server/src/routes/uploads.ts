@@ -3,7 +3,7 @@ import multer from "multer";
 import { getAuth } from "@clerk/express";
 import { eq, and } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { bookingsTable, usersTable } from "@workspace/db";
+import { bookingsTable, usersTable, testHomeworkTable } from "@workspace/db";
 import { ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES, buildKey, putObject, type UploadContext } from "../lib/objectStorage";
 
 const router: IRouter = Router();
@@ -13,7 +13,14 @@ const upload = multer({
   limits: { fileSize: MAX_UPLOAD_BYTES },
 });
 
-const UPLOAD_CONTEXTS: UploadContext[] = ["homework-assigned", "homework-submission", "homework-review"];
+const UPLOAD_CONTEXTS: UploadContext[] = [
+  "homework-assigned",
+  "homework-submission",
+  "homework-review",
+  "test-homework-assigned",
+  "test-homework-submission",
+  "test-homework-review",
+];
 
 router.post("/uploads", upload.single("file"), async (req, res): Promise<void> => {
   const file = req.file;
@@ -38,33 +45,56 @@ router.post("/uploads", upload.single("file"), async (req, res): Promise<void> =
     return;
   }
 
-  const [booking] = await db.select().from(bookingsTable).where(eq(bookingsTable.id, bookingId));
-  if (!booking) {
-    res.status(400).json({ error: "Booking not found" });
-    return;
-  }
-
   const ctx = context as UploadContext;
-  if (ctx === "homework-assigned" || ctx === "homework-review") {
-    const sess = req.session as any;
-    if (!sess?.isAdmin) {
-      res.status(401).json({ error: "Admin authentication required" });
+
+  if (ctx.startsWith("test-homework-")) {
+    const [testHw] = await db.select().from(testHomeworkTable).where(eq(testHomeworkTable.id, bookingId));
+    if (!testHw) {
+      res.status(400).json({ error: "Test homework not found" });
       return;
+    }
+    if (ctx === "test-homework-assigned" || ctx === "test-homework-review") {
+      const sess = req.session as any;
+      if (!sess?.isAdmin) {
+        res.status(401).json({ error: "Admin authentication required" });
+        return;
+      }
+    } else {
+      const auth = getAuth(req);
+      const clerkUserId = (auth?.sessionClaims?.userId as string | undefined) || auth?.userId;
+      if (!clerkUserId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
     }
   } else {
-    const auth = getAuth(req);
-    const clerkUserId = (auth?.sessionClaims?.userId as string | undefined) || auth?.userId;
-    if (!clerkUserId) {
-      res.status(401).json({ error: "Unauthorized" });
+    const [booking] = await db.select().from(bookingsTable).where(eq(bookingsTable.id, bookingId));
+    if (!booking) {
+      res.status(400).json({ error: "Booking not found" });
       return;
     }
-    const [owner] = await db
-      .select()
-      .from(usersTable)
-      .where(and(eq(usersTable.clerkUserId, clerkUserId), eq(usersTable.id, booking.studentId)));
-    if (!owner) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
+
+    if (ctx === "homework-assigned" || ctx === "homework-review") {
+      const sess = req.session as any;
+      if (!sess?.isAdmin) {
+        res.status(401).json({ error: "Admin authentication required" });
+        return;
+      }
+    } else {
+      const auth = getAuth(req);
+      const clerkUserId = (auth?.sessionClaims?.userId as string | undefined) || auth?.userId;
+      if (!clerkUserId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      const [owner] = await db
+        .select()
+        .from(usersTable)
+        .where(and(eq(usersTable.clerkUserId, clerkUserId), eq(usersTable.id, booking.studentId)));
+      if (!owner) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
     }
   }
 

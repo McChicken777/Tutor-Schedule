@@ -57,6 +57,7 @@ import type {
   LessonTypeUpdate,
   ListAdminBookingsParams,
   ListAdminHomeworkParams,
+  ListAdminTestHomeworkParams,
   ListStudentBookingsParams,
   Message,
   MessageInput,
@@ -70,6 +71,10 @@ import type {
   SiteSettingsUpdate,
   StudentDashboard,
   StudentProfile,
+  TestHomework,
+  TestHomeworkCreateInput,
+  TestHomeworkSubmitInput,
+  TestHomeworkUpdateInput,
   Testimonial,
   TestimonialInput,
   TestimonialUpdate,
@@ -1478,6 +1483,155 @@ export function useListStudentHomework<TData = Awaited<ReturnType<typeof listStu
 
 
 
+
+export const getListStudentTestHomeworkUrl = () => {
+
+
+
+
+  return `/api/student/test-homework`
+}
+
+/**
+ * @summary [Sandbox] List all test homework rows
+ */
+export const listStudentTestHomework = async ( options?: Parameters<typeof customFetch>[1]): Promise<TestHomework[]> => {
+
+  return customFetch<TestHomework[]>(getListStudentTestHomeworkUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListStudentTestHomeworkQueryKey = () => {
+    return [
+    `/api/student/test-homework`
+    ] as const;
+    }
+
+
+export const getListStudentTestHomeworkQueryOptions = <TData = Awaited<ReturnType<typeof listStudentTestHomework>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStudentTestHomework>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListStudentTestHomeworkQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listStudentTestHomework>>> = ({ signal }) => listStudentTestHomework({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listStudentTestHomework>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListStudentTestHomeworkQueryResult = NonNullable<Awaited<ReturnType<typeof listStudentTestHomework>>>
+export type ListStudentTestHomeworkQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary [Sandbox] List all test homework rows
+ */
+
+export function useListStudentTestHomework<TData = Awaited<ReturnType<typeof listStudentTestHomework>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStudentTestHomework>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListStudentTestHomeworkQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSubmitTestHomeworkUrl = (id: number,) => {
+
+
+
+
+  return `/api/student/test-homework/${id}/submit`
+}
+
+/**
+ * @summary [Sandbox] Submit a test homework row
+ */
+export const submitTestHomework = async (id: number,
+    testHomeworkSubmitInput: TestHomeworkSubmitInput, options?: Parameters<typeof customFetch>[1]): Promise<TestHomework> => {
+
+  return customFetch<TestHomework>(getSubmitTestHomeworkUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(testHomeworkSubmitInput)
+  }
+);}
+
+
+
+
+
+export const getSubmitTestHomeworkMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitTestHomework>>, TError,{id: number;data: BodyType<TestHomeworkSubmitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitTestHomework>>, TError,{id: number;data: BodyType<TestHomeworkSubmitInput>}, TContext> => {
+
+const mutationKey = ['submitTestHomework'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitTestHomework>>, {id: number;data: BodyType<TestHomeworkSubmitInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  submitTestHomework(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitTestHomeworkMutationResult = NonNullable<Awaited<ReturnType<typeof submitTestHomework>>>
+    export type SubmitTestHomeworkMutationBody = BodyType<TestHomeworkSubmitInput>
+    export type SubmitTestHomeworkMutationError = ErrorType<void>
+
+    /**
+ * @summary [Sandbox] Submit a test homework row
+ */
+export const useSubmitTestHomework = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitTestHomework>>, TError,{id: number;data: BodyType<TestHomeworkSubmitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitTestHomework>>,
+        TError,
+        {id: number;data: BodyType<TestHomeworkSubmitInput>},
+        TContext
+      > => {
+      return useMutation(getSubmitTestHomeworkMutationOptions(options));
+    }
 
 export const getSubmitReviewUrl = (id: number,) => {
 
@@ -3030,6 +3184,304 @@ export const useUpdateHomework = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUpdateHomeworkMutationOptions(options));
+    }
+
+export const getCreateTestHomeworkUrl = () => {
+
+
+
+
+  return `/api/admin/test-homework`
+}
+
+/**
+ * @summary [Sandbox] Create/assign a test homework row
+ */
+export const createTestHomework = async (testHomeworkCreateInput: TestHomeworkCreateInput, options?: Parameters<typeof customFetch>[1]): Promise<TestHomework> => {
+
+  return customFetch<TestHomework>(getCreateTestHomeworkUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(testHomeworkCreateInput)
+  }
+);}
+
+
+
+
+
+export const getCreateTestHomeworkMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTestHomework>>, TError,{data: BodyType<TestHomeworkCreateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTestHomework>>, TError,{data: BodyType<TestHomeworkCreateInput>}, TContext> => {
+
+const mutationKey = ['createTestHomework'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTestHomework>>, {data: BodyType<TestHomeworkCreateInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createTestHomework(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTestHomeworkMutationResult = NonNullable<Awaited<ReturnType<typeof createTestHomework>>>
+    export type CreateTestHomeworkMutationBody = BodyType<TestHomeworkCreateInput>
+    export type CreateTestHomeworkMutationError = ErrorType<void>
+
+    /**
+ * @summary [Sandbox] Create/assign a test homework row
+ */
+export const useCreateTestHomework = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTestHomework>>, TError,{data: BodyType<TestHomeworkCreateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTestHomework>>,
+        TError,
+        {data: BodyType<TestHomeworkCreateInput>},
+        TContext
+      > => {
+      return useMutation(getCreateTestHomeworkMutationOptions(options));
+    }
+
+export const getListAdminTestHomeworkUrl = (params?: ListAdminTestHomeworkParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/test-homework?${stringifiedParams}` : `/api/admin/test-homework`
+}
+
+/**
+ * @summary [Sandbox] List all test homework rows
+ */
+export const listAdminTestHomework = async (params?: ListAdminTestHomeworkParams, options?: Parameters<typeof customFetch>[1]): Promise<TestHomework[]> => {
+
+  return customFetch<TestHomework[]>(getListAdminTestHomeworkUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminTestHomeworkQueryKey = (params?: ListAdminTestHomeworkParams,) => {
+    return [
+    `/api/admin/test-homework`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAdminTestHomeworkQueryOptions = <TData = Awaited<ReturnType<typeof listAdminTestHomework>>, TError = ErrorType<void>>(params?: ListAdminTestHomeworkParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminTestHomework>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminTestHomeworkQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminTestHomework>>> = ({ signal }) => listAdminTestHomework(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminTestHomework>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminTestHomeworkQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminTestHomework>>>
+export type ListAdminTestHomeworkQueryError = ErrorType<void>
+
+
+/**
+ * @summary [Sandbox] List all test homework rows
+ */
+
+export function useListAdminTestHomework<TData = Awaited<ReturnType<typeof listAdminTestHomework>>, TError = ErrorType<void>>(
+ params?: ListAdminTestHomeworkParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminTestHomework>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminTestHomeworkQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateTestHomeworkUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/test-homework/${id}`
+}
+
+/**
+ * @summary [Sandbox] Edit assignment or add tutor feedback/grade to test homework
+ */
+export const updateTestHomework = async (id: number,
+    testHomeworkUpdateInput: TestHomeworkUpdateInput, options?: Parameters<typeof customFetch>[1]): Promise<TestHomework> => {
+
+  return customFetch<TestHomework>(getUpdateTestHomeworkUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(testHomeworkUpdateInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateTestHomeworkMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTestHomework>>, TError,{id: number;data: BodyType<TestHomeworkUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateTestHomework>>, TError,{id: number;data: BodyType<TestHomeworkUpdateInput>}, TContext> => {
+
+const mutationKey = ['updateTestHomework'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateTestHomework>>, {id: number;data: BodyType<TestHomeworkUpdateInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateTestHomework(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateTestHomeworkMutationResult = NonNullable<Awaited<ReturnType<typeof updateTestHomework>>>
+    export type UpdateTestHomeworkMutationBody = BodyType<TestHomeworkUpdateInput>
+    export type UpdateTestHomeworkMutationError = ErrorType<void>
+
+    /**
+ * @summary [Sandbox] Edit assignment or add tutor feedback/grade to test homework
+ */
+export const useUpdateTestHomework = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTestHomework>>, TError,{id: number;data: BodyType<TestHomeworkUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateTestHomework>>,
+        TError,
+        {id: number;data: BodyType<TestHomeworkUpdateInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateTestHomeworkMutationOptions(options));
+    }
+
+export const getDeleteTestHomeworkUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/test-homework/${id}`
+}
+
+/**
+ * @summary [Sandbox] Delete a test homework row
+ */
+export const deleteTestHomework = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteTestHomeworkUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteTestHomeworkMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTestHomework>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteTestHomework>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteTestHomework'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteTestHomework>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteTestHomework(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteTestHomeworkMutationResult = NonNullable<Awaited<ReturnType<typeof deleteTestHomework>>>
+
+    export type DeleteTestHomeworkMutationError = ErrorType<void>
+
+    /**
+ * @summary [Sandbox] Delete a test homework row
+ */
+export const useDeleteTestHomework = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTestHomework>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteTestHomework>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteTestHomeworkMutationOptions(options));
     }
 
 export const getListAdminStudentsUrl = () => {
@@ -4810,6 +5262,88 @@ export function useGetHomeworkFile<TData = Awaited<ReturnType<typeof getHomework
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetHomeworkFileQueryOptions(homeworkId,which,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetTestHomeworkFileUrl = (id: number,
+    which: 'assigned' | 'submission' | 'review',) => {
+
+
+
+
+  return `/api/files/test-homework/${id}/${which}`
+}
+
+/**
+ * @summary [Sandbox] Download/view a test homework file (assigned, submission, or review) via a private proxy
+ */
+export const getTestHomeworkFile = async (id: number,
+    which: 'assigned' | 'submission' | 'review', options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetTestHomeworkFileUrl(id,which),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTestHomeworkFileQueryKey = (id: number,
+    which: 'assigned' | 'submission' | 'review',) => {
+    return [
+    `/api/files/test-homework/${id}/${which}`
+    ] as const;
+    }
+
+
+export const getGetTestHomeworkFileQueryOptions = <TData = Awaited<ReturnType<typeof getTestHomeworkFile>>, TError = ErrorType<void>>(id: number,
+    which: 'assigned' | 'submission' | 'review', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTestHomeworkFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTestHomeworkFileQueryKey(id,which);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTestHomeworkFile>>> = ({ signal }) => getTestHomeworkFile(id,which, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && which !== null && which !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTestHomeworkFile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTestHomeworkFileQueryResult = NonNullable<Awaited<ReturnType<typeof getTestHomeworkFile>>>
+export type GetTestHomeworkFileQueryError = ErrorType<void>
+
+
+/**
+ * @summary [Sandbox] Download/view a test homework file (assigned, submission, or review) via a private proxy
+ */
+
+export function useGetTestHomeworkFile<TData = Awaited<ReturnType<typeof getTestHomeworkFile>>, TError = ErrorType<void>>(
+ id: number,
+    which: 'assigned' | 'submission' | 'review', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTestHomeworkFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTestHomeworkFileQueryOptions(id,which,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

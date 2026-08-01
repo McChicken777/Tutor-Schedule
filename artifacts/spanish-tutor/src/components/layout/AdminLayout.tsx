@@ -1,6 +1,6 @@
 import { ReactNode, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { LogOut, Users, BookOpen, Settings, LayoutDashboard, Calendar, CalendarOff, FileText, MessageSquare, MessageCircle, HelpCircle } from "lucide-react";
+import { LogOut, Users, BookOpen, Settings, LayoutDashboard, Calendar, CalendarOff, FileText, MessageSquare, MessageCircle, HelpCircle, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAdminLogout, useGetAdminDashboard } from "@workspace/api-client-react";
 
@@ -33,6 +33,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     { label: "Students", href: "/admin/students", icon: Users },
     { label: "Messages", href: "/admin/messages", icon: MessageCircle },
     { label: "Homework", href: "/admin/homework", icon: FileText },
+    { label: "Test Homework", href: "/admin/test-homework", icon: FlaskConical },
     { label: "Lesson Types", href: "/admin/lesson-types", icon: BookOpen },
     { label: "Testimonials", href: "/admin/testimonials", icon: MessageSquare },
     { label: "FAQs", href: "/admin/faqs", icon: HelpCircle },
