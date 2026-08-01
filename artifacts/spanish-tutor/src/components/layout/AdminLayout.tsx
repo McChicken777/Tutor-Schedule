@@ -1,15 +1,15 @@
 import { ReactNode, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { LogOut, Users, BookOpen, Settings, LayoutDashboard, Calendar, CalendarOff, FileText, MessageSquare, MessageCircle, HelpCircle, FlaskConical } from "lucide-react";
+import { LogOut, Users, BookOpen, Settings, LayoutDashboard, Calendar, CalendarOff, FileText, MessageSquare, MessageCircle, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PingDot from "@/components/ui/ping-dot";
-import { useAdminLogout, useGetAdminDashboard, useListAdminTestHomework, useListAdminMessageThreads } from "@workspace/api-client-react";
+import { useAdminLogout, useGetAdminDashboard, useListAdminHomework, useListAdminMessageThreads } from "@workspace/api-client-react";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const logout = useAdminLogout();
   const { data: dashboard, error } = useGetAdminDashboard();
-  const { data: needsReviewList } = useListAdminTestHomework({ submitted: true, reviewed: false });
+  const { data: needsReviewList } = useListAdminHomework({ reviewed: false });
   const hasNeedsReview = (needsReviewList?.length ?? 0) > 0;
   const { data: messageThreads } = useListAdminMessageThreads();
   const hasUnreadMessages = (messageThreads ?? []).some((t) => t.unreadCount > 0);
@@ -38,7 +38,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     { label: "Students", href: "/admin/students", icon: Users },
     { label: "Messages", href: "/admin/messages", icon: MessageCircle },
     { label: "Homework", href: "/admin/homework", icon: FileText },
-    { label: "Test Homework", href: "/admin/test-homework", icon: FlaskConical },
     { label: "Lesson Types", href: "/admin/lesson-types", icon: BookOpen },
     { label: "Testimonials", href: "/admin/testimonials", icon: MessageSquare },
     { label: "FAQs", href: "/admin/faqs", icon: HelpCircle },
@@ -72,7 +71,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               >
                 <item.icon className="w-5 h-5" />
                 <span className="flex-1">{item.label}</span>
-                {item.href === "/admin/test-homework" && hasNeedsReview && <PingDot />}
+                {item.href === "/admin/homework" && hasNeedsReview && <PingDot />}
                 {item.href === "/admin/messages" && hasUnreadMessages && <PingDot />}
                 {badgeCount > 0 && (
                   <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-xs font-bold">

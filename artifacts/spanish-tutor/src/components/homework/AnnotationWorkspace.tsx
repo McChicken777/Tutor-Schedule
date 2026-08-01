@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  useAttachTestHomeworkFile,
-  useRelinkTestHomeworkFile,
-  getListAdminTestHomeworkQueryKey,
+  useAttachHomeworkFile,
+  useRelinkHomeworkFile,
+  getListAdminHomeworkQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +13,7 @@ import FileViewer from "./FileViewer";
 import { truncateFileName } from "@/lib/truncateFileName";
 import { Eye, EyeOff } from "lucide-react";
 
-interface TestHomeworkFile {
+interface HomeworkFileItem {
   id: number;
   slot: string;
   key: string;
@@ -26,8 +26,9 @@ interface TestHomeworkFile {
 interface AnnotationWorkspaceProps {
   hw: {
     id: number;
-    assignedFiles: TestHomeworkFile[];
-    submissionFiles: TestHomeworkFile[];
+    bookingId: number;
+    assignedFiles: HomeworkFileItem[];
+    submissionFiles: HomeworkFileItem[];
   };
   onClose: () => void;
 }
@@ -36,8 +37,8 @@ export default function AnnotationWorkspace({ hw, onClose }: AnnotationWorkspace
   const qc = useQueryClient();
   const { toast } = useToast();
   const uploadMutation = useFileUpload();
-  const attachMutation = useAttachTestHomeworkFile();
-  const relinkMutation = useRelinkTestHomeworkFile();
+  const attachMutation = useAttachHomeworkFile();
+  const relinkMutation = useRelinkHomeworkFile();
 
   const [remainingIds, setRemainingIds] = useState<number[]>(() => hw.submissionFiles.map((f) => f.id));
   const [showOriginal, setShowOriginal] = useState(hw.assignedFiles.length > 0);
@@ -66,7 +67,7 @@ export default function AnnotationWorkspace({ hw, onClose }: AnnotationWorkspace
     hw.assignedFiles[originalIndex] ??
     hw.assignedFiles[0];
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: getListAdminTestHomeworkQueryKey() });
+  const invalidate = () => qc.invalidateQueries({ queryKey: getListAdminHomeworkQueryKey() });
 
   const handleRelink = (assignedFileId: number) => {
     if (!currentFileId) return;
@@ -87,8 +88,8 @@ export default function AnnotationWorkspace({ hw, onClose }: AnnotationWorkspace
       const file = new File([blob], mimeType === "application/pdf" ? "annotated.pdf" : "annotated.png", { type: mimeType });
       const uploaded = await uploadMutation.mutateAsync({
         file,
-        context: "test-homework-review",
-        bookingId: hw.id,
+        context: "homework-review",
+        bookingId: hw.bookingId,
       });
       await attachMutation.mutateAsync({
         id: hw.id,
@@ -152,14 +153,14 @@ export default function AnnotationWorkspace({ hw, onClose }: AnnotationWorkspace
         {showOriginal && resolvedOriginal && (
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-1.5">Original assigned file</p>
-            <FileViewer fileUrl={`/api/files/test-homework-file/${resolvedOriginal.id}`} mimeType={resolvedOriginal.mime} />
+            <FileViewer fileUrl={`/api/files/homework-file/${resolvedOriginal.id}`} mimeType={resolvedOriginal.mime} />
           </div>
         )}
         <div>
           {showOriginal && resolvedOriginal && <p className="text-xs font-medium text-muted-foreground mb-1.5">Student submission</p>}
           <AnnotationEditor
             key={currentFileId}
-            fileUrl={`/api/files/test-homework-file/${currentFile.id}`}
+            fileUrl={`/api/files/homework-file/${currentFile.id}`}
             mimeType={currentFile.mime}
             onSave={handleAnnotationSave}
             onCancel={onClose}

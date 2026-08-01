@@ -19,14 +19,12 @@ import BookingDetail from "@/pages/student/BookingDetail";
 import BookLesson from "@/pages/student/Book";
 import StudentMessages from "@/pages/student/Messages";
 import StudentHomework from "@/pages/student/Homework";
-import StudentTestHomework from "@/pages/student/TestHomework";
 
 import AdminLogin from "@/pages/admin/Login";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import AdminBookings from "@/pages/admin/Bookings";
 import AdminLessonTypes from "@/pages/admin/LessonTypes";
 import AdminHomework from "@/pages/admin/Homework";
-import AdminTestHomework from "@/pages/admin/TestHomework";
 import AdminStudents from "@/pages/admin/Students";
 import AdminTestimonials from "@/pages/admin/Testimonials";
 import AdminFaqs from "@/pages/admin/Faqs";
@@ -220,9 +218,6 @@ function ClerkProviderWithRoutes() {
             <Route path="/admin/homework">
               <AdminLayout><AdminHomework /></AdminLayout>
             </Route>
-            <Route path="/admin/test-homework">
-              <AdminLayout><AdminTestHomework /></AdminLayout>
-            </Route>
             <Route path="/admin/students">
               <AdminLayout><AdminStudents /></AdminLayout>
             </Route>
@@ -261,10 +256,6 @@ function ClerkProviderWithRoutes() {
             <Route path="/homework">
               <StudentPortal><StudentHomework /></StudentPortal>
             </Route>
-            <Route path="/test-homework">
-              <StudentPortal><StudentTestHomework /></StudentPortal>
-            </Route>
-
             <Route component={NotFound} />
           </Switch>
           </ErrorBoundary>

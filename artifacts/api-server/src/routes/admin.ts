@@ -8,8 +8,7 @@ import {
   lessonPackagesTable,
   creditBundlesTable,
   homeworkTable,
-  testHomeworkTable,
-  testHomeworkFilesTable,
+  homeworkFilesTable,
   reviewsTable,
   testimonialsTable,
   faqsTable,
@@ -31,16 +30,8 @@ import {
   UpdateCreditBundleParams,
   DeleteCreditBundleParams,
   UpdateHomeworkBody,
-  UpdateHomeworkParams,
-  CreateTestHomeworkBody,
-  UpdateTestHomeworkBody,
-  UpdateTestHomeworkParams,
-  DeleteTestHomeworkParams,
-  AttachTestHomeworkFileParams,
-  AttachTestHomeworkFileBody,
-  DeleteTestHomeworkFileParams,
-  RelinkTestHomeworkFileParams,
-  RelinkTestHomeworkFileBody,
+  AttachHomeworkFileBody,
+  RelinkHomeworkFileBody,
   GetAdminStudentParams,
   GrantPackageBody,
   CreateTestimonialBody,
@@ -62,7 +53,6 @@ import { isCalendarConnected, getCalendarEmail, deleteCalendarEvent, createOAuth
 import { google } from "googleapis";
 import { calendarTokensTable } from "@workspace/db";
 import { mapHomeworkRow } from "../lib/homeworkMapper";
-import { mapTestHomework } from "../lib/testHomeworkMapper";
 
 const router: IRouter = Router();
 
@@ -300,32 +290,31 @@ router.patch("/admin/bookings/:id/complete", requireAdmin, async (req, res): Pro
     .where(eq(bookingsTable.id, id))
     .returning();
 
-  if (
-    parsed.data.homeworkAssignedText != null ||
-    parsed.data.homeworkAssignedFileUrl != null ||
-    parsed.data.homeworkAssignedFileKey != null
-  ) {
-    const assignment = {
-      assignedText: parsed.data.homeworkAssignedText ?? null,
-      assignedFileUrl: parsed.data.homeworkAssignedFileUrl ?? null,
-      assignedFileKey: parsed.data.homeworkAssignedFileKey ?? null,
-      assignedFileName: parsed.data.homeworkAssignedFileName ?? null,
-      assignedFileMime: parsed.data.homeworkAssignedFileMime ?? null,
-    };
+  const assignment = {
+    noHomework: parsed.data.homework.noHomework,
+    assignedText: parsed.data.homework.noHomework ? null : (parsed.data.homework.assignedText ?? null),
+    assignedLinkUrl: parsed.data.homework.noHomework ? null : (parsed.data.homework.assignedLinkUrl ?? null),
+  };
 
-    // Bookings normally get an empty homework row at creation time, but older
-    // (and seeded) bookings predate that — upsert so the assignment is never
-    // silently dropped by an UPDATE that matches no rows.
-    const [existingHw] = await db
-      .select({ id: homeworkTable.id })
-      .from(homeworkTable)
-      .where(eq(homeworkTable.bookingId, id));
+  // Bookings normally get an empty homework row at creation time, but older
+  // (and seeded) bookings predate that — upsert so the assignment is never
+  // silently dropped by an UPDATE that matches no rows. The homework decision
+  // is required on every complete-booking call, so this always runs.
+  const [existingHw] = await db
+    .select({ id: homeworkTable.id })
+    .from(homeworkTable)
+    .where(eq(homeworkTable.bookingId, id));
 
-    if (existingHw) {
-      await db.update(homeworkTable).set(assignment).where(eq(homeworkTable.bookingId, id));
-    } else {
-      await db.insert(homeworkTable).values({ bookingId: id, ...assignment });
-    }
+  let homeworkId: number;
+  if (existingHw) {
+    homeworkId = existingHw.id;
+    await db.update(homeworkTable).set(assignment).where(eq(homeworkTable.bookingId, id));
+  } else {
+    const [inserted] = await db
+      .insert(homeworkTable)
+      .values({ bookingId: id, ...assignment })
+      .returning({ id: homeworkTable.id });
+    homeworkId = inserted.id;
   }
 
   res.json({
@@ -341,6 +330,7 @@ router.patch("/admin/bookings/:id/complete", requireAdmin, async (req, res): Pro
     meetLink: updated.meetLink ?? null,
     notes: updated.notes ?? null,
     createdAt: updated.createdAt,
+    homeworkId,
   });
 });
 
@@ -508,6 +498,38 @@ router.delete("/admin/credit-bundles/:id", requireAdmin, async (req, res): Promi
 
 // ─── Homework ─────────────────────────────────────────────────────────────────
 
+async function getHomeworkFiles(homeworkId: number) {
+  return db.select().from(homeworkFilesTable).where(eq(homeworkFilesTable.homeworkId, homeworkId));
+}
+
+async function getHomeworkFilesByIds(ids: number[]) {
+  if (ids.length === 0) return new Map<number, (typeof homeworkFilesTable.$inferSelect)[]>();
+  const rows = await db.select().from(homeworkFilesTable).where(inArray(homeworkFilesTable.homeworkId, ids));
+  const byId = new Map<number, (typeof homeworkFilesTable.$inferSelect)[]>();
+  for (const row of rows) {
+    const list = byId.get(row.homeworkId) ?? [];
+    list.push(row);
+    byId.set(row.homeworkId, list);
+  }
+  return byId;
+}
+
+async function getHomeworkContext(bookingId: number) {
+  const [row] = await db
+    .select({ user: usersTable, booking: bookingsTable, lessonType: lessonTypesTable })
+    .from(bookingsTable)
+    .innerJoin(usersTable, eq(bookingsTable.studentId, usersTable.id))
+    .innerJoin(lessonTypesTable, eq(bookingsTable.lessonTypeId, lessonTypesTable.id))
+    .where(eq(bookingsTable.id, bookingId));
+
+  return {
+    studentId: row?.booking.studentId ?? 0,
+    studentName: row?.user.displayName ?? "",
+    lessonTypeName: row?.lessonType.name ?? "",
+    lessonDate: row?.booking.startTime ?? new Date(),
+  };
+}
+
 router.get("/admin/homework", requireAdmin, async (req, res): Promise<void> => {
   const { reviewed, studentId, submitted } = req.query;
   const conditions: any[] = [];
@@ -538,9 +560,11 @@ router.get("/admin/homework", requireAdmin, async (req, res): Promise<void> => {
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(desc(homeworkTable.submittedAt));
 
+  const filesByHwId = await getHomeworkFilesByIds(rows.map((r) => r.hw.id));
+
   res.json(
     rows.map((r) =>
-      mapHomeworkRow(r.hw, {
+      mapHomeworkRow(r.hw, filesByHwId.get(r.hw.id) ?? [], {
         studentId: r.booking.studentId,
         studentName: r.user.displayName,
         lessonTypeName: r.lessonType.name,
@@ -569,9 +593,6 @@ router.patch("/admin/homework/:id", requireAdmin, async (req, res): Promise<void
   const updateData: any = { reviewedAt: new Date() };
   if (parsed.data.tutorFeedback != null) updateData.tutorFeedback = parsed.data.tutorFeedback;
   if (parsed.data.grade != null) updateData.grade = parsed.data.grade;
-  if (parsed.data.reviewedFileKey != null) updateData.reviewedFileKey = parsed.data.reviewedFileKey;
-  if (parsed.data.reviewedFileName != null) updateData.reviewedFileName = parsed.data.reviewedFileName;
-  if (parsed.data.reviewedFileMime != null) updateData.reviewedFileMime = parsed.data.reviewedFileMime;
 
   const [updated] = await db
     .update(homeworkTable)
@@ -579,147 +600,33 @@ router.patch("/admin/homework/:id", requireAdmin, async (req, res): Promise<void
     .where(eq(homeworkTable.id, id))
     .returning();
 
-  const [row] = await db
-    .select({ user: usersTable, booking: bookingsTable, lessonType: lessonTypesTable })
-    .from(bookingsTable)
-    .innerJoin(usersTable, eq(bookingsTable.studentId, usersTable.id))
-    .innerJoin(lessonTypesTable, eq(bookingsTable.lessonTypeId, lessonTypesTable.id))
-    .where(eq(bookingsTable.id, updated.bookingId));
+  const context = await getHomeworkContext(updated.bookingId);
+  const files = await getHomeworkFiles(id);
 
-  res.json(
-    mapHomeworkRow(updated, {
-      studentId: row?.booking.studentId ?? 0,
-      studentName: row?.user.displayName ?? "",
-      lessonTypeName: row?.lessonType.name ?? "",
-      lessonDate: row?.booking.startTime ?? new Date(),
-    }),
-  );
+  res.json(mapHomeworkRow(updated, files, context));
 });
 
-// ─── Test Homework (sandbox) ────────────────────────────────────────────────
+router.post("/admin/homework/:id/files", requireAdmin, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
 
-async function getTestHomeworkFiles(testHomeworkId: number) {
-  return db.select().from(testHomeworkFilesTable).where(eq(testHomeworkFilesTable.testHomeworkId, testHomeworkId));
-}
-
-async function getTestHomeworkFilesByHomeworkIds(ids: number[]) {
-  if (ids.length === 0) return new Map<number, (typeof testHomeworkFilesTable.$inferSelect)[]>();
-  const rows = await db.select().from(testHomeworkFilesTable).where(inArray(testHomeworkFilesTable.testHomeworkId, ids));
-  const byId = new Map<number, (typeof testHomeworkFilesTable.$inferSelect)[]>();
-  for (const row of rows) {
-    const list = byId.get(row.testHomeworkId) ?? [];
-    list.push(row);
-    byId.set(row.testHomeworkId, list);
-  }
-  return byId;
-}
-
-router.post("/admin/test-homework", requireAdmin, async (req, res): Promise<void> => {
-  const parsed = CreateTestHomeworkBody.safeParse(req.body);
+  const parsed = AttachHomeworkFileBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
 
-  const [created] = await db.insert(testHomeworkTable).values(parsed.data).returning();
-  res.status(201).json(mapTestHomework(created, []));
-});
-
-router.get("/admin/test-homework", requireAdmin, async (req, res): Promise<void> => {
-  const { reviewed, submitted } = req.query;
-  const conditions: any[] = [];
-
-  if (submitted === "true") {
-    conditions.push(sql`${testHomeworkTable.submittedAt} IS NOT NULL`);
-  } else if (submitted === "false") {
-    conditions.push(sql`${testHomeworkTable.submittedAt} IS NULL`);
-  }
-
-  if (reviewed === "true") {
-    conditions.push(sql`${testHomeworkTable.reviewedAt} IS NOT NULL`);
-  } else if (reviewed === "false") {
-    conditions.push(sql`${testHomeworkTable.reviewedAt} IS NULL`);
-  }
-
-  const rows = await db
-    .select()
-    .from(testHomeworkTable)
-    .where(conditions.length ? and(...conditions) : undefined)
-    .orderBy(desc(testHomeworkTable.createdAt));
-
-  const filesByHwId = await getTestHomeworkFilesByHomeworkIds(rows.map((r) => r.id));
-  res.json(rows.map((row) => mapTestHomework(row, filesByHwId.get(row.id) ?? [])));
-});
-
-router.patch("/admin/test-homework/:id", requireAdmin, async (req, res): Promise<void> => {
-  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const id = parseInt(raw, 10);
-
-  const parsed = UpdateTestHomeworkBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-
-  const [existing] = await db.select().from(testHomeworkTable).where(eq(testHomeworkTable.id, id));
+  const [existing] = await db.select().from(homeworkTable).where(eq(homeworkTable.id, id));
   if (!existing) {
-    res.status(404).json({ error: "Test homework not found" });
+    res.status(404).json({ error: "Homework not found" });
     return;
   }
 
-  const updateData: any = {};
-  if (parsed.data.assignedText != null) updateData.assignedText = parsed.data.assignedText;
-  if (parsed.data.tutorFeedback != null) updateData.tutorFeedback = parsed.data.tutorFeedback;
-  if (parsed.data.grade != null) updateData.grade = parsed.data.grade;
-  if (parsed.data.tutorFeedback != null || parsed.data.grade != null) {
-    updateData.reviewedAt = new Date();
-  }
-
-  const [updated] = await db
-    .update(testHomeworkTable)
-    .set(updateData)
-    .where(eq(testHomeworkTable.id, id))
-    .returning();
-
-  const files = await getTestHomeworkFiles(id);
-  res.json(mapTestHomework(updated, files));
-});
-
-router.delete("/admin/test-homework/:id", requireAdmin, async (req, res): Promise<void> => {
-  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const id = parseInt(raw, 10);
-
-  const [existing] = await db.select().from(testHomeworkTable).where(eq(testHomeworkTable.id, id));
-  if (!existing) {
-    res.status(404).json({ error: "Test homework not found" });
-    return;
-  }
-
-  await db.delete(testHomeworkTable).where(eq(testHomeworkTable.id, id));
-  res.sendStatus(204);
-});
-
-router.post("/admin/test-homework/:id/files", requireAdmin, async (req, res): Promise<void> => {
-  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const id = parseInt(raw, 10);
-
-  const parsed = AttachTestHomeworkFileBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-
-  const [existing] = await db.select().from(testHomeworkTable).where(eq(testHomeworkTable.id, id));
-  if (!existing) {
-    res.status(404).json({ error: "Test homework not found" });
-    return;
-  }
-
-  const existingFiles = await getTestHomeworkFiles(id);
+  const existingFiles = await getHomeworkFiles(id);
   const sortOrder = existingFiles.filter((f) => f.slot === parsed.data.slot).length;
 
-  await db.insert(testHomeworkFilesTable).values({
-    testHomeworkId: id,
+  await db.insert(homeworkFilesTable).values({
+    homeworkId: id,
     slot: parsed.data.slot,
     key: parsed.data.key,
     name: parsed.data.name,
@@ -730,56 +637,58 @@ router.post("/admin/test-homework/:id/files", requireAdmin, async (req, res): Pr
     sortOrder,
   });
 
-  const [updated] = await db.select().from(testHomeworkTable).where(eq(testHomeworkTable.id, id));
-  const files = await getTestHomeworkFiles(id);
-  res.status(201).json(mapTestHomework(updated, files));
+  const context = await getHomeworkContext(existing.bookingId);
+  const files = await getHomeworkFiles(id);
+  res.status(201).json(mapHomeworkRow(existing, files, context));
 });
 
-router.delete("/admin/test-homework/:id/files/:fileId", requireAdmin, async (req, res): Promise<void> => {
+router.delete("/admin/homework/:id/files/:fileId", requireAdmin, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(rawId, 10);
   const rawFileId = Array.isArray(req.params.fileId) ? req.params.fileId[0] : req.params.fileId;
   const fileId = parseInt(rawFileId, 10);
 
-  const [existing] = await db.select().from(testHomeworkTable).where(eq(testHomeworkTable.id, id));
+  const [existing] = await db.select().from(homeworkTable).where(eq(homeworkTable.id, id));
   if (!existing) {
-    res.status(404).json({ error: "Test homework not found" });
+    res.status(404).json({ error: "Homework not found" });
     return;
   }
 
   await db
-    .delete(testHomeworkFilesTable)
-    .where(and(eq(testHomeworkFilesTable.id, fileId), eq(testHomeworkFilesTable.testHomeworkId, id)));
+    .delete(homeworkFilesTable)
+    .where(and(eq(homeworkFilesTable.id, fileId), eq(homeworkFilesTable.homeworkId, id)));
 
-  const files = await getTestHomeworkFiles(id);
-  res.json(mapTestHomework(existing, files));
+  const context = await getHomeworkContext(existing.bookingId);
+  const files = await getHomeworkFiles(id);
+  res.json(mapHomeworkRow(existing, files, context));
 });
 
-router.patch("/admin/test-homework/:id/files/:fileId", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/homework/:id/files/:fileId", requireAdmin, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(rawId, 10);
   const rawFileId = Array.isArray(req.params.fileId) ? req.params.fileId[0] : req.params.fileId;
   const fileId = parseInt(rawFileId, 10);
 
-  const parsed = RelinkTestHomeworkFileBody.safeParse(req.body);
+  const parsed = RelinkHomeworkFileBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
 
-  const [existing] = await db.select().from(testHomeworkTable).where(eq(testHomeworkTable.id, id));
+  const [existing] = await db.select().from(homeworkTable).where(eq(homeworkTable.id, id));
   if (!existing) {
-    res.status(404).json({ error: "Test homework not found" });
+    res.status(404).json({ error: "Homework not found" });
     return;
   }
 
   await db
-    .update(testHomeworkFilesTable)
+    .update(homeworkFilesTable)
     .set({ linkedFileId: parsed.data.linkedFileId })
-    .where(and(eq(testHomeworkFilesTable.id, fileId), eq(testHomeworkFilesTable.testHomeworkId, id)));
+    .where(and(eq(homeworkFilesTable.id, fileId), eq(homeworkFilesTable.homeworkId, id)));
 
-  const files = await getTestHomeworkFiles(id);
-  res.json(mapTestHomework(existing, files));
+  const context = await getHomeworkContext(existing.bookingId);
+  const files = await getHomeworkFiles(id);
+  res.json(mapHomeworkRow(existing, files, context));
 });
 
 // ─── Students ─────────────────────────────────────────────────────────────────

@@ -5,10 +5,10 @@
  * Spanish Tutor Booking Platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { AttachTestHomeworkFileInputSlot } from './attachTestHomeworkFileInputSlot';
+import type { AttachHomeworkFileInputSlot } from './attachHomeworkFileInputSlot';
 
-export interface AttachTestHomeworkFileInput {
-  slot: AttachTestHomeworkFileInputSlot;
+export interface AttachHomeworkFileInput {
+  slot: AttachHomeworkFileInputSlot;
   key: string;
   name: string;
   mime: string;

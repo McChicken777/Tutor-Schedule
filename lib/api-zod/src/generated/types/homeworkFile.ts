@@ -5,11 +5,11 @@
  * Spanish Tutor Booking Platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { TestHomeworkFileSlot } from './testHomeworkFileSlot';
+import type { HomeworkFileSlot } from './homeworkFileSlot';
 
-export interface TestHomeworkFile {
+export interface HomeworkFile {
   id: number;
-  slot: TestHomeworkFileSlot;
+  slot: HomeworkFileSlot;
   key: string;
   name: string;
   mime: string;

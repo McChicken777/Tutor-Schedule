@@ -6,11 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type TestHomeworkFileSlot = typeof TestHomeworkFileSlot[keyof typeof TestHomeworkFileSlot];
+export type AttachHomeworkFileInputSlot = typeof AttachHomeworkFileInputSlot[keyof typeof AttachHomeworkFileInputSlot];
 
 
-export const TestHomeworkFileSlot = {
+export const AttachHomeworkFileInputSlot = {
   assigned: 'assigned',
-  submission: 'submission',
   review: 'review',
 } as const;

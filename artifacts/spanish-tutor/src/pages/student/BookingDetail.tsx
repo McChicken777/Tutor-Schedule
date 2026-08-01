@@ -16,8 +16,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getGetStudentBookingQueryKey } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFileUpload } from "@/hooks/use-file-upload";
+import MultiFilePicker from "@/components/homework/MultiFilePicker";
 import ErrorState from "@/components/ErrorState";
-import { Video, ArrowLeft, Star, Upload, Download, MessageSquare, FileText, Paperclip } from "lucide-react";
+import { Video, ArrowLeft, Star, Download, MessageSquare, FileText } from "lucide-react";
 import { Link } from "wouter";
 
 export default function BookingDetail() {
@@ -34,7 +35,7 @@ export default function BookingDetail() {
 
   const [hwText, setHwText] = useState("");
   const [hwUrl, setHwUrl] = useState("");
-  const [hwFile, setHwFile] = useState<File | null>(null);
+  const [hwFiles, setHwFiles] = useState<File[]>([]);
 
   const [rating, setRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
@@ -72,35 +73,34 @@ export default function BookingDetail() {
   };
 
   const handleHomeworkSubmit = async () => {
-    let uploaded: Awaited<ReturnType<typeof uploadMutation.mutateAsync>> | undefined;
-    if (hwFile) {
-      try {
-        uploaded = await uploadMutation.mutateAsync({
-          file: hwFile,
-          context: "homework-submission",
-          bookingId: id,
-        });
-      } catch (err) {
-        toast({ title: "File upload failed", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
-        return;
+    try {
+      const uploaded = [];
+      for (const file of hwFiles) {
+        uploaded.push(
+          await uploadMutation.mutateAsync({
+            file,
+            context: "homework-submission",
+            bookingId: id,
+          }),
+        );
       }
-    }
 
-    homeworkMutation.mutate({
-      id,
-      data: {
-        submittedText: hwText,
-        fileUrl: hwUrl,
-        fileKey: uploaded?.key,
-        fileName: uploaded?.fileName,
-        fileMime: uploaded?.mimeType,
-      },
-    }, {
-      onSuccess: () => {
-        toast({ title: "Homework submitted" });
-        qc.invalidateQueries({ queryKey: getGetStudentBookingQueryKey(id) });
-      }
-    });
+      homeworkMutation.mutate({
+        id,
+        data: {
+          submittedText: hwText,
+          submittedLinkUrl: hwUrl,
+          files: uploaded.map((u) => ({ key: u.key, name: u.fileName, mime: u.mimeType })),
+        },
+      }, {
+        onSuccess: () => {
+          toast({ title: "Homework submitted" });
+          qc.invalidateQueries({ queryKey: getGetStudentBookingQueryKey(id) });
+        }
+      });
+    } catch (err) {
+      toast({ title: "File upload failed", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+    }
   };
 
   const handleReviewSubmit = () => {
@@ -196,96 +196,93 @@ export default function BookingDetail() {
             <FileText className="w-6 h-6 text-primary" /> Homework
           </h2>
           
-          {booking.homework?.assignedText || booking.homework?.assignedFileUrl || booking.homework?.assignedFileKey ? (
-            <div className="mb-6 pb-6 border-b border-border">
-              <h3 className="font-bold text-foreground mb-2">Assigned by your teacher</h3>
-              {booking.homework.assignedText && (
-                <p className="bg-primary/5 p-4 rounded-xl text-foreground whitespace-pre-wrap">{booking.homework.assignedText}</p>
-              )}
-              {booking.homework.assignedFileUrl && (
-                <a href={booking.homework.assignedFileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-primary mt-2 hover:underline">
-                  <Download className="w-4 h-4 mr-1" /> View attachment
-                </a>
-              )}
-              {booking.homework.assignedFileKey && (
-                <a href={`/api/files/homework/${booking.homework.id}/assigned`} target="_blank" rel="noreferrer" className="inline-flex items-center text-primary mt-2 ml-4 hover:underline">
-                  <FileText className="w-4 h-4 mr-1" /> {booking.homework.assignedFileName || "View attachment"}
-                </a>
-              )}
-            </div>
-          ) : null}
+          {booking.homework?.noHomework ? (
+            <p className="text-muted-foreground">No homework was assigned for this lesson.</p>
+          ) : (
+            <>
+              {booking.homework?.assignedText || booking.homework?.assignedLinkUrl || (booking.homework?.assignedFiles?.length ?? 0) > 0 ? (
+                <div className="mb-6 pb-6 border-b border-border">
+                  <h3 className="font-bold text-foreground mb-2">Assigned by your teacher</h3>
+                  {booking.homework?.assignedText && (
+                    <p className="bg-primary/5 p-4 rounded-xl text-foreground whitespace-pre-wrap">{booking.homework.assignedText}</p>
+                  )}
+                  {booking.homework?.assignedLinkUrl && (
+                    <a href={booking.homework.assignedLinkUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-primary mt-2 hover:underline">
+                      <Download className="w-4 h-4 mr-1" /> View link
+                    </a>
+                  )}
+                  {booking.homework?.assignedFiles?.map((f) => (
+                    <a key={f.id} href={`/api/files/homework-file/${f.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center text-primary mt-2 mr-4 hover:underline">
+                      <FileText className="w-4 h-4 mr-1" /> {f.name}
+                    </a>
+                  ))}
+                </div>
+              ) : null}
 
-          {booking.homework?.submittedAt ? (
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-bold text-foreground mb-2">Your Submission</h3>
-                {booking.homework.submittedText && (
-                  <p className="bg-accent/50 p-4 rounded-xl text-muted-foreground whitespace-pre-wrap">{booking.homework.submittedText}</p>
-                )}
-                {booking.homework.fileUrl && (
-                  <a href={booking.homework.fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-primary mt-2 hover:underline">
-                    <Upload className="w-4 h-4 mr-1" /> View attached file
-                  </a>
-                )}
-                {booking.homework.submittedFileKey && (
-                  <a href={`/api/files/homework/${booking.homework.id}/submission`} target="_blank" rel="noreferrer" className="inline-flex items-center text-primary mt-2 ml-4 hover:underline">
-                    <Paperclip className="w-4 h-4 mr-1" /> {booking.homework.submittedFileName || "View uploaded file"}
-                  </a>
-                )}
-              </div>
-              
-              {booking.homework.tutorFeedback ? (
-                <div>
-                  <h3 className="font-bold text-foreground mb-2 flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-secondary" /> Tutor Feedback
-                  </h3>
-                  <div className="bg-secondary/5 p-4 rounded-xl border border-secondary/20">
-                    <p className="text-foreground whitespace-pre-wrap mb-2">{booking.homework.tutorFeedback}</p>
-                    {booking.homework.grade && <p className="font-bold text-secondary mb-2">Grade: {booking.homework.grade}</p>}
-                    {booking.homework.reviewedFileKey && (
-                      <a href={`/api/files/homework/${booking.homework.id}/review`} target="_blank" rel="noreferrer" className="inline-flex items-center text-secondary hover:underline text-sm">
-                        <FileText className="w-4 h-4 mr-1" /> View marked-up version
+              {booking.homework?.submittedAt ? (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="font-bold text-foreground mb-2">Your Submission</h3>
+                    {booking.homework.submittedText && (
+                      <p className="bg-accent/50 p-4 rounded-xl text-muted-foreground whitespace-pre-wrap">{booking.homework.submittedText}</p>
+                    )}
+                    {booking.homework.submittedLinkUrl && (
+                      <a href={booking.homework.submittedLinkUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-primary mt-2 hover:underline">
+                        <Download className="w-4 h-4 mr-1" /> View link
                       </a>
                     )}
+                    {booking.homework.submissionFiles.map((f) => (
+                      <a key={f.id} href={`/api/files/homework-file/${f.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center text-primary mt-2 mr-4 hover:underline">
+                        <FileText className="w-4 h-4 mr-1" /> {f.name}
+                      </a>
+                    ))}
                   </div>
+
+                  {booking.homework.tutorFeedback ? (
+                    <div>
+                      <h3 className="font-bold text-foreground mb-2 flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4 text-secondary" /> Tutor Feedback
+                      </h3>
+                      <div className="bg-secondary/5 p-4 rounded-xl border border-secondary/20">
+                        <p className="text-foreground whitespace-pre-wrap mb-2">{booking.homework.tutorFeedback}</p>
+                        {booking.homework.grade && <p className="font-bold text-secondary mb-2">Grade: {booking.homework.grade}</p>}
+                        {booking.homework.reviewFiles.map((f) => (
+                          <a key={f.id} href={`/api/files/homework-file/${f.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center text-secondary hover:underline text-sm mr-4">
+                            <FileText className="w-4 h-4 mr-1" /> View marked-up version
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">Waiting for tutor review.</p>
+                  )}
+                </div>
+              ) : booking.status === "completed" || booking.status === "upcoming" ? (
+                <div className="space-y-4">
+                  <p className="text-muted-foreground">Submit your homework before the next class or after completion.</p>
+                  <Textarea
+                    placeholder="Type your homework or notes here..."
+                    className="min-h-[120px] bg-background"
+                    value={hwText}
+                    onChange={e => setHwText(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Link to file (Google Doc, PDF URL, etc.)"
+                    value={hwUrl}
+                    onChange={e => setHwUrl(e.target.value)}
+                  />
+                  <MultiFilePicker files={hwFiles} onFilesChange={setHwFiles} allowCamera />
+                  <Button
+                    onClick={handleHomeworkSubmit}
+                    disabled={homeworkMutation.isPending || uploadMutation.isPending || (!hwText && !hwUrl && hwFiles.length === 0)}
+                  >
+                    {uploadMutation.isPending ? "Uploading..." : homeworkMutation.isPending ? "Submitting..." : "Submit Homework"}
+                  </Button>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground italic">Waiting for tutor review.</p>
+                <p className="text-muted-foreground">No homework.</p>
               )}
-            </div>
-          ) : booking.status === "completed" || booking.status === "upcoming" ? (
-            <div className="space-y-4">
-              <p className="text-muted-foreground">Submit your homework before the next class or after completion.</p>
-              <Textarea 
-                placeholder="Type your homework or notes here..." 
-                className="min-h-[120px] bg-background"
-                value={hwText}
-                onChange={e => setHwText(e.target.value)}
-              />
-              <Input
-                placeholder="Link to file (Google Doc, PDF URL, etc.)"
-                value={hwUrl}
-                onChange={e => setHwUrl(e.target.value)}
-              />
-              <label className="flex items-center gap-2 border border-dashed border-border rounded-md px-3 py-2 text-sm text-muted-foreground cursor-pointer hover:bg-accent/50 transition">
-                <Paperclip className="size-4" />
-                {hwFile ? hwFile.name : "Attach PDF or image, up to 15MB"}
-                <input
-                  type="file"
-                  accept="application/pdf,image/*"
-                  className="hidden"
-                  onChange={(e) => setHwFile(e.target.files?.[0] ?? null)}
-                />
-              </label>
-              <Button
-                onClick={handleHomeworkSubmit}
-                disabled={homeworkMutation.isPending || uploadMutation.isPending || (!hwText && !hwUrl && !hwFile)}
-              >
-                {uploadMutation.isPending ? "Uploading..." : homeworkMutation.isPending ? "Submitting..." : "Submit Homework"}
-              </Button>
-            </div>
-          ) : (
-            <p className="text-muted-foreground">No homework.</p>
+            </>
           )}
         </div>
 

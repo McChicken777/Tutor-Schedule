@@ -213,24 +213,53 @@ export const GetStudentDashboardResponse = zod.object({
   "studentName": zod.string(),
   "lessonTypeName": zod.string(),
   "lessonDate": zod.coerce.date(),
+  "noHomework": zod.boolean(),
   "assignedText": zod.string().nullable(),
-  "assignedFileUrl": zod.string().nullable(),
-  "assignedFileKey": zod.string().nullable(),
-  "assignedFileName": zod.string().nullable(),
-  "assignedFileMime": zod.string().nullable(),
+  "assignedLinkUrl": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
-  "fileUrl": zod.string().nullable(),
-  "submittedFileKey": zod.string().nullable(),
-  "submittedFileName": zod.string().nullable(),
-  "submittedFileMime": zod.string().nullable(),
-  "reviewedFileKey": zod.string().nullable(),
-  "reviewedFileName": zod.string().nullable(),
-  "reviewedFileMime": zod.string().nullable(),
+  "submittedLinkUrl": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "reviewedAt": zod.coerce.date().nullable(),
-  "reminderActive": zod.boolean()
+  "studentReviewSeenAt": zod.coerce.date().nullable(),
+  "reminderActive": zod.boolean(),
+  "assignedFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "submissionFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "reviewFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+}))
 }))
 })
 
@@ -299,24 +328,53 @@ export const GetStudentBookingResponse = zod.object({
   "homework": zod.object({
   "id": zod.number(),
   "bookingId": zod.number(),
+  "noHomework": zod.boolean(),
   "assignedText": zod.string().nullable(),
-  "assignedFileUrl": zod.string().nullable(),
-  "assignedFileKey": zod.string().nullable(),
-  "assignedFileName": zod.string().nullable(),
-  "assignedFileMime": zod.string().nullable(),
+  "assignedLinkUrl": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
-  "fileUrl": zod.string().nullable(),
-  "submittedFileKey": zod.string().nullable(),
-  "submittedFileName": zod.string().nullable(),
-  "submittedFileMime": zod.string().nullable(),
-  "reviewedFileKey": zod.string().nullable(),
-  "reviewedFileName": zod.string().nullable(),
-  "reviewedFileMime": zod.string().nullable(),
+  "submittedLinkUrl": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "reviewedAt": zod.coerce.date().nullable(),
-  "reminderActive": zod.boolean()
+  "studentReviewSeenAt": zod.coerce.date().nullable().describe('When the student last viewed a review that is at least as new as reviewedAt. Null (or older than reviewedAt) means there\'s unseen tutor feedback.'),
+  "reminderActive": zod.boolean(),
+  "assignedFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "submissionFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "reviewFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+}))
 }).optional(),
   "review": zod.object({
   "id": zod.number(),
@@ -385,24 +443,53 @@ export const GetHomeworkParams = zod.object({
 export const GetHomeworkResponse = zod.object({
   "id": zod.number(),
   "bookingId": zod.number(),
+  "noHomework": zod.boolean(),
   "assignedText": zod.string().nullable(),
-  "assignedFileUrl": zod.string().nullable(),
-  "assignedFileKey": zod.string().nullable(),
-  "assignedFileName": zod.string().nullable(),
-  "assignedFileMime": zod.string().nullable(),
+  "assignedLinkUrl": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
-  "fileUrl": zod.string().nullable(),
-  "submittedFileKey": zod.string().nullable(),
-  "submittedFileName": zod.string().nullable(),
-  "submittedFileMime": zod.string().nullable(),
-  "reviewedFileKey": zod.string().nullable(),
-  "reviewedFileName": zod.string().nullable(),
-  "reviewedFileMime": zod.string().nullable(),
+  "submittedLinkUrl": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "reviewedAt": zod.coerce.date().nullable(),
-  "reminderActive": zod.boolean()
+  "studentReviewSeenAt": zod.coerce.date().nullable().describe('When the student last viewed a review that is at least as new as reviewedAt. Null (or older than reviewedAt) means there\'s unseen tutor feedback.'),
+  "reminderActive": zod.boolean(),
+  "assignedFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "submissionFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "reviewFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+}))
 })
 
 
@@ -415,33 +502,66 @@ export const SubmitHomeworkParams = zod.object({
 
 export const SubmitHomeworkBody = zod.object({
   "submittedText": zod.string().optional(),
-  "fileUrl": zod.string().optional(),
-  "fileKey": zod.string().optional(),
-  "fileName": zod.string().optional(),
-  "fileMime": zod.string().optional()
+  "submittedLinkUrl": zod.string().optional(),
+  "files": zod.array(zod.object({
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().optional(),
+  "linkedFileId": zod.number().optional()
+})).optional()
 })
 
 export const SubmitHomeworkResponse = zod.object({
   "id": zod.number(),
   "bookingId": zod.number(),
+  "noHomework": zod.boolean(),
   "assignedText": zod.string().nullable(),
-  "assignedFileUrl": zod.string().nullable(),
-  "assignedFileKey": zod.string().nullable(),
-  "assignedFileName": zod.string().nullable(),
-  "assignedFileMime": zod.string().nullable(),
+  "assignedLinkUrl": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
-  "fileUrl": zod.string().nullable(),
-  "submittedFileKey": zod.string().nullable(),
-  "submittedFileName": zod.string().nullable(),
-  "submittedFileMime": zod.string().nullable(),
-  "reviewedFileKey": zod.string().nullable(),
-  "reviewedFileName": zod.string().nullable(),
-  "reviewedFileMime": zod.string().nullable(),
+  "submittedLinkUrl": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "reviewedAt": zod.coerce.date().nullable(),
-  "reminderActive": zod.boolean()
+  "studentReviewSeenAt": zod.coerce.date().nullable().describe('When the student last viewed a review that is at least as new as reviewedAt. Null (or older than reviewedAt) means there\'s unseen tutor feedback.'),
+  "reminderActive": zod.boolean(),
+  "assignedFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "submissionFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "reviewFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+}))
 })
 
 
@@ -455,165 +575,82 @@ export const ListStudentHomeworkResponseItem = zod.object({
   "studentName": zod.string(),
   "lessonTypeName": zod.string(),
   "lessonDate": zod.coerce.date(),
+  "noHomework": zod.boolean(),
   "assignedText": zod.string().nullable(),
-  "assignedFileUrl": zod.string().nullable(),
-  "assignedFileKey": zod.string().nullable(),
-  "assignedFileName": zod.string().nullable(),
-  "assignedFileMime": zod.string().nullable(),
+  "assignedLinkUrl": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
-  "fileUrl": zod.string().nullable(),
-  "submittedFileKey": zod.string().nullable(),
-  "submittedFileName": zod.string().nullable(),
-  "submittedFileMime": zod.string().nullable(),
-  "reviewedFileKey": zod.string().nullable(),
-  "reviewedFileName": zod.string().nullable(),
-  "reviewedFileMime": zod.string().nullable(),
+  "submittedLinkUrl": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "reviewedAt": zod.coerce.date().nullable(),
-  "reminderActive": zod.boolean()
+  "studentReviewSeenAt": zod.coerce.date().nullable(),
+  "reminderActive": zod.boolean(),
+  "assignedFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "submissionFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "reviewFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+}))
 })
 export const ListStudentHomeworkResponse = zod.array(ListStudentHomeworkResponseItem)
 
 
 /**
- * @summary [Sandbox] List all test homework rows
+ * @summary Mark a homework's tutor review as seen by the student
  */
-export const ListStudentTestHomeworkResponseItem = zod.object({
-  "id": zod.number(),
-  "assignedText": zod.string().nullable(),
-  "submittedText": zod.string().nullable(),
-  "tutorFeedback": zod.string().nullable(),
-  "grade": zod.string().nullable(),
-  "submittedAt": zod.coerce.date().nullable(),
-  "reviewedAt": zod.coerce.date().nullable(),
-  "studentReviewSeenAt": zod.coerce.date().nullable().describe('When the student last viewed a review that is at least as new as reviewedAt. Null (or older than reviewedAt) means there\'s unseen tutor feedback.'),
-  "createdAt": zod.coerce.date(),
-  "assignedFiles": zod.array(zod.object({
-  "id": zod.number(),
-  "slot": zod.enum(['assigned', 'submission', 'review']),
-  "key": zod.string(),
-  "name": zod.string(),
-  "mime": zod.string(),
-  "url": zod.string().nullable(),
-  "linkedFileId": zod.number().nullable(),
-  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
-  "sortOrder": zod.number(),
-  "createdAt": zod.coerce.date()
-})),
-  "submissionFiles": zod.array(zod.object({
-  "id": zod.number(),
-  "slot": zod.enum(['assigned', 'submission', 'review']),
-  "key": zod.string(),
-  "name": zod.string(),
-  "mime": zod.string(),
-  "url": zod.string().nullable(),
-  "linkedFileId": zod.number().nullable(),
-  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
-  "sortOrder": zod.number(),
-  "createdAt": zod.coerce.date()
-})),
-  "reviewFiles": zod.array(zod.object({
-  "id": zod.number(),
-  "slot": zod.enum(['assigned', 'submission', 'review']),
-  "key": zod.string(),
-  "name": zod.string(),
-  "mime": zod.string(),
-  "url": zod.string().nullable(),
-  "linkedFileId": zod.number().nullable(),
-  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
-  "sortOrder": zod.number(),
-  "createdAt": zod.coerce.date()
-}))
-})
-export const ListStudentTestHomeworkResponse = zod.array(ListStudentTestHomeworkResponseItem)
-
-
-/**
- * @summary [Sandbox] Submit a test homework row
- */
-export const SubmitTestHomeworkParams = zod.object({
+export const MarkHomeworkReviewSeenParams = zod.object({
   "id": zod.coerce.number()
 })
 
-export const SubmitTestHomeworkBody = zod.object({
-  "submittedText": zod.string().optional(),
-  "files": zod.array(zod.object({
-  "key": zod.string(),
-  "name": zod.string(),
-  "mime": zod.string(),
-  "url": zod.string().optional(),
-  "linkedFileId": zod.number().optional()
-}))
-})
-
-export const SubmitTestHomeworkResponse = zod.object({
+export const MarkHomeworkReviewSeenResponse = zod.object({
   "id": zod.number(),
+  "bookingId": zod.number(),
+  "studentId": zod.number(),
+  "studentName": zod.string(),
+  "lessonTypeName": zod.string(),
+  "lessonDate": zod.coerce.date(),
+  "noHomework": zod.boolean(),
   "assignedText": zod.string().nullable(),
+  "assignedLinkUrl": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
+  "submittedLinkUrl": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "reviewedAt": zod.coerce.date().nullable(),
-  "studentReviewSeenAt": zod.coerce.date().nullable().describe('When the student last viewed a review that is at least as new as reviewedAt. Null (or older than reviewedAt) means there\'s unseen tutor feedback.'),
-  "createdAt": zod.coerce.date(),
-  "assignedFiles": zod.array(zod.object({
-  "id": zod.number(),
-  "slot": zod.enum(['assigned', 'submission', 'review']),
-  "key": zod.string(),
-  "name": zod.string(),
-  "mime": zod.string(),
-  "url": zod.string().nullable(),
-  "linkedFileId": zod.number().nullable(),
-  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
-  "sortOrder": zod.number(),
-  "createdAt": zod.coerce.date()
-})),
-  "submissionFiles": zod.array(zod.object({
-  "id": zod.number(),
-  "slot": zod.enum(['assigned', 'submission', 'review']),
-  "key": zod.string(),
-  "name": zod.string(),
-  "mime": zod.string(),
-  "url": zod.string().nullable(),
-  "linkedFileId": zod.number().nullable(),
-  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
-  "sortOrder": zod.number(),
-  "createdAt": zod.coerce.date()
-})),
-  "reviewFiles": zod.array(zod.object({
-  "id": zod.number(),
-  "slot": zod.enum(['assigned', 'submission', 'review']),
-  "key": zod.string(),
-  "name": zod.string(),
-  "mime": zod.string(),
-  "url": zod.string().nullable(),
-  "linkedFileId": zod.number().nullable(),
-  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
-  "sortOrder": zod.number(),
-  "createdAt": zod.coerce.date()
-}))
-})
-
-
-/**
- * @summary [Sandbox] Mark a test homework's tutor review as seen by the student
- */
-export const MarkTestHomeworkReviewSeenParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const MarkTestHomeworkReviewSeenResponse = zod.object({
-  "id": zod.number(),
-  "assignedText": zod.string().nullable(),
-  "submittedText": zod.string().nullable(),
-  "tutorFeedback": zod.string().nullable(),
-  "grade": zod.string().nullable(),
-  "submittedAt": zod.coerce.date().nullable(),
-  "reviewedAt": zod.coerce.date().nullable(),
-  "studentReviewSeenAt": zod.coerce.date().nullable().describe('When the student last viewed a review that is at least as new as reviewedAt. Null (or older than reviewedAt) means there\'s unseen tutor feedback.'),
-  "createdAt": zod.coerce.date(),
+  "studentReviewSeenAt": zod.coerce.date().nullable(),
+  "reminderActive": zod.boolean(),
   "assignedFiles": zod.array(zod.object({
   "id": zod.number(),
   "slot": zod.enum(['assigned', 'submission', 'review']),
@@ -846,11 +883,11 @@ export const CompleteBookingParams = zod.object({
 
 export const CompleteBookingBody = zod.object({
   "notes": zod.string().min(1).describe('The teacher\'s recap of the lesson.'),
-  "homeworkAssignedText": zod.string().optional(),
-  "homeworkAssignedFileUrl": zod.string().optional(),
-  "homeworkAssignedFileKey": zod.string().optional(),
-  "homeworkAssignedFileName": zod.string().optional(),
-  "homeworkAssignedFileMime": zod.string().optional()
+  "homework": zod.object({
+  "noHomework": zod.boolean(),
+  "assignedText": zod.string().optional(),
+  "assignedLinkUrl": zod.string().optional()
+}).describe('The teacher must explicitly decide whether to assign homework when completing a lesson.')
 })
 
 export const CompleteBookingResponse = zod.object({
@@ -866,7 +903,9 @@ export const CompleteBookingResponse = zod.object({
   "meetLink": zod.string().nullable(),
   "notes": zod.string().nullable(),
   "createdAt": zod.coerce.date()
-})
+}).and(zod.object({
+  "homeworkId": zod.number().describe('The id of the homework row created\/updated for this booking, so the client can attach files to it next.')
+}))
 
 
 /**
@@ -1053,24 +1092,53 @@ export const ListAdminHomeworkResponseItem = zod.object({
   "studentName": zod.string(),
   "lessonTypeName": zod.string(),
   "lessonDate": zod.coerce.date(),
+  "noHomework": zod.boolean(),
   "assignedText": zod.string().nullable(),
-  "assignedFileUrl": zod.string().nullable(),
-  "assignedFileKey": zod.string().nullable(),
-  "assignedFileName": zod.string().nullable(),
-  "assignedFileMime": zod.string().nullable(),
+  "assignedLinkUrl": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
-  "fileUrl": zod.string().nullable(),
-  "submittedFileKey": zod.string().nullable(),
-  "submittedFileName": zod.string().nullable(),
-  "submittedFileMime": zod.string().nullable(),
-  "reviewedFileKey": zod.string().nullable(),
-  "reviewedFileName": zod.string().nullable(),
-  "reviewedFileMime": zod.string().nullable(),
+  "submittedLinkUrl": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "reviewedAt": zod.coerce.date().nullable(),
-  "reminderActive": zod.boolean()
+  "studentReviewSeenAt": zod.coerce.date().nullable(),
+  "reminderActive": zod.boolean(),
+  "assignedFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "submissionFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "reviewFiles": zod.array(zod.object({
+  "id": zod.number(),
+  "slot": zod.enum(['assigned', 'submission', 'review']),
+  "key": zod.string(),
+  "name": zod.string(),
+  "mime": zod.string(),
+  "url": zod.string().nullable(),
+  "linkedFileId": zod.number().nullable(),
+  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+}))
 })
 export const ListAdminHomeworkResponse = zod.array(ListAdminHomeworkResponseItem)
 
@@ -1084,10 +1152,7 @@ export const UpdateHomeworkParams = zod.object({
 
 export const UpdateHomeworkBody = zod.object({
   "tutorFeedback": zod.string().optional(),
-  "grade": zod.string().optional(),
-  "reviewedFileKey": zod.string().optional(),
-  "reviewedFileName": zod.string().optional(),
-  "reviewedFileMime": zod.string().optional()
+  "grade": zod.string().optional()
 })
 
 export const UpdateHomeworkResponse = zod.object({
@@ -1097,44 +1162,17 @@ export const UpdateHomeworkResponse = zod.object({
   "studentName": zod.string(),
   "lessonTypeName": zod.string(),
   "lessonDate": zod.coerce.date(),
+  "noHomework": zod.boolean(),
   "assignedText": zod.string().nullable(),
-  "assignedFileUrl": zod.string().nullable(),
-  "assignedFileKey": zod.string().nullable(),
-  "assignedFileName": zod.string().nullable(),
-  "assignedFileMime": zod.string().nullable(),
+  "assignedLinkUrl": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
-  "fileUrl": zod.string().nullable(),
-  "submittedFileKey": zod.string().nullable(),
-  "submittedFileName": zod.string().nullable(),
-  "submittedFileMime": zod.string().nullable(),
-  "reviewedFileKey": zod.string().nullable(),
-  "reviewedFileName": zod.string().nullable(),
-  "reviewedFileMime": zod.string().nullable(),
+  "submittedLinkUrl": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "reviewedAt": zod.coerce.date().nullable(),
-  "reminderActive": zod.boolean()
-})
-
-
-/**
- * @summary [Sandbox] Create/assign a test homework row
- */
-export const CreateTestHomeworkBody = zod.object({
-  "assignedText": zod.string().optional()
-})
-
-export const CreateTestHomeworkResponse = zod.object({
-  "id": zod.number(),
-  "assignedText": zod.string().nullable(),
-  "submittedText": zod.string().nullable(),
-  "tutorFeedback": zod.string().nullable(),
-  "grade": zod.string().nullable(),
-  "submittedAt": zod.coerce.date().nullable(),
-  "reviewedAt": zod.coerce.date().nullable(),
-  "studentReviewSeenAt": zod.coerce.date().nullable().describe('When the student last viewed a review that is at least as new as reviewedAt. Null (or older than reviewedAt) means there\'s unseen tutor feedback.'),
-  "createdAt": zod.coerce.date(),
+  "studentReviewSeenAt": zod.coerce.date().nullable(),
+  "reminderActive": zod.boolean(),
   "assignedFiles": zod.array(zod.object({
   "id": zod.number(),
   "slot": zod.enum(['assigned', 'submission', 'review']),
@@ -1175,143 +1213,13 @@ export const CreateTestHomeworkResponse = zod.object({
 
 
 /**
- * @summary [Sandbox] List all test homework rows
+ * @summary Attach an assigned or review file to a homework row
  */
-export const ListAdminTestHomeworkQueryParams = zod.object({
-  "reviewed": zod.coerce.boolean().optional(),
-  "submitted": zod.coerce.boolean().optional()
-})
-
-export const ListAdminTestHomeworkResponseItem = zod.object({
-  "id": zod.number(),
-  "assignedText": zod.string().nullable(),
-  "submittedText": zod.string().nullable(),
-  "tutorFeedback": zod.string().nullable(),
-  "grade": zod.string().nullable(),
-  "submittedAt": zod.coerce.date().nullable(),
-  "reviewedAt": zod.coerce.date().nullable(),
-  "studentReviewSeenAt": zod.coerce.date().nullable().describe('When the student last viewed a review that is at least as new as reviewedAt. Null (or older than reviewedAt) means there\'s unseen tutor feedback.'),
-  "createdAt": zod.coerce.date(),
-  "assignedFiles": zod.array(zod.object({
-  "id": zod.number(),
-  "slot": zod.enum(['assigned', 'submission', 'review']),
-  "key": zod.string(),
-  "name": zod.string(),
-  "mime": zod.string(),
-  "url": zod.string().nullable(),
-  "linkedFileId": zod.number().nullable(),
-  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
-  "sortOrder": zod.number(),
-  "createdAt": zod.coerce.date()
-})),
-  "submissionFiles": zod.array(zod.object({
-  "id": zod.number(),
-  "slot": zod.enum(['assigned', 'submission', 'review']),
-  "key": zod.string(),
-  "name": zod.string(),
-  "mime": zod.string(),
-  "url": zod.string().nullable(),
-  "linkedFileId": zod.number().nullable(),
-  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
-  "sortOrder": zod.number(),
-  "createdAt": zod.coerce.date()
-})),
-  "reviewFiles": zod.array(zod.object({
-  "id": zod.number(),
-  "slot": zod.enum(['assigned', 'submission', 'review']),
-  "key": zod.string(),
-  "name": zod.string(),
-  "mime": zod.string(),
-  "url": zod.string().nullable(),
-  "linkedFileId": zod.number().nullable(),
-  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
-  "sortOrder": zod.number(),
-  "createdAt": zod.coerce.date()
-}))
-})
-export const ListAdminTestHomeworkResponse = zod.array(ListAdminTestHomeworkResponseItem)
-
-
-/**
- * @summary [Sandbox] Edit assignment or add tutor feedback/grade to test homework
- */
-export const UpdateTestHomeworkParams = zod.object({
+export const AttachHomeworkFileParams = zod.object({
   "id": zod.coerce.number()
 })
 
-export const UpdateTestHomeworkBody = zod.object({
-  "assignedText": zod.string().optional(),
-  "tutorFeedback": zod.string().optional(),
-  "grade": zod.string().optional()
-}).describe('Dual-purpose — re-editing the assignment and\/or grading the submission. All fields optional.')
-
-export const UpdateTestHomeworkResponse = zod.object({
-  "id": zod.number(),
-  "assignedText": zod.string().nullable(),
-  "submittedText": zod.string().nullable(),
-  "tutorFeedback": zod.string().nullable(),
-  "grade": zod.string().nullable(),
-  "submittedAt": zod.coerce.date().nullable(),
-  "reviewedAt": zod.coerce.date().nullable(),
-  "studentReviewSeenAt": zod.coerce.date().nullable().describe('When the student last viewed a review that is at least as new as reviewedAt. Null (or older than reviewedAt) means there\'s unseen tutor feedback.'),
-  "createdAt": zod.coerce.date(),
-  "assignedFiles": zod.array(zod.object({
-  "id": zod.number(),
-  "slot": zod.enum(['assigned', 'submission', 'review']),
-  "key": zod.string(),
-  "name": zod.string(),
-  "mime": zod.string(),
-  "url": zod.string().nullable(),
-  "linkedFileId": zod.number().nullable(),
-  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
-  "sortOrder": zod.number(),
-  "createdAt": zod.coerce.date()
-})),
-  "submissionFiles": zod.array(zod.object({
-  "id": zod.number(),
-  "slot": zod.enum(['assigned', 'submission', 'review']),
-  "key": zod.string(),
-  "name": zod.string(),
-  "mime": zod.string(),
-  "url": zod.string().nullable(),
-  "linkedFileId": zod.number().nullable(),
-  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
-  "sortOrder": zod.number(),
-  "createdAt": zod.coerce.date()
-})),
-  "reviewFiles": zod.array(zod.object({
-  "id": zod.number(),
-  "slot": zod.enum(['assigned', 'submission', 'review']),
-  "key": zod.string(),
-  "name": zod.string(),
-  "mime": zod.string(),
-  "url": zod.string().nullable(),
-  "linkedFileId": zod.number().nullable(),
-  "originalFileId": zod.number().nullable().describe('For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).'),
-  "sortOrder": zod.number(),
-  "createdAt": zod.coerce.date()
-}))
-})
-
-
-/**
- * @summary [Sandbox] Delete a test homework row
- */
-export const DeleteTestHomeworkParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const DeleteTestHomeworkResponse = zod.void()
-
-
-/**
- * @summary [Sandbox] Attach an assigned or review file to a test homework row
- */
-export const AttachTestHomeworkFileParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const AttachTestHomeworkFileBody = zod.object({
+export const AttachHomeworkFileBody = zod.object({
   "slot": zod.enum(['assigned', 'review']),
   "key": zod.string(),
   "name": zod.string(),
@@ -1321,16 +1229,24 @@ export const AttachTestHomeworkFileBody = zod.object({
   "originalFileId": zod.number().nullish().describe('For a review file, the assigned file it should be shown alongside.')
 })
 
-export const AttachTestHomeworkFileResponse = zod.object({
+export const AttachHomeworkFileResponse = zod.object({
   "id": zod.number(),
+  "bookingId": zod.number(),
+  "studentId": zod.number(),
+  "studentName": zod.string(),
+  "lessonTypeName": zod.string(),
+  "lessonDate": zod.coerce.date(),
+  "noHomework": zod.boolean(),
   "assignedText": zod.string().nullable(),
+  "assignedLinkUrl": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
+  "submittedLinkUrl": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "reviewedAt": zod.coerce.date().nullable(),
-  "studentReviewSeenAt": zod.coerce.date().nullable().describe('When the student last viewed a review that is at least as new as reviewedAt. Null (or older than reviewedAt) means there\'s unseen tutor feedback.'),
-  "createdAt": zod.coerce.date(),
+  "studentReviewSeenAt": zod.coerce.date().nullable(),
+  "reminderActive": zod.boolean(),
   "assignedFiles": zod.array(zod.object({
   "id": zod.number(),
   "slot": zod.enum(['assigned', 'submission', 'review']),
@@ -1371,23 +1287,31 @@ export const AttachTestHomeworkFileResponse = zod.object({
 
 
 /**
- * @summary [Sandbox] Delete one attached test homework file
+ * @summary Delete one attached homework file
  */
-export const DeleteTestHomeworkFileParams = zod.object({
+export const DeleteHomeworkFileParams = zod.object({
   "id": zod.coerce.number(),
   "fileId": zod.coerce.number()
 })
 
-export const DeleteTestHomeworkFileResponse = zod.object({
+export const DeleteHomeworkFileResponse = zod.object({
   "id": zod.number(),
+  "bookingId": zod.number(),
+  "studentId": zod.number(),
+  "studentName": zod.string(),
+  "lessonTypeName": zod.string(),
+  "lessonDate": zod.coerce.date(),
+  "noHomework": zod.boolean(),
   "assignedText": zod.string().nullable(),
+  "assignedLinkUrl": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
+  "submittedLinkUrl": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "reviewedAt": zod.coerce.date().nullable(),
-  "studentReviewSeenAt": zod.coerce.date().nullable().describe('When the student last viewed a review that is at least as new as reviewedAt. Null (or older than reviewedAt) means there\'s unseen tutor feedback.'),
-  "createdAt": zod.coerce.date(),
+  "studentReviewSeenAt": zod.coerce.date().nullable(),
+  "reminderActive": zod.boolean(),
   "assignedFiles": zod.array(zod.object({
   "id": zod.number(),
   "slot": zod.enum(['assigned', 'submission', 'review']),
@@ -1428,27 +1352,35 @@ export const DeleteTestHomeworkFileResponse = zod.object({
 
 
 /**
- * @summary [Sandbox] Re-pair a submission/review file with a different original/submission file
+ * @summary Re-pair a submission/review file with a different original/submission file
  */
-export const RelinkTestHomeworkFileParams = zod.object({
+export const RelinkHomeworkFileParams = zod.object({
   "id": zod.coerce.number(),
   "fileId": zod.coerce.number()
 })
 
-export const RelinkTestHomeworkFileBody = zod.object({
+export const RelinkHomeworkFileBody = zod.object({
   "linkedFileId": zod.number().nullable()
 })
 
-export const RelinkTestHomeworkFileResponse = zod.object({
+export const RelinkHomeworkFileResponse = zod.object({
   "id": zod.number(),
+  "bookingId": zod.number(),
+  "studentId": zod.number(),
+  "studentName": zod.string(),
+  "lessonTypeName": zod.string(),
+  "lessonDate": zod.coerce.date(),
+  "noHomework": zod.boolean(),
   "assignedText": zod.string().nullable(),
+  "assignedLinkUrl": zod.string().nullable(),
   "submittedText": zod.string().nullable(),
+  "submittedLinkUrl": zod.string().nullable(),
   "tutorFeedback": zod.string().nullable(),
   "grade": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "reviewedAt": zod.coerce.date().nullable(),
-  "studentReviewSeenAt": zod.coerce.date().nullable().describe('When the student last viewed a review that is at least as new as reviewedAt. Null (or older than reviewedAt) means there\'s unseen tutor feedback.'),
-  "createdAt": zod.coerce.date(),
+  "studentReviewSeenAt": zod.coerce.date().nullable(),
+  "reminderActive": zod.boolean(),
   "assignedFiles": zod.array(zod.object({
   "id": zod.number(),
   "slot": zod.enum(['assigned', 'submission', 'review']),
@@ -1995,7 +1927,7 @@ export const DisconnectCalendarResponse = zod.object({
  */
 export const UploadFileBody = zod.object({
   "file": zod.string(),
-  "context": zod.enum(['homework-assigned', 'homework-submission', 'homework-review', 'test-homework-assigned', 'test-homework-submission', 'test-homework-review']),
+  "context": zod.enum(['homework-assigned', 'homework-submission', 'homework-review']),
   "bookingId": zod.number()
 }).describe('Multipart form fields for POST \/uploads. The \"file\" field carries the binary upload; multer parses it server-side rather than this schema.')
 
@@ -2008,23 +1940,12 @@ export const UploadFileResponse = zod.object({
 
 
 /**
- * @summary Download/view a homework file (assigned, submission, or review) via a private proxy
+ * @summary Download/view a single homework file (assigned, submission, or review) via a private proxy
  */
 export const GetHomeworkFileParams = zod.object({
-  "homeworkId": zod.coerce.number(),
-  "which": zod.enum(['assigned', 'submission', 'review'])
-})
-
-export const GetHomeworkFileResponse = zod.unknown()
-
-
-/**
- * @summary [Sandbox] Download/view a single test homework file via a private proxy
- */
-export const GetTestHomeworkFileParams = zod.object({
   "fileId": zod.coerce.number()
 })
 
-export const GetTestHomeworkFileResponse = zod.unknown()
+export const GetHomeworkFileResponse = zod.unknown()
 
 

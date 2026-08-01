@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListAdminHomework, useUpdateHomework } from "@workspace/api-client-react";
+import { useListAdminHomework, useUpdateHomework, useDeleteHomeworkFile } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,12 +10,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListAdminHomeworkQueryKey } from "@workspace/api-client-react";
-import { useFileUpload } from "@/hooks/use-file-upload";
-import AnnotationEditor from "@/components/homework/AnnotationEditor";
+import AnnotationWorkspace from "@/components/homework/AnnotationWorkspace";
 import ErrorState from "@/components/ErrorState";
 import PingDot from "@/components/ui/ping-dot";
+import { printFile } from "@/lib/printFile";
 import { truncateFileName } from "@/lib/truncateFileName";
-import { FileText, Download, Paperclip, PenLine } from "lucide-react";
+import { FileText, Download, Paperclip, PenLine, Printer, X } from "lucide-react";
+
+interface HomeworkFileItem {
+  id: number;
+  slot: string;
+  key: string;
+  name: string;
+  mime: string;
+  linkedFileId: number | null;
+  originalFileId: number | null;
+}
 
 export default function AdminHomework() {
   const [tab, setTab] = useState<"pending" | "reviewed">("pending");
@@ -59,11 +69,44 @@ export default function AdminHomework() {
   );
 }
 
+function FileList({
+  files,
+  onDelete,
+}: {
+  files: HomeworkFileItem[];
+  onDelete?: (fileId: number) => void;
+}) {
+  if (files.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-2 mb-4">
+      {files.map((f) => (
+        <div key={f.id} className="inline-flex items-center bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium overflow-hidden">
+          <a href={`/api/files/homework-file/${f.id}`} target="_blank" rel="noreferrer" title={f.name} className="flex items-center px-3 py-2">
+            <Paperclip className="w-4 h-4 mr-2" /> {truncateFileName(f.name)}
+          </a>
+          <button
+            className="px-2 py-2 hover:bg-accent-foreground/10"
+            onClick={() => printFile(`/api/files/homework-file/${f.id}`)}
+            aria-label={`Print ${f.name}`}
+          >
+            <Printer className="w-3.5 h-3.5" />
+          </button>
+          {onDelete && (
+            <button className="px-2 py-2 hover:bg-destructive/10" onClick={() => onDelete(f.id)} aria-label={`Remove ${f.name}`}>
+              <X className="w-3.5 h-3.5 text-destructive" />
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function HomeworkCard({ hw }: { hw: any }) {
   const qc = useQueryClient();
   const { toast } = useToast();
   const updateMutation = useUpdateHomework();
-  const uploadMutation = useFileUpload();
+  const deleteFileMutation = useDeleteHomeworkFile();
 
   const [feedback, setFeedback] = useState(hw.tutorFeedback || "");
   const [grade, setGrade] = useState(hw.grade || "");
@@ -80,37 +123,16 @@ export function HomeworkCard({ hw }: { hw: any }) {
     });
   };
 
-  const handleAnnotationSave = async (blob: Blob, mimeType: string) => {
-    try {
-      const file = new File([blob], mimeType === "application/pdf" ? "annotated.pdf" : "annotated.png", { type: mimeType });
-      const uploaded = await uploadMutation.mutateAsync({
-        file,
-        context: "homework-review",
-        bookingId: hw.bookingId,
-      });
-      updateMutation.mutate({
-        id: hw.id,
-        data: {
-          tutorFeedback: feedback,
-          grade,
-          reviewedFileKey: uploaded.key,
-          reviewedFileName: uploaded.fileName,
-          reviewedFileMime: uploaded.mimeType,
-        },
-      }, {
-        onSuccess: () => {
-          toast({ title: "Marked-up file saved" });
-          invalidate();
-          setAnnotating(false);
-        }
-      });
-    } catch (err) {
-      toast({ title: "Failed to save annotation", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
-    }
+  const handleDeleteFile = (fileId: number) => {
+    deleteFileMutation.mutate({ id: hw.id, fileId }, {
+      onSuccess: () => invalidate(),
+    });
   };
 
-  const submittedFileMime = hw.submittedFileMime as string | undefined;
-  const canAnnotate = !!hw.submittedFileKey && (submittedFileMime === "application/pdf" || submittedFileMime?.startsWith("image/"));
+  const assignedFiles: HomeworkFileItem[] = hw.assignedFiles ?? [];
+  const submissionFiles: HomeworkFileItem[] = hw.submissionFiles ?? [];
+  const reviewFiles: HomeworkFileItem[] = hw.reviewFiles ?? [];
+  const canAnnotate = submissionFiles.some((f) => f.mime === "application/pdf" || f.mime.startsWith("image/"));
 
   return (
     <div className="bg-card border border-border rounded-2xl p-6">
@@ -127,34 +149,41 @@ export function HomeworkCard({ hw }: { hw: any }) {
       <div className="grid md:grid-cols-2 gap-8">
         <div>
           <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-primary" /> Assignment
+          </h4>
+          {hw.assignedText && (
+            <div className="bg-accent/50 p-4 rounded-xl text-sm whitespace-pre-wrap mb-4">{hw.assignedText}</div>
+          )}
+          {hw.assignedLinkUrl && (
+            <a href={hw.assignedLinkUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-primary hover:underline text-sm mb-4">
+              <Download className="w-4 h-4 mr-1" /> Link
+            </a>
+          )}
+          <FileList files={assignedFiles} />
+
+          <h4 className="font-medium text-foreground mb-2 flex items-center gap-2 mt-4">
             <FileText className="w-4 h-4 text-primary" /> Submission
           </h4>
           {hw.submittedText && (
-            <div className="bg-accent/50 p-4 rounded-xl text-sm whitespace-pre-wrap mb-4">
-              {hw.submittedText}
-            </div>
+            <div className="bg-accent/50 p-4 rounded-xl text-sm whitespace-pre-wrap mb-4">{hw.submittedText}</div>
           )}
-          <div className="flex flex-wrap gap-2">
-            {hw.fileUrl && (
-              <a href={hw.fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center px-4 py-2 bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium">
-                <Download className="w-4 h-4 mr-2" /> View Attachment
-              </a>
-            )}
-            {hw.submittedFileKey && (
-              <a href={`/api/files/homework/${hw.id}/submission`} target="_blank" rel="noreferrer" title={hw.submittedFileName || undefined} className="inline-flex items-center px-4 py-2 bg-accent hover:bg-accent/80 text-foreground rounded-lg text-sm font-medium">
-                <Paperclip className="w-4 h-4 mr-2" /> {hw.submittedFileName ? truncateFileName(hw.submittedFileName) : "View file"}
-              </a>
-            )}
-            {canAnnotate && (
-              <Button variant="outline" size="sm" onClick={() => setAnnotating(true)}>
-                <PenLine className="w-4 h-4 mr-2" /> Annotate
-              </Button>
-            )}
-          </div>
-          {hw.reviewedFileKey && (
-            <a href={`/api/files/homework/${hw.id}/review`} target="_blank" rel="noreferrer" className="inline-flex items-center text-secondary hover:underline text-sm mt-3">
-              <FileText className="w-4 h-4 mr-1" /> View marked-up version
+          {hw.submittedLinkUrl && (
+            <a href={hw.submittedLinkUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-primary hover:underline text-sm mb-4">
+              <Download className="w-4 h-4 mr-1" /> Link
             </a>
+          )}
+          <FileList files={submissionFiles} />
+          {canAnnotate && (
+            <Button variant="outline" size="sm" onClick={() => setAnnotating(true)} className="mb-4">
+              <PenLine className="w-4 h-4 mr-2" /> Annotate
+            </Button>
+          )}
+
+          {reviewFiles.length > 0 && (
+            <>
+              <h4 className="font-medium text-foreground mb-2 mt-2">Marked-up version</h4>
+              <FileList files={reviewFiles} onDelete={handleDeleteFile} />
+            </>
           )}
         </div>
 
@@ -168,11 +197,7 @@ export function HomeworkCard({ hw }: { hw: any }) {
           />
           <div className="flex gap-4">
             <div className="flex-1">
-              <Input
-                value={grade}
-                onChange={(e) => setGrade(e.target.value)}
-                placeholder="Grade (e.g. A, 90%, Great)"
-              />
+              <Input value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="Grade (e.g. A, 90%, Great)" />
             </div>
             <Button onClick={handleSave} disabled={updateMutation.isPending}>
               {hw.reviewedAt ? "Update" : "Submit Review"}
@@ -182,18 +207,11 @@ export function HomeworkCard({ hw }: { hw: any }) {
       </div>
 
       <Dialog open={annotating} onOpenChange={setAnnotating}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-5xl">
           <DialogHeader>
             <DialogTitle>Annotate Submission</DialogTitle>
           </DialogHeader>
-          {annotating && (
-            <AnnotationEditor
-              fileUrl={`/api/files/homework/${hw.id}/submission`}
-              mimeType={submittedFileMime || "application/pdf"}
-              onSave={handleAnnotationSave}
-              onCancel={() => setAnnotating(false)}
-            />
-          )}
+          {annotating && <AnnotationWorkspace hw={hw} onClose={() => setAnnotating(false)} />}
         </DialogContent>
       </Dialog>
     </div>

@@ -130,35 +130,46 @@ export const BookingDetailStatus = {
   cancelled: 'cancelled',
 } as const;
 
+export type HomeworkFileSlot = typeof HomeworkFileSlot[keyof typeof HomeworkFileSlot];
+
+
+export const HomeworkFileSlot = {
+  assigned: 'assigned',
+  submission: 'submission',
+  review: 'review',
+} as const;
+
+export interface HomeworkFile {
+  id: number;
+  slot: HomeworkFileSlot;
+  key: string;
+  name: string;
+  mime: string;
+  /** @nullable */
+  url: string | null;
+  /** @nullable */
+  linkedFileId: number | null;
+  /**
+     * For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).
+     * @nullable
+     */
+  originalFileId: number | null;
+  sortOrder: number;
+  createdAt: string;
+}
+
 export interface Homework {
   id: number;
   bookingId: number;
+  noHomework: boolean;
   /** @nullable */
   assignedText: string | null;
   /** @nullable */
-  assignedFileUrl: string | null;
-  /** @nullable */
-  assignedFileKey: string | null;
-  /** @nullable */
-  assignedFileName: string | null;
-  /** @nullable */
-  assignedFileMime: string | null;
+  assignedLinkUrl: string | null;
   /** @nullable */
   submittedText: string | null;
   /** @nullable */
-  fileUrl: string | null;
-  /** @nullable */
-  submittedFileKey: string | null;
-  /** @nullable */
-  submittedFileName: string | null;
-  /** @nullable */
-  submittedFileMime: string | null;
-  /** @nullable */
-  reviewedFileKey: string | null;
-  /** @nullable */
-  reviewedFileName: string | null;
-  /** @nullable */
-  reviewedFileMime: string | null;
+  submittedLinkUrl: string | null;
   /** @nullable */
   tutorFeedback: string | null;
   /** @nullable */
@@ -167,7 +178,15 @@ export interface Homework {
   submittedAt: string | null;
   /** @nullable */
   reviewedAt: string | null;
+  /**
+     * When the student last viewed a review that is at least as new as reviewedAt. Null (or older than reviewedAt) means there's unseen tutor feedback.
+     * @nullable
+     */
+  studentReviewSeenAt: string | null;
   reminderActive: boolean;
+  assignedFiles: HomeworkFile[];
+  submissionFiles: HomeworkFile[];
+  reviewFiles: HomeworkFile[];
 }
 
 export interface Review {
@@ -216,89 +235,7 @@ export interface RescheduleInput {
   newStartTime: string;
 }
 
-export interface HomeworkInput {
-  submittedText?: string;
-  fileUrl?: string;
-  fileKey?: string;
-  fileName?: string;
-  fileMime?: string;
-}
-
-export interface HomeworkFeedbackInput {
-  tutorFeedback?: string;
-  grade?: string;
-  reviewedFileKey?: string;
-  reviewedFileName?: string;
-  reviewedFileMime?: string;
-}
-
-export type TestHomeworkFileSlot = typeof TestHomeworkFileSlot[keyof typeof TestHomeworkFileSlot];
-
-
-export const TestHomeworkFileSlot = {
-  assigned: 'assigned',
-  submission: 'submission',
-  review: 'review',
-} as const;
-
-export interface TestHomeworkFile {
-  id: number;
-  slot: TestHomeworkFileSlot;
-  key: string;
-  name: string;
-  mime: string;
-  /** @nullable */
-  url: string | null;
-  /** @nullable */
-  linkedFileId: number | null;
-  /**
-     * For a review file, the assigned file it should be shown alongside (only set when the tutor had the original visible while annotating).
-     * @nullable
-     */
-  originalFileId: number | null;
-  sortOrder: number;
-  createdAt: string;
-}
-
-export interface TestHomework {
-  id: number;
-  /** @nullable */
-  assignedText: string | null;
-  /** @nullable */
-  submittedText: string | null;
-  /** @nullable */
-  tutorFeedback: string | null;
-  /** @nullable */
-  grade: string | null;
-  /** @nullable */
-  submittedAt: string | null;
-  /** @nullable */
-  reviewedAt: string | null;
-  /**
-     * When the student last viewed a review that is at least as new as reviewedAt. Null (or older than reviewedAt) means there's unseen tutor feedback.
-     * @nullable
-     */
-  studentReviewSeenAt: string | null;
-  createdAt: string;
-  assignedFiles: TestHomeworkFile[];
-  submissionFiles: TestHomeworkFile[];
-  reviewFiles: TestHomeworkFile[];
-}
-
-export interface TestHomeworkCreateInput {
-  assignedText?: string;
-}
-
-/**
- * Dual-purpose — re-editing the assignment and/or grading the submission. All fields optional.
- */
-export interface TestHomeworkUpdateInput {
-  assignedText?: string;
-  tutorFeedback?: string;
-  grade?: string;
-}
-
-export type TestHomeworkSubmitInputFilesItem = {
+export type HomeworkInputFilesItem = {
   key: string;
   name: string;
   mime: string;
@@ -306,21 +243,27 @@ export type TestHomeworkSubmitInputFilesItem = {
   linkedFileId?: number;
 };
 
-export interface TestHomeworkSubmitInput {
+export interface HomeworkInput {
   submittedText?: string;
-  files: TestHomeworkSubmitInputFilesItem[];
+  submittedLinkUrl?: string;
+  files?: HomeworkInputFilesItem[];
 }
 
-export type AttachTestHomeworkFileInputSlot = typeof AttachTestHomeworkFileInputSlot[keyof typeof AttachTestHomeworkFileInputSlot];
+export interface HomeworkFeedbackInput {
+  tutorFeedback?: string;
+  grade?: string;
+}
+
+export type AttachHomeworkFileInputSlot = typeof AttachHomeworkFileInputSlot[keyof typeof AttachHomeworkFileInputSlot];
 
 
-export const AttachTestHomeworkFileInputSlot = {
+export const AttachHomeworkFileInputSlot = {
   assigned: 'assigned',
   review: 'review',
 } as const;
 
-export interface AttachTestHomeworkFileInput {
-  slot: AttachTestHomeworkFileInputSlot;
+export interface AttachHomeworkFileInput {
+  slot: AttachHomeworkFileInputSlot;
   key: string;
   name: string;
   mime: string;
@@ -333,7 +276,7 @@ export interface AttachTestHomeworkFileInput {
   originalFileId?: number | null;
 }
 
-export interface RelinkTestHomeworkFileInput {
+export interface RelinkHomeworkFileInput {
   /** @nullable */
   linkedFileId: number | null;
 }
@@ -352,9 +295,6 @@ export const UploadFileInputContext = {
   'homework-assigned': 'homework-assigned',
   'homework-submission': 'homework-submission',
   'homework-review': 'homework-review',
-  'test-homework-assigned': 'test-homework-assigned',
-  'test-homework-submission': 'test-homework-submission',
-  'test-homework-review': 'test-homework-review',
 } as const;
 
 /**
@@ -406,32 +346,15 @@ export interface AdminHomework {
   studentName: string;
   lessonTypeName: string;
   lessonDate: string;
+  noHomework: boolean;
   /** @nullable */
   assignedText: string | null;
   /** @nullable */
-  assignedFileUrl: string | null;
-  /** @nullable */
-  assignedFileKey: string | null;
-  /** @nullable */
-  assignedFileName: string | null;
-  /** @nullable */
-  assignedFileMime: string | null;
+  assignedLinkUrl: string | null;
   /** @nullable */
   submittedText: string | null;
   /** @nullable */
-  fileUrl: string | null;
-  /** @nullable */
-  submittedFileKey: string | null;
-  /** @nullable */
-  submittedFileName: string | null;
-  /** @nullable */
-  submittedFileMime: string | null;
-  /** @nullable */
-  reviewedFileKey: string | null;
-  /** @nullable */
-  reviewedFileName: string | null;
-  /** @nullable */
-  reviewedFileMime: string | null;
+  submittedLinkUrl: string | null;
   /** @nullable */
   tutorFeedback: string | null;
   /** @nullable */
@@ -440,7 +363,12 @@ export interface AdminHomework {
   submittedAt: string | null;
   /** @nullable */
   reviewedAt: string | null;
+  /** @nullable */
+  studentReviewSeenAt: string | null;
   reminderActive: boolean;
+  assignedFiles: HomeworkFile[];
+  submissionFiles: HomeworkFile[];
+  reviewFiles: HomeworkFile[];
 }
 
 export interface StudentDashboard {
@@ -616,18 +544,29 @@ export interface AdminBookingUpdate {
   notes?: string;
 }
 
+/**
+ * The teacher must explicitly decide whether to assign homework when completing a lesson.
+ */
+export type CompleteBookingInputHomework = {
+  noHomework: boolean;
+  assignedText?: string;
+  assignedLinkUrl?: string;
+};
+
 export interface CompleteBookingInput {
   /**
      * The teacher's recap of the lesson.
      * @minLength 1
      */
   notes: string;
-  homeworkAssignedText?: string;
-  homeworkAssignedFileUrl?: string;
-  homeworkAssignedFileKey?: string;
-  homeworkAssignedFileName?: string;
-  homeworkAssignedFileMime?: string;
+  /** The teacher must explicitly decide whether to assign homework when completing a lesson. */
+  homework: CompleteBookingInputHomework;
 }
+
+export type CompletedBooking = AdminBooking & {
+  /** The id of the homework row created/updated for this booking, so the client can attach files to it next. */
+  homeworkId: number;
+};
 
 export interface AdminStudent {
   id: number;
@@ -726,11 +665,6 @@ studentId?: number;
 /**
  * Defaults to true (existing behavior — only submitted homework). Set to false to include assigned-but-unsubmitted homework too.
  */
-submitted?: boolean;
-};
-
-export type ListAdminTestHomeworkParams = {
-reviewed?: boolean;
 submitted?: boolean;
 };
 

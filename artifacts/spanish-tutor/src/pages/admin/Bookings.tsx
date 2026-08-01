@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListAdminBookings, useUpdateAdminBooking, useCompleteBooking } from "@workspace/api-client-react";
+import { useListAdminBookings, useUpdateAdminBooking, useCompleteBooking, useAttachHomeworkFile } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListAdminBookingsQueryKey } from "@workspace/api-client-react";
 import { useFileUpload } from "@/hooks/use-file-upload";
-import { Paperclip } from "lucide-react";
+import MultiFilePicker from "@/components/homework/MultiFilePicker";
 
 export default function AdminBookings() {
   const [statusFilter, setStatusFilter] = useState<string>("upcoming");
@@ -24,10 +24,11 @@ export default function AdminBookings() {
   const [completingId, setCompletingId] = useState<number | null>(null);
   const [recap, setRecap] = useState("");
   const [homeworkText, setHomeworkText] = useState("");
-  const [homeworkFileUrl, setHomeworkFileUrl] = useState("");
-  const [homeworkFile, setHomeworkFile] = useState<File | null>(null);
+  const [homeworkLinkUrl, setHomeworkLinkUrl] = useState("");
+  const [homeworkFiles, setHomeworkFiles] = useState<File[]>([]);
   const completeMutation = useCompleteBooking();
   const uploadMutation = useFileUpload();
+  const attachMutation = useAttachHomeworkFile();
 
   const handleStatusChange = (id: number, newStatus: string) => {
     updateMutation.mutate({ id, data: { status: newStatus as any } }, {
@@ -41,45 +42,50 @@ export default function AdminBookings() {
   const openComplete = (id: number) => {
     setRecap("");
     setHomeworkText("");
-    setHomeworkFileUrl("");
-    setHomeworkFile(null);
+    setHomeworkLinkUrl("");
+    setHomeworkFiles([]);
     setCompletingId(id);
   };
 
-  const handleComplete = async () => {
+  const isBusy = completeMutation.isPending || uploadMutation.isPending || attachMutation.isPending;
+
+  const handleComplete = async (noHomework: boolean) => {
     if (completingId == null || !recap.trim()) return;
+    const bookingId = completingId;
 
-    let uploaded: Awaited<ReturnType<typeof uploadMutation.mutateAsync>> | undefined;
-    if (homeworkFile) {
-      try {
-        uploaded = await uploadMutation.mutateAsync({
-          file: homeworkFile,
-          context: "homework-assigned",
-          bookingId: completingId,
-        });
-      } catch (err) {
-        toast({ title: "File upload failed", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
-        return;
+    try {
+      const result = await completeMutation.mutateAsync({
+        id: bookingId,
+        data: {
+          notes: recap,
+          homework: {
+            noHomework,
+            assignedText: noHomework ? undefined : homeworkText || undefined,
+            assignedLinkUrl: noHomework ? undefined : homeworkLinkUrl || undefined,
+          },
+        },
+      });
+
+      if (!noHomework) {
+        for (const file of homeworkFiles) {
+          const uploaded = await uploadMutation.mutateAsync({
+            file,
+            context: "homework-assigned",
+            bookingId,
+          });
+          await attachMutation.mutateAsync({
+            id: result.homeworkId,
+            data: { slot: "assigned", key: uploaded.key, name: uploaded.fileName, mime: uploaded.mimeType },
+          });
+        }
       }
+
+      toast({ title: "Lesson completed" });
+      qc.invalidateQueries({ queryKey: getListAdminBookingsQueryKey() });
+      setCompletingId(null);
+    } catch (err) {
+      toast({ title: "Failed to complete lesson", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
     }
-
-    completeMutation.mutate({
-      id: completingId,
-      data: {
-        notes: recap,
-        homeworkAssignedText: homeworkText || undefined,
-        homeworkAssignedFileUrl: homeworkFileUrl || undefined,
-        homeworkAssignedFileKey: uploaded?.key,
-        homeworkAssignedFileName: uploaded?.fileName,
-        homeworkAssignedFileMime: uploaded?.mimeType,
-      },
-    }, {
-      onSuccess: () => {
-        toast({ title: "Lesson completed" });
-        qc.invalidateQueries({ queryKey: getListAdminBookingsQueryKey() });
-        setCompletingId(null);
-      }
-    });
   };
 
   return (
@@ -178,29 +184,35 @@ export default function AdminBookings() {
               <Textarea value={recap} onChange={e => setRecap(e.target.value)} placeholder="What did you work on today?" className="h-28" />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Homework (optional)</label>
+              <label className="text-sm font-medium mb-1 block">Homework</label>
+              <p className="text-xs text-muted-foreground mb-2">Assign homework below, or mark this lesson as having no homework.</p>
               <Textarea value={homeworkText} onChange={e => setHomeworkText(e.target.value)} placeholder="What should they do before next class?" className="h-24" />
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Homework link (optional)</label>
-              <Input value={homeworkFileUrl} onChange={e => setHomeworkFileUrl(e.target.value)} placeholder="Link to a worksheet, doc, etc." />
+              <Input value={homeworkLinkUrl} onChange={e => setHomeworkLinkUrl(e.target.value)} placeholder="Link to a worksheet, doc, etc." />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Attach a file (optional)</label>
-              <label className="flex items-center gap-2 border border-dashed border-border rounded-md px-3 py-2 text-sm text-muted-foreground cursor-pointer hover:bg-accent/50 transition">
-                <Paperclip className="size-4" />
-                {homeworkFile ? homeworkFile.name : "PDF or image, up to 15MB"}
-                <input
-                  type="file"
-                  accept="application/pdf,image/*"
-                  className="hidden"
-                  onChange={(e) => setHomeworkFile(e.target.files?.[0] ?? null)}
-                />
-              </label>
+              <label className="text-sm font-medium mb-1 block">Attach files (optional)</label>
+              <MultiFilePicker files={homeworkFiles} onFilesChange={setHomeworkFiles} />
             </div>
-            <Button onClick={handleComplete} disabled={completeMutation.isPending || uploadMutation.isPending || !recap.trim()} className="w-full">
-              {uploadMutation.isPending ? "Uploading..." : completeMutation.isPending ? "Completing..." : "Complete Lesson"}
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => handleComplete(true)}
+                disabled={isBusy || !recap.trim()}
+                className="flex-1"
+              >
+                No Homework & Complete
+              </Button>
+              <Button
+                onClick={() => handleComplete(false)}
+                disabled={isBusy || !recap.trim() || (!homeworkText.trim() && !homeworkLinkUrl.trim() && homeworkFiles.length === 0)}
+                className="flex-1"
+              >
+                {isBusy ? "Completing..." : "Assign Homework & Complete"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

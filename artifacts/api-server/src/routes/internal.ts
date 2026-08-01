@@ -23,8 +23,8 @@ router.post("/internal/homework-reminders/run", requireCronSecret, async (_req, 
         eq(homeworkTable.reminderActive, false),
         or(
           sql`${homeworkTable.assignedText} IS NOT NULL`,
-          sql`${homeworkTable.assignedFileUrl} IS NOT NULL`,
-          sql`${homeworkTable.assignedFileKey} IS NOT NULL`,
+          sql`${homeworkTable.assignedLinkUrl} IS NOT NULL`,
+          sql`EXISTS (SELECT 1 FROM homework_files WHERE homework_files.homework_id = ${homeworkTable.id} AND homework_files.slot = 'assigned')`,
         ),
       ),
     );

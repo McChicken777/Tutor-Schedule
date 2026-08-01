@@ -6,7 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListAdminTestHomeworkParams = {
-reviewed?: boolean;
-submitted?: boolean;
+export type HomeworkInputFilesItem = {
+  key: string;
+  name: string;
+  mime: string;
+  url?: string;
+  linkedFileId?: number;
 };

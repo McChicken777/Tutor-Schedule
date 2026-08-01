@@ -17,13 +17,7 @@ export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 // submission and are legitimately much larger than any single raw attachment.
 export const MAX_REVIEW_UPLOAD_BYTES = 100 * 1024 * 1024;
 
-export type UploadContext =
-  | "homework-assigned"
-  | "homework-submission"
-  | "homework-review"
-  | "test-homework-assigned"
-  | "test-homework-submission"
-  | "test-homework-review";
+export type UploadContext = "homework-assigned" | "homework-submission" | "homework-review";
 
 export function buildKey(bookingId: number, context: UploadContext, fileName: string): string {
   const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");

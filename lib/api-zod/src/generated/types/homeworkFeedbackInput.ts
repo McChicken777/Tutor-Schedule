@@ -9,7 +9,4 @@
 export interface HomeworkFeedbackInput {
   tutorFeedback?: string;
   grade?: string;
-  reviewedFileKey?: string;
-  reviewedFileName?: string;
-  reviewedFileMime?: string;
 }

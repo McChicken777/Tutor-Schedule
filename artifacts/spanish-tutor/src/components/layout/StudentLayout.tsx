@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Link, useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { LogOut, LayoutDashboard, Calendar, BookOpen, MessageCircle, FileText, FlaskConical } from "lucide-react";
+import { LogOut, LayoutDashboard, Calendar, BookOpen, MessageCircle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PingDot from "@/components/ui/ping-dot";
 import PurchaseCreditsDialog from "@/components/PurchaseCreditsDialog";
@@ -11,7 +11,6 @@ import {
   useGetStudentDashboard,
   useCompleteTour,
   getGetStudentDashboardQueryKey,
-  useListStudentTestHomework,
   useListStudentHomework,
 } from "@workspace/api-client-react";
 
@@ -29,18 +28,14 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   const { data: dashboard } = useGetStudentDashboard();
-  const { data: testHomeworkList } = useListStudentTestHomework();
-  const hasPendingTestHomework = (testHomeworkList ?? []).some((hw: any) => {
-    const hasAssignment = hw.assignedText || (hw.assignedFiles?.length ?? 0) > 0;
+  const { data: homeworkList } = useListStudentHomework();
+  const hasPendingHomework = (homeworkList ?? []).some((hw: any) => {
+    if (hw.noHomework) return false;
+    const hasAssignment = hw.assignedText || hw.assignedLinkUrl || (hw.assignedFiles?.length ?? 0) > 0;
     const needsSubmission = hasAssignment && !hw.submittedAt;
     const needsReviewSeen =
       !!hw.reviewedAt && (!hw.studentReviewSeenAt || new Date(hw.studentReviewSeenAt).getTime() < new Date(hw.reviewedAt).getTime());
     return needsSubmission || needsReviewSeen;
-  });
-  const { data: homeworkList } = useListStudentHomework();
-  const hasPendingHomework = (homeworkList ?? []).some((hw: any) => {
-    const hasAssignment = hw.assignedText || hw.assignedFileUrl || hw.assignedFileKey;
-    return hasAssignment && !hw.submittedAt;
   });
   const hasUnreadMessages = !!dashboard?.hasUnreadMessages;
   const completeTourMutation = useCompleteTour();
@@ -63,7 +58,6 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
     { label: "Book a Lesson", href: "/book", icon: BookOpen },
     { label: "Messages", href: "/messages", icon: MessageCircle },
     { label: "Homework", href: "/homework", icon: FileText },
-    { label: "Test Homework", href: "/test-homework", icon: FlaskConical },
   ];
 
   return (
@@ -110,7 +104,6 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
                 >
                   <item.icon className="w-5 h-5" />
                   <span className="flex-1">{item.label}</span>
-                  {item.href === "/test-homework" && hasPendingTestHomework && <PingDot />}
                   {item.href === "/homework" && hasPendingHomework && <PingDot />}
                   {item.href === "/messages" && hasUnreadMessages && <PingDot />}
                 </Link>

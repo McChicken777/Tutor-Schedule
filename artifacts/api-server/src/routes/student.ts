@@ -8,8 +8,7 @@ import {
   lessonTypesTable,
   lessonPackagesTable,
   homeworkTable,
-  testHomeworkTable,
-  testHomeworkFilesTable,
+  homeworkFilesTable,
   reviewsTable,
   messagesTable,
   siteSettingsTable,
@@ -25,8 +24,6 @@ import {
   GetHomeworkParams,
   SubmitHomeworkBody,
   SubmitHomeworkParams,
-  SubmitTestHomeworkBody,
-  SubmitTestHomeworkParams,
   SubmitReviewBody,
   SubmitReviewParams,
   ListStudentBookingsQueryParams,
@@ -39,9 +36,40 @@ import {
   getFreeBusySlots,
 } from "../lib/calendar";
 import { mapHomeworkFields, mapHomeworkRow } from "../lib/homeworkMapper";
-import { mapTestHomework } from "../lib/testHomeworkMapper";
 
 const router: IRouter = Router();
+
+async function getHomeworkFiles(homeworkId: number) {
+  return db.select().from(homeworkFilesTable).where(eq(homeworkFilesTable.homeworkId, homeworkId));
+}
+
+async function getHomeworkFilesByIds(ids: number[]) {
+  if (ids.length === 0) return new Map<number, (typeof homeworkFilesTable.$inferSelect)[]>();
+  const rows = await db.select().from(homeworkFilesTable).where(inArray(homeworkFilesTable.homeworkId, ids));
+  const byId = new Map<number, (typeof homeworkFilesTable.$inferSelect)[]>();
+  for (const row of rows) {
+    const list = byId.get(row.homeworkId) ?? [];
+    list.push(row);
+    byId.set(row.homeworkId, list);
+  }
+  return byId;
+}
+
+async function getHomeworkContext(bookingId: number) {
+  const [row] = await db
+    .select({ booking: bookingsTable, user: usersTable, lessonType: lessonTypesTable })
+    .from(bookingsTable)
+    .innerJoin(usersTable, eq(bookingsTable.studentId, usersTable.id))
+    .innerJoin(lessonTypesTable, eq(bookingsTable.lessonTypeId, lessonTypesTable.id))
+    .where(eq(bookingsTable.id, bookingId));
+
+  return {
+    studentId: row?.booking.studentId ?? 0,
+    studentName: row?.user.displayName ?? "",
+    lessonTypeName: row?.lessonType.name ?? "",
+    lessonDate: row?.booking.startTime ?? new Date(),
+  };
+}
 
 // Looks up real email/name from Clerk directly, rather than relying on session
 // claims (which need a custom JWT template configured in the Clerk dashboard
@@ -256,6 +284,8 @@ router.get("/student/dashboard", requireAuth, async (req, res): Promise<void> =>
     (h) => h.hw.submittedAt && !h.hw.reviewedAt,
   ).length;
 
+  const recentHomeworkFilesByHwId = await getHomeworkFilesByIds(recentHomework.map((h) => h.hw.id));
+
   const [{ count: unreadMessageCount }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(messagesTable)
@@ -297,7 +327,7 @@ router.get("/student/dashboard", requireAuth, async (req, res): Promise<void> =>
       purchasedAt: p.purchasedAt,
     })),
     recentHomework: recentHomework.map((r) =>
-      mapHomeworkRow(r.hw, {
+      mapHomeworkRow(r.hw, recentHomeworkFilesByHwId.get(r.hw.id) ?? [], {
         studentId: user.id,
         studentName: "",
         lessonTypeName: r.lessonType.name,
@@ -482,6 +512,7 @@ router.get("/student/bookings/:id", requireAuth, async (req, res): Promise<void>
   }
 
   const [hw] = await db.select().from(homeworkTable).where(eq(homeworkTable.bookingId, id));
+  const homeworkFiles = hw ? await getHomeworkFiles(hw.id) : [];
   const [review] = await db.select().from(reviewsTable).where(eq(reviewsTable.bookingId, id));
 
   res.json({
@@ -494,7 +525,7 @@ router.get("/student/bookings/:id", requireAuth, async (req, res): Promise<void>
     status: row.booking.status,
     meetLink: row.booking.meetLink ?? null,
     notes: row.booking.notes ?? null,
-    homework: hw ? mapHomeworkFields(hw) : null,
+    homework: hw ? mapHomeworkFields(hw, homeworkFiles) : null,
     review: review
       ? {
           id: review.id,
@@ -679,7 +710,8 @@ router.get("/student/bookings/:id/homework", requireAuth, async (req, res): Prom
     return;
   }
 
-  res.json(mapHomeworkFields(hw));
+  const files = await getHomeworkFiles(hw.id);
+  res.json(mapHomeworkFields(hw, files));
 });
 
 router.post("/student/bookings/:id/homework", requireAuth, async (req, res): Promise<void> => {
@@ -712,10 +744,7 @@ router.post("/student/bookings/:id/homework", requireAuth, async (req, res): Pro
       .update(homeworkTable)
       .set({
         submittedText: parsed.data.submittedText ?? existing.submittedText,
-        fileUrl: parsed.data.fileUrl ?? existing.fileUrl,
-        submittedFileKey: parsed.data.fileKey ?? existing.submittedFileKey,
-        submittedFileName: parsed.data.fileName ?? existing.submittedFileName,
-        submittedFileMime: parsed.data.fileMime ?? existing.submittedFileMime,
+        submittedLinkUrl: parsed.data.submittedLinkUrl ?? existing.submittedLinkUrl,
         submittedAt: new Date(),
         reminderActive: false,
       })
@@ -727,17 +756,33 @@ router.post("/student/bookings/:id/homework", requireAuth, async (req, res): Pro
       .values({
         bookingId: id,
         submittedText: parsed.data.submittedText ?? null,
-        fileUrl: parsed.data.fileUrl ?? null,
-        submittedFileKey: parsed.data.fileKey ?? null,
-        submittedFileName: parsed.data.fileName ?? null,
-        submittedFileMime: parsed.data.fileMime ?? null,
+        submittedLinkUrl: parsed.data.submittedLinkUrl ?? null,
         submittedAt: new Date(),
         reminderActive: false,
       })
       .returning();
   }
 
-  res.status(201).json(mapHomeworkFields(hw));
+  const files = parsed.data.files ?? [];
+  if (files.length > 0) {
+    const existingSubmissionCount = (await getHomeworkFiles(hw.id)).filter((f) => f.slot === "submission").length;
+
+    await db.insert(homeworkFilesTable).values(
+      files.map((file, index) => ({
+        homeworkId: hw.id,
+        slot: "submission" as const,
+        key: file.key,
+        name: file.name,
+        mime: file.mime,
+        url: file.url,
+        linkedFileId: file.linkedFileId,
+        sortOrder: existingSubmissionCount + index,
+      })),
+    );
+  }
+
+  const allFiles = await getHomeworkFiles(hw.id);
+  res.status(201).json(mapHomeworkFields(hw, allFiles));
 });
 
 router.get("/student/homework", requireAuth, async (req, res): Promise<void> => {
@@ -752,9 +797,11 @@ router.get("/student/homework", requireAuth, async (req, res): Promise<void> => 
     .where(eq(bookingsTable.studentId, user.id))
     .orderBy(desc(bookingsTable.startTime));
 
+  const filesByHwId = await getHomeworkFilesByIds(rows.map((r) => r.hw.id));
+
   res.json(
     rows.map((r) =>
-      mapHomeworkRow(r.hw, {
+      mapHomeworkRow(r.hw, filesByHwId.get(r.hw.id) ?? [], {
         studentId: user.id,
         studentName: user.displayName,
         lessonTypeName: r.lessonType.name,
@@ -764,87 +811,32 @@ router.get("/student/homework", requireAuth, async (req, res): Promise<void> => 
   );
 });
 
-router.get("/student/test-homework", requireAuth, async (_req, res): Promise<void> => {
-  const rows = await db.select().from(testHomeworkTable).orderBy(desc(testHomeworkTable.createdAt));
-  const ids = rows.map((r) => r.id);
-  const filesByHwId = new Map<number, (typeof testHomeworkFilesTable.$inferSelect)[]>();
-  if (ids.length > 0) {
-    const files = await db.select().from(testHomeworkFilesTable).where(inArray(testHomeworkFilesTable.testHomeworkId, ids));
-    for (const file of files) {
-      const list = filesByHwId.get(file.testHomeworkId) ?? [];
-      list.push(file);
-      filesByHwId.set(file.testHomeworkId, list);
-    }
-  }
-  res.json(rows.map((row) => mapTestHomework(row, filesByHwId.get(row.id) ?? [])));
-});
+router.post("/student/homework/:id/seen", requireAuth, async (req, res): Promise<void> => {
+  const clerkUserId = (req as any).clerkUserId;
+  const user = await getOrCreateUser(clerkUserId);
 
-router.post("/student/test-homework/:id/submit", requireAuth, async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
 
-  const parsed = SubmitTestHomeworkBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-
-  const [existing] = await db.select().from(testHomeworkTable).where(eq(testHomeworkTable.id, id));
-  if (!existing) {
-    res.status(404).json({ error: "Test homework not found" });
+  const [row] = await db
+    .select({ hw: homeworkTable, booking: bookingsTable })
+    .from(homeworkTable)
+    .innerJoin(bookingsTable, eq(homeworkTable.bookingId, bookingsTable.id))
+    .where(and(eq(homeworkTable.id, id), eq(bookingsTable.studentId, user.id)));
+  if (!row) {
+    res.status(404).json({ error: "Homework not found" });
     return;
   }
 
   const [hw] = await db
-    .update(testHomeworkTable)
-    .set({
-      submittedText: parsed.data.submittedText ?? existing.submittedText,
-      submittedAt: new Date(),
-    })
-    .where(eq(testHomeworkTable.id, id))
-    .returning();
-
-  const existingSubmissionCount = (await db.select().from(testHomeworkFilesTable).where(eq(testHomeworkFilesTable.testHomeworkId, id))).filter(
-    (f) => f.slot === "submission",
-  ).length;
-
-  if (parsed.data.files.length > 0) {
-    await db.insert(testHomeworkFilesTable).values(
-      parsed.data.files.map((file, index) => ({
-        testHomeworkId: id,
-        slot: "submission" as const,
-        key: file.key,
-        name: file.name,
-        mime: file.mime,
-        url: file.url,
-        linkedFileId: file.linkedFileId,
-        sortOrder: existingSubmissionCount + index,
-      })),
-    );
-  }
-
-  const files = await db.select().from(testHomeworkFilesTable).where(eq(testHomeworkFilesTable.testHomeworkId, id));
-  res.status(200).json(mapTestHomework(hw, files));
-});
-
-router.post("/student/test-homework/:id/seen", requireAuth, async (req, res): Promise<void> => {
-  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const id = parseInt(raw, 10);
-
-  const [existing] = await db.select().from(testHomeworkTable).where(eq(testHomeworkTable.id, id));
-  if (!existing) {
-    res.status(404).json({ error: "Test homework not found" });
-    return;
-  }
-
-  const [hw] = await db
-    .update(testHomeworkTable)
+    .update(homeworkTable)
     .set({ studentReviewSeenAt: new Date() })
-    .where(eq(testHomeworkTable.id, id))
+    .where(eq(homeworkTable.id, id))
     .returning();
 
-  const files = await db.select().from(testHomeworkFilesTable).where(eq(testHomeworkFilesTable.testHomeworkId, id));
-  res.status(200).json(mapTestHomework(hw, files));
+  const context = await getHomeworkContext(hw.bookingId);
+  const files = await getHomeworkFiles(id);
+  res.status(200).json(mapHomeworkRow(hw, files, context));
 });
 
 router.post("/student/bookings/:id/review", requireAuth, async (req, res): Promise<void> => {

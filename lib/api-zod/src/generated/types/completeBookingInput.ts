@@ -5,6 +5,7 @@
  * Spanish Tutor Booking Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { CompleteBookingInputHomework } from './completeBookingInputHomework';
 
 export interface CompleteBookingInput {
   /**
@@ -12,9 +13,6 @@ export interface CompleteBookingInput {
      * @minLength 1
      */
   notes: string;
-  homeworkAssignedText?: string;
-  homeworkAssignedFileUrl?: string;
-  homeworkAssignedFileKey?: string;
-  homeworkAssignedFileName?: string;
-  homeworkAssignedFileMime?: string;
+  /** The teacher must explicitly decide whether to assign homework when completing a lesson. */
+  homework: CompleteBookingInputHomework;
 }

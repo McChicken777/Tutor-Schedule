@@ -377,53 +377,11 @@ paths:
                 items:
                   $ref: "#/components/schemas/AdminHomework"
 
-  /student/test-homework:
-    get:
-      operationId: listStudentTestHomework
-      tags: [student]
-      summary: "[Sandbox] List all test homework rows"
-      responses:
-        "200":
-          description: All test homework
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/TestHomework"
-
-  /student/test-homework/{id}/submit:
+  /student/homework/{id}/seen:
     post:
-      operationId: submitTestHomework
+      operationId: markHomeworkReviewSeen
       tags: [student]
-      summary: "[Sandbox] Submit a test homework row"
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: number
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/TestHomeworkSubmitInput"
-      responses:
-        "200":
-          description: Test homework submitted
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TestHomework"
-        "404":
-          description: Not found
-
-  /student/test-homework/{id}/seen:
-    post:
-      operationId: markTestHomeworkReviewSeen
-      tags: [student]
-      summary: "[Sandbox] Mark a test homework's tutor review as seen by the student"
+      summary: Mark a homework's tutor review as seen by the student
       parameters:
         - name: id
           in: path
@@ -436,7 +394,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TestHomework"
+                $ref: "#/components/schemas/AdminHomework"
         "404":
           description: Not found
 
@@ -667,7 +625,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AdminBooking"
+                $ref: "#/components/schemas/CompletedBooking"
         "400":
           description: Invalid input
         "404":
@@ -878,127 +836,38 @@ paths:
         "404":
           description: Not found
 
-  /admin/test-homework:
+  /admin/homework/{id}/files:
     post:
-      operationId: createTestHomework
+      operationId: attachHomeworkFile
       tags: [admin]
-      summary: "[Sandbox] Create/assign a test homework row"
+      summary: Attach an assigned or review file to a homework row
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TestHomeworkCreateInput"
+              $ref: "#/components/schemas/AttachHomeworkFileInput"
       responses:
         "201":
-          description: Test homework created
+          description: Updated homework
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TestHomework"
-        "401":
-          description: Unauthorized
-    get:
-      operationId: listAdminTestHomework
-      tags: [admin]
-      summary: "[Sandbox] List all test homework rows"
-      parameters:
-        - name: reviewed
-          in: query
-          required: false
-          schema:
-            type: boolean
-        - name: submitted
-          in: query
-          required: false
-          schema:
-            type: boolean
-      responses:
-        "200":
-          description: All test homework
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/TestHomework"
-        "401":
-          description: Unauthorized
-
-  /admin/test-homework/{id}:
-    patch:
-      operationId: updateTestHomework
-      tags: [admin]
-      summary: "[Sandbox] Edit assignment or add tutor feedback/grade to test homework"
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: number
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/TestHomeworkUpdateInput"
-      responses:
-        "200":
-          description: Updated test homework
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TestHomework"
+                $ref: "#/components/schemas/AdminHomework"
         "404":
           description: Not found
+
+  /admin/homework/{id}/files/{fileId}:
     delete:
-      operationId: deleteTestHomework
+      operationId: deleteHomeworkFile
       tags: [admin]
-      summary: "[Sandbox] Delete a test homework row"
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: number
-      responses:
-        "204":
-          description: Deleted
-        "404":
-          description: Not found
-
-  /admin/test-homework/{id}/files:
-    post:
-      operationId: attachTestHomeworkFile
-      tags: [admin]
-      summary: "[Sandbox] Attach an assigned or review file to a test homework row"
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: number
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AttachTestHomeworkFileInput"
-      responses:
-        "201":
-          description: Updated test homework
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TestHomework"
-        "404":
-          description: Not found
-
-  /admin/test-homework/{id}/files/{fileId}:
-    delete:
-      operationId: deleteTestHomeworkFile
-      tags: [admin]
-      summary: "[Sandbox] Delete one attached test homework file"
+      summary: Delete one attached homework file
       parameters:
         - name: id
           in: path
@@ -1012,17 +881,17 @@ paths:
             type: number
       responses:
         "200":
-          description: Updated test homework
+          description: Updated homework
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TestHomework"
+                $ref: "#/components/schemas/AdminHomework"
         "404":
           description: Not found
     patch:
-      operationId: relinkTestHomeworkFile
+      operationId: relinkHomeworkFile
       tags: [admin]
-      summary: "[Sandbox] Re-pair a submission/review file with a different original/submission file"
+      summary: Re-pair a submission/review file with a different original/submission file
       parameters:
         - name: id
           in: path
@@ -1039,14 +908,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RelinkTestHomeworkFileInput"
+              $ref: "#/components/schemas/RelinkHomeworkFileInput"
       responses:
         "200":
-          description: Updated test homework
+          description: Updated homework
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TestHomework"
+                $ref: "#/components/schemas/AdminHomework"
         "404":
           description: Not found
 
@@ -1492,41 +1361,11 @@ paths:
         "401":
           description: Unauthorized
 
-  /files/homework/{homeworkId}/{which}:
+  /files/homework-file/{fileId}:
     get:
       operationId: getHomeworkFile
       tags: [uploads]
-      summary: Download/view a homework file (assigned, submission, or review) via a private proxy
-      parameters:
-        - name: homeworkId
-          in: path
-          required: true
-          schema:
-            type: number
-        - name: which
-          in: path
-          required: true
-          schema:
-            type: string
-            enum: [assigned, submission, review]
-      responses:
-        "200":
-          description: File contents
-          content:
-            application/octet-stream:
-              schema:
-                type: string
-                format: binary
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not found
-
-  /files/test-homework-file/{fileId}:
-    get:
-      operationId: getTestHomeworkFile
-      tags: [uploads]
-      summary: "[Sandbox] Download/view a single test homework file via a private proxy"
+      summary: Download/view a single homework file (assigned, submission, or review) via a private proxy
       parameters:
         - name: fileId
           in: path
@@ -1856,102 +1695,7 @@ components:
       required:
         - newStartTime
 
-    Homework:
-      type: object
-      properties:
-        id:
-          type: number
-        bookingId:
-          type: number
-        assignedText:
-          type: ["string", "null"]
-        assignedFileUrl:
-          type: ["string", "null"]
-        assignedFileKey:
-          type: ["string", "null"]
-        assignedFileName:
-          type: ["string", "null"]
-        assignedFileMime:
-          type: ["string", "null"]
-        submittedText:
-          type: ["string", "null"]
-        fileUrl:
-          type: ["string", "null"]
-        submittedFileKey:
-          type: ["string", "null"]
-        submittedFileName:
-          type: ["string", "null"]
-        submittedFileMime:
-          type: ["string", "null"]
-        reviewedFileKey:
-          type: ["string", "null"]
-        reviewedFileName:
-          type: ["string", "null"]
-        reviewedFileMime:
-          type: ["string", "null"]
-        tutorFeedback:
-          type: ["string", "null"]
-        grade:
-          type: ["string", "null"]
-        submittedAt:
-          type: ["string", "null"]
-          format: date-time
-        reviewedAt:
-          type: ["string", "null"]
-          format: date-time
-        reminderActive:
-          type: boolean
-      required:
-        - id
-        - bookingId
-        - assignedText
-        - assignedFileUrl
-        - assignedFileKey
-        - assignedFileName
-        - assignedFileMime
-        - submittedText
-        - fileUrl
-        - submittedFileKey
-        - submittedFileName
-        - submittedFileMime
-        - reviewedFileKey
-        - reviewedFileName
-        - reviewedFileMime
-        - tutorFeedback
-        - grade
-        - submittedAt
-        - reviewedAt
-        - reminderActive
-
-    HomeworkInput:
-      type: object
-      properties:
-        submittedText:
-          type: string
-        fileUrl:
-          type: string
-        fileKey:
-          type: string
-        fileName:
-          type: string
-        fileMime:
-          type: string
-
-    HomeworkFeedbackInput:
-      type: object
-      properties:
-        tutorFeedback:
-          type: string
-        grade:
-          type: string
-        reviewedFileKey:
-          type: string
-        reviewedFileName:
-          type: string
-        reviewedFileMime:
-          type: string
-
-    TestHomeworkFile:
+    HomeworkFile:
       type: object
       properties:
         id:
@@ -1989,14 +1733,22 @@ components:
         - sortOrder
         - createdAt
 
-    TestHomework:
+    Homework:
       type: object
       properties:
         id:
           type: number
+        bookingId:
+          type: number
+        noHomework:
+          type: boolean
         assignedText:
           type: ["string", "null"]
+        assignedLinkUrl:
+          type: ["string", "null"]
         submittedText:
+          type: ["string", "null"]
+        submittedLinkUrl:
           type: ["string", "null"]
         tutorFeedback:
           type: ["string", "null"]
@@ -2012,56 +1764,44 @@ components:
           type: ["string", "null"]
           format: date-time
           description: "When the student last viewed a review that is at least as new as reviewedAt. Null (or older than reviewedAt) means there's unseen tutor feedback."
-        createdAt:
-          type: string
-          format: date-time
+        reminderActive:
+          type: boolean
         assignedFiles:
           type: array
           items:
-            $ref: "#/components/schemas/TestHomeworkFile"
+            $ref: "#/components/schemas/HomeworkFile"
         submissionFiles:
           type: array
           items:
-            $ref: "#/components/schemas/TestHomeworkFile"
+            $ref: "#/components/schemas/HomeworkFile"
         reviewFiles:
           type: array
           items:
-            $ref: "#/components/schemas/TestHomeworkFile"
+            $ref: "#/components/schemas/HomeworkFile"
       required:
         - id
+        - bookingId
+        - noHomework
         - assignedText
+        - assignedLinkUrl
         - submittedText
+        - submittedLinkUrl
         - tutorFeedback
         - grade
         - submittedAt
         - reviewedAt
         - studentReviewSeenAt
-        - createdAt
+        - reminderActive
         - assignedFiles
         - submissionFiles
         - reviewFiles
 
-    TestHomeworkCreateInput:
-      type: object
-      properties:
-        assignedText:
-          type: string
-
-    TestHomeworkUpdateInput:
-      type: object
-      description: Dual-purpose — re-editing the assignment and/or grading the submission. All fields optional.
-      properties:
-        assignedText:
-          type: string
-        tutorFeedback:
-          type: string
-        grade:
-          type: string
-
-    TestHomeworkSubmitInput:
+    HomeworkInput:
       type: object
       properties:
         submittedText:
+          type: string
+        submittedLinkUrl:
           type: string
         files:
           type: array
@@ -2082,10 +1822,16 @@ components:
               - key
               - name
               - mime
-      required:
-        - files
 
-    AttachTestHomeworkFileInput:
+    HomeworkFeedbackInput:
+      type: object
+      properties:
+        tutorFeedback:
+          type: string
+        grade:
+          type: string
+
+    AttachHomeworkFileInput:
       type: object
       properties:
         slot:
@@ -2110,7 +1856,7 @@ components:
         - name
         - mime
 
-    RelinkTestHomeworkFileInput:
+    RelinkHomeworkFileInput:
       type: object
       properties:
         linkedFileId:
@@ -2143,7 +1889,7 @@ components:
           type: string
         context:
           type: string
-          enum: [homework-assigned, homework-submission, homework-review, test-homework-assigned, test-homework-submission, test-homework-review]
+          enum: [homework-assigned, homework-submission, homework-review]
         bookingId:
           type: number
       required:
@@ -2592,18 +2338,32 @@ components:
           type: string
           minLength: 1
           description: The teacher's recap of the lesson.
-        homeworkAssignedText:
-          type: string
-        homeworkAssignedFileUrl:
-          type: string
-        homeworkAssignedFileKey:
-          type: string
-        homeworkAssignedFileName:
-          type: string
-        homeworkAssignedFileMime:
-          type: string
+        homework:
+          type: object
+          description: The teacher must explicitly decide whether to assign homework when completing a lesson.
+          properties:
+            noHomework:
+              type: boolean
+            assignedText:
+              type: string
+            assignedLinkUrl:
+              type: string
+          required:
+            - noHomework
       required:
         - notes
+        - homework
+
+    CompletedBooking:
+      allOf:
+        - $ref: "#/components/schemas/AdminBooking"
+        - type: object
+          properties:
+            homeworkId:
+              type: number
+              description: The id of the homework row created/updated for this booking, so the client can attach files to it next.
+          required:
+            - homeworkId
 
     AdminHomework:
       type: object
@@ -2621,31 +2381,15 @@ components:
         lessonDate:
           type: string
           format: date-time
+        noHomework:
+          type: boolean
         assignedText:
           type: ["string", "null"]
-        assignedFileUrl:
-          type: ["string", "null"]
-        assignedFileKey:
-          type: ["string", "null"]
-        assignedFileName:
-          type: ["string", "null"]
-        assignedFileMime:
+        assignedLinkUrl:
           type: ["string", "null"]
         submittedText:
           type: ["string", "null"]
-        fileUrl:
-          type: ["string", "null"]
-        submittedFileKey:
-          type: ["string", "null"]
-        submittedFileName:
-          type: ["string", "null"]
-        submittedFileMime:
-          type: ["string", "null"]
-        reviewedFileKey:
-          type: ["string", "null"]
-        reviewedFileName:
-          type: ["string", "null"]
-        reviewedFileMime:
+        submittedLinkUrl:
           type: ["string", "null"]
         tutorFeedback:
           type: ["string", "null"]
@@ -2657,8 +2401,23 @@ components:
         reviewedAt:
           type: ["string", "null"]
           format: date-time
+        studentReviewSeenAt:
+          type: ["string", "null"]
+          format: date-time
         reminderActive:
           type: boolean
+        assignedFiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/HomeworkFile"
+        submissionFiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/HomeworkFile"
+        reviewFiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/HomeworkFile"
       required:
         - id
         - bookingId
@@ -2666,24 +2425,20 @@ components:
         - studentName
         - lessonTypeName
         - lessonDate
+        - noHomework
         - assignedText
-        - assignedFileUrl
-        - assignedFileKey
-        - assignedFileName
-        - assignedFileMime
+        - assignedLinkUrl
         - submittedText
-        - fileUrl
-        - submittedFileKey
-        - submittedFileName
-        - submittedFileMime
-        - reviewedFileKey
-        - reviewedFileName
-        - reviewedFileMime
+        - submittedLinkUrl
         - tutorFeedback
         - grade
         - submittedAt
         - reviewedAt
+        - studentReviewSeenAt
         - reminderActive
+        - assignedFiles
+        - submissionFiles
+        - reviewFiles
 
     AdminStudent:
       type: object

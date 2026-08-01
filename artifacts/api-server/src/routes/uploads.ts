@@ -3,7 +3,7 @@ import multer from "multer";
 import { getAuth } from "@clerk/express";
 import { eq, and } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { bookingsTable, usersTable, testHomeworkTable } from "@workspace/db";
+import { bookingsTable, usersTable } from "@workspace/db";
 import {
   ALLOWED_MIME_TYPES,
   MAX_UPLOAD_BYTES,
@@ -31,21 +31,11 @@ const uploadReview = multer({
 // right instance can be picked before the file bytes start streaming in.
 function pickUpload(req: Request, res: Response, next: NextFunction) {
   const context = req.query?.context as string | undefined;
-  const handler =
-    context === "homework-review" || context === "test-homework-review"
-      ? uploadReview.single("file")
-      : uploadNormal.single("file");
+  const handler = context === "homework-review" ? uploadReview.single("file") : uploadNormal.single("file");
   handler(req, res, next);
 }
 
-const UPLOAD_CONTEXTS: UploadContext[] = [
-  "homework-assigned",
-  "homework-submission",
-  "homework-review",
-  "test-homework-assigned",
-  "test-homework-submission",
-  "test-homework-review",
-];
+const UPLOAD_CONTEXTS: UploadContext[] = ["homework-assigned", "homework-submission", "homework-review"];
 
 router.post("/uploads", pickUpload, async (req, res): Promise<void> => {
   const file = req.file;
@@ -72,54 +62,32 @@ router.post("/uploads", pickUpload, async (req, res): Promise<void> => {
 
   const ctx = context as UploadContext;
 
-  if (ctx.startsWith("test-homework-")) {
-    const [testHw] = await db.select().from(testHomeworkTable).where(eq(testHomeworkTable.id, bookingId));
-    if (!testHw) {
-      res.status(400).json({ error: "Test homework not found" });
+  const [booking] = await db.select().from(bookingsTable).where(eq(bookingsTable.id, bookingId));
+  if (!booking) {
+    res.status(400).json({ error: "Booking not found" });
+    return;
+  }
+
+  if (ctx === "homework-assigned" || ctx === "homework-review") {
+    const sess = req.session as any;
+    if (!sess?.isAdmin) {
+      res.status(401).json({ error: "Admin authentication required" });
       return;
-    }
-    if (ctx === "test-homework-assigned" || ctx === "test-homework-review") {
-      const sess = req.session as any;
-      if (!sess?.isAdmin) {
-        res.status(401).json({ error: "Admin authentication required" });
-        return;
-      }
-    } else {
-      const auth = getAuth(req);
-      const clerkUserId = (auth?.sessionClaims?.userId as string | undefined) || auth?.userId;
-      if (!clerkUserId) {
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-      }
     }
   } else {
-    const [booking] = await db.select().from(bookingsTable).where(eq(bookingsTable.id, bookingId));
-    if (!booking) {
-      res.status(400).json({ error: "Booking not found" });
+    const auth = getAuth(req);
+    const clerkUserId = (auth?.sessionClaims?.userId as string | undefined) || auth?.userId;
+    if (!clerkUserId) {
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
-
-    if (ctx === "homework-assigned" || ctx === "homework-review") {
-      const sess = req.session as any;
-      if (!sess?.isAdmin) {
-        res.status(401).json({ error: "Admin authentication required" });
-        return;
-      }
-    } else {
-      const auth = getAuth(req);
-      const clerkUserId = (auth?.sessionClaims?.userId as string | undefined) || auth?.userId;
-      if (!clerkUserId) {
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-      }
-      const [owner] = await db
-        .select()
-        .from(usersTable)
-        .where(and(eq(usersTable.clerkUserId, clerkUserId), eq(usersTable.id, booking.studentId)));
-      if (!owner) {
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-      }
+    const [owner] = await db
+      .select()
+      .from(usersTable)
+      .where(and(eq(usersTable.clerkUserId, clerkUserId), eq(usersTable.id, booking.studentId)));
+    if (!owner) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
     }
   }
 

@@ -5,11 +5,10 @@
  * Spanish Tutor Booking Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { HomeworkInputFilesItem } from './homeworkInputFilesItem';
 
 export interface HomeworkInput {
   submittedText?: string;
-  fileUrl?: string;
-  fileKey?: string;
-  fileName?: string;
-  fileMime?: string;
+  submittedLinkUrl?: string;
+  files?: HomeworkInputFilesItem[];
 }
