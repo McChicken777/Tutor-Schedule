@@ -36,6 +36,7 @@ import type {
   CalendarBusyBlock,
   CalendarStatus,
   CancellationInput,
+  ClaimTeacherInput,
   CompleteBookingInput,
   CompleteTour200,
   CompletedBooking,
@@ -73,6 +74,7 @@ import type {
   SiteSettingsUpdate,
   StudentDashboard,
   StudentProfile,
+  Teacher,
   Testimonial,
   TestimonialInput,
   TestimonialUpdate,
@@ -1919,6 +1921,225 @@ export const useSendStudentMessage = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getSendStudentMessageMutationOptions(options));
+    }
+
+export const getGetTeacherMeUrl = () => {
+
+
+
+
+  return `/api/teachers/me`
+}
+
+/**
+ * @summary Get the current Clerk user's teacher row, if any
+ */
+export const getTeacherMe = async ( options?: Parameters<typeof customFetch>[1]): Promise<Teacher> => {
+
+  return customFetch<Teacher>(getGetTeacherMeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTeacherMeQueryKey = () => {
+    return [
+    `/api/teachers/me`
+    ] as const;
+    }
+
+
+export const getGetTeacherMeQueryOptions = <TData = Awaited<ReturnType<typeof getTeacherMe>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTeacherMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTeacherMeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTeacherMe>>> = ({ signal }) => getTeacherMe({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTeacherMe>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTeacherMeQueryResult = NonNullable<Awaited<ReturnType<typeof getTeacherMe>>>
+export type GetTeacherMeQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get the current Clerk user's teacher row, if any
+ */
+
+export function useGetTeacherMe<TData = Awaited<ReturnType<typeof getTeacherMe>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTeacherMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTeacherMeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRegisterTeacherUrl = () => {
+
+
+
+
+  return `/api/teachers/register`
+}
+
+/**
+ * @summary Register a brand-new teacher account for the current Clerk user
+ */
+export const registerTeacher = async ( options?: Parameters<typeof customFetch>[1]): Promise<Teacher> => {
+
+  return customFetch<Teacher>(getRegisterTeacherUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRegisterTeacherMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerTeacher>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof registerTeacher>>, TError,void, TContext> => {
+
+const mutationKey = ['registerTeacher'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof registerTeacher>>, void> = () => {
+
+
+          return  registerTeacher(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegisterTeacherMutationResult = NonNullable<Awaited<ReturnType<typeof registerTeacher>>>
+
+    export type RegisterTeacherMutationError = ErrorType<void>
+
+    /**
+ * @summary Register a brand-new teacher account for the current Clerk user
+ */
+export const useRegisterTeacher = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerTeacher>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof registerTeacher>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getRegisterTeacherMutationOptions(options));
+    }
+
+export const getClaimTeacherUrl = () => {
+
+
+
+
+  return `/api/teachers/claim`
+}
+
+/**
+ * @summary Link the current Clerk user to an existing unclaimed teacher row via password
+ */
+export const claimTeacher = async (claimTeacherInput: ClaimTeacherInput, options?: Parameters<typeof customFetch>[1]): Promise<Teacher> => {
+
+  return customFetch<Teacher>(getClaimTeacherUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(claimTeacherInput)
+  }
+);}
+
+
+
+
+
+export const getClaimTeacherMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimTeacher>>, TError,{data: BodyType<ClaimTeacherInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof claimTeacher>>, TError,{data: BodyType<ClaimTeacherInput>}, TContext> => {
+
+const mutationKey = ['claimTeacher'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof claimTeacher>>, {data: BodyType<ClaimTeacherInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  claimTeacher(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ClaimTeacherMutationResult = NonNullable<Awaited<ReturnType<typeof claimTeacher>>>
+    export type ClaimTeacherMutationBody = BodyType<ClaimTeacherInput>
+    export type ClaimTeacherMutationError = ErrorType<void>
+
+    /**
+ * @summary Link the current Clerk user to an existing unclaimed teacher row via password
+ */
+export const useClaimTeacher = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimTeacher>>, TError,{data: BodyType<ClaimTeacherInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof claimTeacher>>,
+        TError,
+        {data: BodyType<ClaimTeacherInput>},
+        TContext
+      > => {
+      return useMutation(getClaimTeacherMutationOptions(options));
     }
 
 export const getAdminLoginUrl = () => {

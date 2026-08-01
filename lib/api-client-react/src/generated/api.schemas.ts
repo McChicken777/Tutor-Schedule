@@ -488,6 +488,16 @@ export interface SiteSettingsUpdate {
   timezone?: string;
 }
 
+export interface Teacher {
+  id: number;
+  email: string;
+  displayName: string;
+}
+
+export interface ClaimTeacherInput {
+  password: string;
+}
+
 export interface AdminLoginInput {
   password: string;
 }

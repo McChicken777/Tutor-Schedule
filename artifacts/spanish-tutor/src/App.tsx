@@ -21,6 +21,9 @@ import StudentMessages from "@/pages/student/Messages";
 import StudentHomework from "@/pages/student/Homework";
 
 import AdminLogin from "@/pages/admin/Login";
+import TeacherSignIn from "@/pages/teacher/sign-in";
+import TeacherSignUp from "@/pages/teacher/sign-up";
+import TeacherOnboarding from "@/pages/teacher/onboarding";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import AdminBookings from "@/pages/admin/Bookings";
 import AdminLessonTypes from "@/pages/admin/LessonTypes";
@@ -154,6 +157,19 @@ function HomeRedirect() {
   );
 }
 
+function TeacherOnboardingGate() {
+  return (
+    <>
+      <Show when="signed-in">
+        <TeacherOnboarding />
+      </Show>
+      <Show when="signed-out">
+        <Redirect to="/teacher/sign-in" />
+      </Show>
+    </>
+  );
+}
+
 function StudentPortal({ children }: { children: React.ReactNode }) {
   return (
     <>
@@ -203,6 +219,11 @@ function ClerkProviderWithRoutes() {
             <Route path="/" component={HomeRedirect} />
             <Route path="/sign-in/*?" component={SignInPage} />
             <Route path="/sign-up/*?" component={SignUpPage} />
+
+            {/* Teacher registration (additive, not yet gating /admin) */}
+            <Route path="/teacher/sign-in/*?" component={TeacherSignIn} />
+            <Route path="/teacher/sign-up/*?" component={TeacherSignUp} />
+            <Route path="/teacher/onboarding" component={TeacherOnboardingGate} />
 
             {/* Admin (No Clerk) */}
             <Route path="/admin/login" component={AdminLogin} />

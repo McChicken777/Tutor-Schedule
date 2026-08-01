@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "backfill-homework-files": "tsx ./src/backfill-homework-files.ts",
+    "backfill-teacher-id": "tsx ./src/backfill-teacher-id.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

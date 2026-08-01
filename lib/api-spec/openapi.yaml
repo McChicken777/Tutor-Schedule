@@ -14,6 +14,8 @@ tags:
     description: Public endpoints (no auth required)
   - name: student
     description: Student endpoints (Clerk auth required)
+  - name: teacher
+    description: Teacher account endpoints (Clerk auth required, teacher row required for /teachers/me)
   - name: admin
     description: Admin endpoints (password session required)
   - name: uploads
@@ -499,6 +501,64 @@ paths:
                 $ref: "#/components/schemas/Message"
         "401":
           description: Unauthorized
+
+  # ─── TEACHER ──────────────────────────────────────────────────────────────
+  /teachers/me:
+    get:
+      operationId: getTeacherMe
+      tags: [teacher]
+      summary: Get the current Clerk user's teacher row, if any
+      responses:
+        "200":
+          description: Teacher row for the signed-in Clerk user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Teacher"
+        "401":
+          description: Unauthorized
+        "404":
+          description: No teacher row is linked to this Clerk user yet
+
+  /teachers/register:
+    post:
+      operationId: registerTeacher
+      tags: [teacher]
+      summary: Register a brand-new teacher account for the current Clerk user
+      responses:
+        "201":
+          description: Teacher created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Teacher"
+        "401":
+          description: Unauthorized
+        "409":
+          description: This Clerk user is already linked to a teacher row
+
+  /teachers/claim:
+    post:
+      operationId: claimTeacher
+      tags: [teacher]
+      summary: Link the current Clerk user to an existing unclaimed teacher row via password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimTeacherInput"
+      responses:
+        "200":
+          description: Teacher row claimed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Teacher"
+        "401":
+          description: Invalid password
+        "409":
+          description: No unclaimed teacher row is available to claim, or this Clerk user already has one
 
   # ─── ADMIN ────────────────────────────────────────────────────────────────
   /admin/login:
@@ -2235,6 +2295,28 @@ components:
           $ref: "#/components/schemas/WeeklyHours"
         timezone:
           type: string
+
+    Teacher:
+      type: object
+      properties:
+        id:
+          type: number
+        email:
+          type: string
+        displayName:
+          type: string
+      required:
+        - id
+        - email
+        - displayName
+
+    ClaimTeacherInput:
+      type: object
+      properties:
+        password:
+          type: string
+      required:
+        - password
 
     AdminLoginInput:
       type: object

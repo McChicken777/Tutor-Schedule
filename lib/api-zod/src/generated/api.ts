@@ -775,6 +775,40 @@ export const SendStudentMessageResponse = zod.object({
 
 
 /**
+ * @summary Get the current Clerk user's teacher row, if any
+ */
+export const GetTeacherMeResponse = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "displayName": zod.string()
+})
+
+
+/**
+ * @summary Register a brand-new teacher account for the current Clerk user
+ */
+export const RegisterTeacherResponse = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "displayName": zod.string()
+})
+
+
+/**
+ * @summary Link the current Clerk user to an existing unclaimed teacher row via password
+ */
+export const ClaimTeacherBody = zod.object({
+  "password": zod.string()
+})
+
+export const ClaimTeacherResponse = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "displayName": zod.string()
+})
+
+
+/**
  * @summary Admin login with password
  */
 export const AdminLoginBody = zod.object({

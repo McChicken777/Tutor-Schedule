@@ -1,6 +1,7 @@
-import { pgTable, text, serial, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, boolean, timestamp, jsonb, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { teachersTable } from "./teachers";
 
 export type DayHours = { enabled: boolean; start: string; end: string }; // start/end as "HH:mm", 24h
 export type WeeklyHours = {
@@ -26,6 +27,7 @@ export const DEFAULT_WEEKLY_HOURS: WeeklyHours = {
 
 export const siteSettingsTable = pgTable("site_settings", {
   id: serial("id").primaryKey(),
+  teacherId: integer("teacher_id").references(() => teachersTable.id).unique(),
   tutorName: text("tutor_name").notNull().default("Your Tutor"),
   tutorBio: text("tutor_bio").notNull().default(""),
   contactEmail: text("contact_email").notNull().default(""),

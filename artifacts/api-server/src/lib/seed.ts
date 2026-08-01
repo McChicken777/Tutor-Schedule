@@ -1,6 +1,7 @@
-import { eq, notInArray } from "drizzle-orm";
+import { eq, and, notInArray } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
+  teachersTable,
   lessonTypesTable,
   testimonialsTable,
   faqsTable,
@@ -9,11 +10,23 @@ import {
 } from "@workspace/db";
 
 export async function seed() {
+  // Placeholder teacher — unclaimed until the real operator registers/claims
+  // it via POST /teachers/claim. Everything below is seeded under this
+  // teacher's id so a fresh (dev/staging) database is immediately consistent.
+  const existingTeachers = await db.select().from(teachersTable);
+  const teacher =
+    existingTeachers[0] ??
+    (await db.insert(teachersTable).values({ clerkUserId: null }).returning())[0];
+  if (existingTeachers.length === 0) {
+    console.log("Seeded placeholder teacher");
+  }
+
   // Lesson types
   const existingTypes = await db.select().from(lessonTypesTable);
   if (existingTypes.length === 0) {
     await db.insert(lessonTypesTable).values([
       {
+        teacherId: teacher.id,
         name: "Trial Lesson",
         durationMinutes: 25,
         creditCost: 1,
@@ -22,6 +35,7 @@ export async function seed() {
         isTrial: true,
       },
       {
+        teacherId: teacher.id,
         name: "Standard Lesson",
         durationMinutes: 55,
         creditCost: 1,
@@ -29,6 +43,7 @@ export async function seed() {
         isActive: true,
       },
       {
+        teacherId: teacher.id,
         name: "Intensive Lesson",
         durationMinutes: 85,
         creditCost: 2,
@@ -36,6 +51,7 @@ export async function seed() {
         isActive: true,
       },
       {
+        teacherId: teacher.id,
         name: "Conversation Practice",
         durationMinutes: 25,
         creditCost: 1,
@@ -53,14 +69,17 @@ export async function seed() {
     { credits: 800, priceCents: 14720, sortOrder: 2, isActive: true },
   ];
   for (const bundle of desiredBundles) {
-    const [existing] = await db.select().from(creditBundlesTable).where(eq(creditBundlesTable.credits, bundle.credits));
+    const [existing] = await db
+      .select()
+      .from(creditBundlesTable)
+      .where(and(eq(creditBundlesTable.credits, bundle.credits), eq(creditBundlesTable.teacherId, teacher.id)));
     if (existing) {
       await db
         .update(creditBundlesTable)
         .set({ priceCents: bundle.priceCents, sortOrder: bundle.sortOrder, isActive: bundle.isActive })
         .where(eq(creditBundlesTable.id, existing.id));
     } else {
-      await db.insert(creditBundlesTable).values(bundle);
+      await db.insert(creditBundlesTable).values({ ...bundle, teacherId: teacher.id });
     }
   }
   // Deactivate any leftover packages from a previous pricing scheme so they
@@ -68,7 +87,12 @@ export async function seed() {
   await db
     .update(creditBundlesTable)
     .set({ isActive: false })
-    .where(notInArray(creditBundlesTable.credits, desiredBundles.map((b) => b.credits)));
+    .where(
+      and(
+        eq(creditBundlesTable.teacherId, teacher.id),
+        notInArray(creditBundlesTable.credits, desiredBundles.map((b) => b.credits)),
+      ),
+    );
   console.log("Synced credit packages");
 
   // Testimonials
@@ -148,9 +172,10 @@ export async function seed() {
   }
 
   // Site settings
-  const existingSettings = await db.select().from(siteSettingsTable);
+  const existingSettings = await db.select().from(siteSettingsTable).where(eq(siteSettingsTable.teacherId, teacher.id));
   if (existingSettings.length === 0) {
     await db.insert(siteSettingsTable).values({
+      teacherId: teacher.id,
       tutorName: "Your Spanish Tutor",
       tutorBio: "Native speaker with a passion for helping learners find their voice in Spanish. With years of teaching experience spanning all levels, I create personalized lessons that make language learning feel natural — and actually fun.",
       contactEmail: "hello@example.com",
