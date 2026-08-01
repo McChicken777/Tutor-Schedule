@@ -1,6 +1,6 @@
 import { Client } from "@replit/object-storage";
 
-const client = new Client();
+const client = new Client({ bucketId: process.env.OBJECT_STORAGE_BUCKET_ID });
 
 export const ALLOWED_MIME_TYPES = [
   "application/pdf",
