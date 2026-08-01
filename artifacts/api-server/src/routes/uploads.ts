@@ -1,17 +1,42 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import multer from "multer";
 import { getAuth } from "@clerk/express";
 import { eq, and } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { bookingsTable, usersTable, testHomeworkTable } from "@workspace/db";
-import { ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES, buildKey, putObject, type UploadContext } from "../lib/objectStorage";
+import {
+  ALLOWED_MIME_TYPES,
+  MAX_UPLOAD_BYTES,
+  MAX_REVIEW_UPLOAD_BYTES,
+  buildKey,
+  putObject,
+  type UploadContext,
+} from "../lib/objectStorage";
 
 const router: IRouter = Router();
 
-const upload = multer({
+const uploadNormal = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_UPLOAD_BYTES },
 });
+
+const uploadReview = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_REVIEW_UPLOAD_BYTES },
+});
+
+// multer's fileSize limit is fixed when the instance is constructed, before the
+// route handler can read req.body.context (multer parses that from the same
+// multipart stream). The client passes context as a query param too so the
+// right instance can be picked before the file bytes start streaming in.
+function pickUpload(req: Request, res: Response, next: NextFunction) {
+  const context = req.query?.context as string | undefined;
+  const handler =
+    context === "homework-review" || context === "test-homework-review"
+      ? uploadReview.single("file")
+      : uploadNormal.single("file");
+  handler(req, res, next);
+}
 
 const UPLOAD_CONTEXTS: UploadContext[] = [
   "homework-assigned",
@@ -22,7 +47,7 @@ const UPLOAD_CONTEXTS: UploadContext[] = [
   "test-homework-review",
 ];
 
-router.post("/uploads", upload.single("file"), async (req, res): Promise<void> => {
+router.post("/uploads", pickUpload, async (req, res): Promise<void> => {
   const file = req.file;
   const context = req.body?.context as string | undefined;
   const bookingIdRaw = req.body?.bookingId as string | undefined;

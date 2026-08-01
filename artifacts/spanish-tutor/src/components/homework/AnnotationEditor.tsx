@@ -5,7 +5,7 @@ import { Eraser, ChevronLeft, ChevronRight, Loader2, Pen, Type } from "lucide-re
 import { useFilePages } from "./useFilePages";
 
 const COLORS = ["#ef4444", "#2563eb", "#16a34a", "#111827"];
-const WIDTHS = [2, 4, 8];
+const WIDTHS = [6, 12, 20];
 const TEXT_FONT_SIZE = 24;
 
 interface AnnotationEditorProps {
@@ -33,6 +33,7 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
   const [textInput, setTextInput] = useState<{ x: number; y: number; left: number; top: number; value: string } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const drawingRef = useRef(false);
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -66,19 +67,23 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    // Prevents the browser's default mousedown-driven focus/blur handling from
+    // immediately stealing focus back from the text-tool's autoFocus input.
+    e.preventDefault();
+
     const canvas = pages[pageIndex];
     if (!canvas) return;
 
     if (tool === "text") {
-      const container = containerRef.current;
-      if (!container) return;
-      const containerRect = container.getBoundingClientRect();
+      const wrapper = wrapperRef.current;
+      if (!wrapper) return;
+      const wrapperRect = wrapper.getBoundingClientRect();
       const pos = getCanvasPos(e, canvas);
       setTextInput({
         x: pos.x,
         y: pos.y,
-        left: e.clientX - containerRect.left,
-        top: e.clientY - containerRect.top,
+        left: e.clientX - wrapperRect.left + wrapper.scrollLeft,
+        top: e.clientY - wrapperRect.top + wrapper.scrollTop,
         value: "",
       });
       return;
@@ -208,7 +213,7 @@ export default function AnnotationEditor({ fileUrl, mimeType, onSave, onCancel }
         </Button>
       </div>
 
-      <div className="relative bg-accent/20 border border-border rounded-xl p-3 max-h-[60vh] overflow-auto">
+      <div ref={wrapperRef} className="relative bg-accent/20 border border-border rounded-xl p-3 max-h-[60vh] overflow-auto">
         {loading ? (
           <div className="flex items-center justify-center h-64 text-muted-foreground gap-2">
             <Loader2 className="w-5 h-5 animate-spin" /> Loading file...

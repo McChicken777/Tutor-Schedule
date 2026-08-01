@@ -27,7 +27,7 @@ async function uploadFile({ file, context, bookingId }: UploadFileParams): Promi
   formData.append("context", context);
   formData.append("bookingId", String(bookingId));
 
-  const response = await fetch("/api/uploads", {
+  const response = await fetch(`/api/uploads?context=${encodeURIComponent(context)}`, {
     method: "POST",
     body: formData,
   });

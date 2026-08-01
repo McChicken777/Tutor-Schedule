@@ -54,7 +54,7 @@ function classify(err: unknown): { status: number; message: string } {
     // The only limit configured is fileSize, so this is nearly always an
     // oversized upload — worth saying plainly rather than as a generic 400.
     if (named.code === "LIMIT_FILE_SIZE") {
-      return { status: 413, message: "File is too large (max 15MB)." };
+      return { status: 413, message: "File is too large." };
     }
     return { status: 400, message: `Upload failed: ${named.message ?? "unknown error"}` };
   }

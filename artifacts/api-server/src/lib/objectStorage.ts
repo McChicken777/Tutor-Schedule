@@ -13,6 +13,10 @@ export const ALLOWED_MIME_TYPES = [
 
 export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 
+// Annotated/merged review PDFs are assembled client-side from every page of a
+// submission and are legitimately much larger than any single raw attachment.
+export const MAX_REVIEW_UPLOAD_BYTES = 100 * 1024 * 1024;
+
 export type UploadContext =
   | "homework-assigned"
   | "homework-submission"

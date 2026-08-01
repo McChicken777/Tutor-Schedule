@@ -98,45 +98,44 @@ export default function AnnotationWorkspace({ hw, initialSubmissionFileId, onClo
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {hw.submissionFiles.length > 1 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground">Submitted file:</span>
-            {hw.submissionFiles.map((f, i) => (
-              <button
-                key={f.id}
-                onClick={() => setSelectedSubmissionFileId(f.id)}
-                className={`px-3 py-1 rounded-md text-sm font-medium border transition ${
-                  f.id === selectedSubmissionFileId ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-accent"
-                }`}
-              >
-                {i + 1}. {f.name}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="flex items-center gap-3 ml-auto">
-          {hw.assignedFiles.length > 0 && (
-            <Button variant="outline" size="sm" onClick={() => setShowOriginal((v) => !v)}>
-              {showOriginal ? <EyeOff className="w-4 h-4 mr-1" /> : <Eye className="w-4 h-4 mr-1" />}
-              {showOriginal ? "Hide original" : "Show original"}
-            </Button>
-          )}
-          {showOriginal && hw.assignedFiles.length > 1 && (
-            <select
-              className="text-sm border border-border rounded-md px-2 py-1.5 bg-background"
-              value={resolvedOriginal?.id ?? ""}
-              onChange={(e) => handleRelink(Number(e.target.value))}
+      {hw.submissionFiles.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">Submitted file:</span>
+          {hw.submissionFiles.map((f, i) => (
+            <button
+              key={f.id}
+              onClick={() => setSelectedSubmissionFileId(f.id)}
+              title={f.name}
+              className={`px-3 py-1 rounded-md text-sm font-medium border transition ${
+                f.id === selectedSubmissionFileId ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-accent"
+              }`}
             >
-              {hw.assignedFiles.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          )}
+              {i + 1}.
+            </button>
+          ))}
         </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-3">
+        {hw.assignedFiles.length > 0 && (
+          <Button variant="outline" size="sm" onClick={() => setShowOriginal((v) => !v)}>
+            {showOriginal ? <EyeOff className="w-4 h-4 mr-1" /> : <Eye className="w-4 h-4 mr-1" />}
+            {showOriginal ? "Hide original" : "Show original"}
+          </Button>
+        )}
+        {showOriginal && hw.assignedFiles.length > 1 && (
+          <select
+            className="text-sm border border-border rounded-md px-2 py-1.5 bg-background"
+            value={resolvedOriginal?.id ?? ""}
+            onChange={(e) => handleRelink(Number(e.target.value))}
+          >
+            {hw.assignedFiles.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div className={showOriginal && resolvedOriginal ? "grid md:grid-cols-2 gap-4" : ""}>
