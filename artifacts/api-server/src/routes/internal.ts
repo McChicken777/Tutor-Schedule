@@ -1,13 +1,15 @@
 import { Router, type IRouter } from "express";
-import { eq, and, gt, isNull, or, sql, inArray } from "drizzle-orm";
+import { eq, and, gt, lt, isNull, or, sql, inArray } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { homeworkTable, bookingsTable } from "@workspace/db";
+import { homeworkTable, bookingsTable, homeworkFilesTable, reportsTable } from "@workspace/db";
 import { requireCronSecret } from "../middlewares/requireCronSecret";
+import { deleteObject } from "../lib/objectStorage";
 
 const router: IRouter = Router();
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const THREE_DAYS_MS = 3 * ONE_DAY_MS;
+const TWENTY_EIGHT_DAYS_MS = 28 * ONE_DAY_MS;
 
 router.post("/internal/homework-reminders/run", requireCronSecret, async (_req, res): Promise<void> => {
   const now = new Date();
@@ -68,6 +70,57 @@ router.post("/internal/homework-reminders/run", requireCronSecret, async (_req, 
     checkedAt: now,
     remindersSet: dueHomeworkIds.length,
     homeworkIds: dueHomeworkIds,
+  });
+});
+
+router.post("/internal/homework-files-cleanup/run", requireCronSecret, async (_req, res): Promise<void> => {
+  const now = new Date();
+  const cutoff = new Date(now.getTime() - TWENTY_EIGHT_DAYS_MS);
+
+  const candidates = await db
+    .select({ file: homeworkFilesTable })
+    .from(homeworkFilesTable)
+    .innerJoin(homeworkTable, eq(homeworkFilesTable.homeworkId, homeworkTable.id))
+    .innerJoin(bookingsTable, eq(homeworkTable.bookingId, bookingsTable.id))
+    .where(and(isNull(homeworkFilesTable.deletedAt), lt(bookingsTable.endTime, cutoff)));
+
+  if (candidates.length === 0) {
+    res.json({ checkedAt: now, filesDeleted: 0, skippedDueToOpenReport: 0, homeworkFileIds: [] });
+    return;
+  }
+
+  const candidateIds = candidates.map((c) => c.file.id);
+  const openReports = await db
+    .select({ targetId: reportsTable.targetId })
+    .from(reportsTable)
+    .where(
+      and(
+        eq(reportsTable.targetType, "homework_file"),
+        eq(reportsTable.status, "open"),
+        inArray(reportsTable.targetId, candidateIds),
+      ),
+    );
+  const openReportFileIds = new Set(openReports.map((r) => r.targetId));
+
+  const toDelete = candidates.filter((c) => !openReportFileIds.has(c.file.id));
+  const deletedIds: number[] = [];
+
+  for (const { file } of toDelete) {
+    try {
+      await deleteObject(file.key);
+    } catch (err) {
+      console.error(`Failed to delete object for homework file ${file.id}:`, err);
+      continue;
+    }
+    await db.update(homeworkFilesTable).set({ deletedAt: now }).where(eq(homeworkFilesTable.id, file.id));
+    deletedIds.push(file.id);
+  }
+
+  res.json({
+    checkedAt: now,
+    filesDeleted: deletedIds.length,
+    skippedDueToOpenReport: openReportFileIds.size,
+    homeworkFileIds: deletedIds,
   });
 });
 
