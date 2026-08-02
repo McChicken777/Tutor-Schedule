@@ -9,7 +9,12 @@ export default function TeacherSignInPage() {
     >
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm"></div>
       <div className="relative z-10">
-        <SignIn routing="path" path={`${basePath}/teacher/sign-in`} signUpUrl={`${basePath}/teacher/sign-up`} />
+        <SignIn
+          routing="path"
+          path={`${basePath}/teacher/sign-in`}
+          signUpUrl={`${basePath}/teacher/sign-up`}
+          forceRedirectUrl={`${basePath}/teacher/onboarding`}
+        />
       </div>
     </div>
   );
