@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Loquu</title>
     <meta name="description" content="Loquu — online Spanish tutoring." />
     <meta name="robots" content="index, follow" />
@@ -12,13 +12,44 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Loquu" />
     <meta name="twitter:description" content="Loquu — online Spanish tutoring." />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" content="#D05D43" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Loquu" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #FDFBF7;
+      }
+      #app-splash img {
+        width: 72px;
+        height: 72px;
+        border-radius: 16px;
+        animation: app-splash-pulse 1.4s ease-in-out infinite;
+      }
+      @keyframes app-splash-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.55; }
+      }
+      @media (prefers-color-scheme: dark) {
+        #app-splash { background: #241C18; }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="app-splash"><img src="/logo.svg" alt="" /></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
