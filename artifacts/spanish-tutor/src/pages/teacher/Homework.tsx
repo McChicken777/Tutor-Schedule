@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListAdminHomework, useUpdateHomework, useDeleteHomeworkFile } from "@workspace/api-client-react";
+import { useListTeacherHomework, useUpdateHomework, useDeleteHomeworkFile } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { getListAdminHomeworkQueryKey } from "@workspace/api-client-react";
+import { getListTeacherHomeworkQueryKey } from "@workspace/api-client-react";
 import AnnotationWorkspace from "@/components/homework/AnnotationWorkspace";
 import ErrorState from "@/components/ErrorState";
 import PingDot from "@/components/ui/ping-dot";
@@ -27,10 +27,10 @@ interface HomeworkFileItem {
   originalFileId: number | null;
 }
 
-export default function AdminHomework() {
+export default function TeacherHomework() {
   const [tab, setTab] = useState<"pending" | "reviewed">("pending");
-  const { data: homeworkList, isLoading, error, refetch } = useListAdminHomework({ reviewed: tab === "reviewed" });
-  const { data: needsReviewList } = useListAdminHomework({ reviewed: false });
+  const { data: homeworkList, isLoading, error, refetch } = useListTeacherHomework({ reviewed: tab === "reviewed" });
+  const { data: needsReviewList } = useListTeacherHomework({ reviewed: false });
   const hasNeedsReview = (needsReviewList?.length ?? 0) > 0;
 
   return (
@@ -112,7 +112,7 @@ export function HomeworkCard({ hw }: { hw: any }) {
   const [grade, setGrade] = useState(hw.grade || "");
   const [annotating, setAnnotating] = useState(false);
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: getListAdminHomeworkQueryKey() });
+  const invalidate = () => qc.invalidateQueries({ queryKey: getListTeacherHomeworkQueryKey() });
 
   const handleSave = () => {
     updateMutation.mutate({ id: hw.id, data: { tutorFeedback: feedback, grade } }, {

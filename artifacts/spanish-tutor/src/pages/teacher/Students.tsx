@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListAdminStudents, useGetAdminStudent, useGrantPackage, useListAdminHomework } from "@workspace/api-client-react";
+import { useListTeacherStudents, useGetTeacherStudent, useGrantPackage, useListTeacherHomework } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,12 +7,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { getListAdminStudentsQueryKey, getGetAdminStudentQueryKey } from "@workspace/api-client-react";
-import { HomeworkCard } from "@/pages/admin/Homework";
+import { getListTeacherStudentsQueryKey, getGetTeacherStudentQueryKey } from "@workspace/api-client-react";
+import { HomeworkCard } from "@/pages/teacher/Homework";
 import ErrorState from "@/components/ErrorState";
 
-export default function AdminStudents() {
-  const { data: students, isLoading, error, refetch } = useListAdminStudents();
+export default function TeacherStudents() {
+  const { data: students, isLoading, error, refetch } = useListTeacherStudents();
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   return (
@@ -75,8 +75,8 @@ export default function AdminStudents() {
 }
 
 function StudentDetail({ id }: { id: number }) {
-  const { data: student, isLoading } = useGetAdminStudent(id);
-  const { data: homeworkList } = useListAdminHomework({ studentId: id, submitted: false });
+  const { data: student, isLoading } = useGetTeacherStudent(id);
+  const { data: homeworkList } = useListTeacherHomework({ studentId: id, submitted: false });
   const grantMutation = useGrantPackage();
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -89,8 +89,8 @@ function StudentDetail({ id }: { id: number }) {
     grantMutation.mutate({ data: { studentId: id, totalCredits: grantCredits } }, {
       onSuccess: () => {
         toast({ title: "Credits granted" });
-        qc.invalidateQueries({ queryKey: getGetAdminStudentQueryKey(id) });
-        qc.invalidateQueries({ queryKey: getListAdminStudentsQueryKey() });
+        qc.invalidateQueries({ queryKey: getGetTeacherStudentQueryKey(id) });
+        qc.invalidateQueries({ queryKey: getListTeacherStudentsQueryKey() });
       }
     });
   };

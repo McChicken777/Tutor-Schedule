@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { format, isToday } from "date-fns";
 import {
-  useListAdminMessageThreads,
-  useListAdminStudentMessages,
-  useSendAdminMessage,
-  getListAdminMessageThreadsQueryKey,
-  getListAdminStudentMessagesQueryKey,
+  useListTeacherMessageThreads,
+  useListTeacherStudentMessages,
+  useSendTeacherMessage,
+  getListTeacherMessageThreadsQueryKey,
+  getListTeacherStudentMessagesQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,10 +18,10 @@ function formatThreadTime(date: Date): string {
   return isToday(date) ? format(date, "h:mm a") : format(date, "MMM d");
 }
 
-export default function AdminMessages() {
+export default function TeacherMessages() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const { data: threads, isLoading, error, refetch } = useListAdminMessageThreads({
-    query: { refetchInterval: 15000, queryKey: getListAdminMessageThreadsQueryKey() },
+  const { data: threads, isLoading, error, refetch } = useListTeacherMessageThreads({
+    query: { refetchInterval: 15000, queryKey: getListTeacherMessageThreadsQueryKey() },
   });
 
   const selected = threads?.find((t) => t.studentId === selectedId) ?? null;
@@ -94,10 +94,10 @@ export default function AdminMessages() {
 function ConversationPane({ studentId, studentName }: { studentId: number; studentName: string }) {
   const [draft, setDraft] = useState("");
   const qc = useQueryClient();
-  const { data: messages, isLoading } = useListAdminStudentMessages(studentId, {
-    query: { refetchInterval: 10000, queryKey: getListAdminStudentMessagesQueryKey(studentId) },
+  const { data: messages, isLoading } = useListTeacherStudentMessages(studentId, {
+    query: { refetchInterval: 10000, queryKey: getListTeacherStudentMessagesQueryKey(studentId) },
   });
-  const sendMutation = useSendAdminMessage();
+  const sendMutation = useSendTeacherMessage();
 
   const handleSend = () => {
     const body = draft.trim();
@@ -107,8 +107,8 @@ function ConversationPane({ studentId, studentName }: { studentId: number; stude
       {
         onSuccess: () => {
           setDraft("");
-          qc.invalidateQueries({ queryKey: getListAdminStudentMessagesQueryKey(studentId) });
-          qc.invalidateQueries({ queryKey: getListAdminMessageThreadsQueryKey() });
+          qc.invalidateQueries({ queryKey: getListTeacherStudentMessagesQueryKey(studentId) });
+          qc.invalidateQueries({ queryKey: getListTeacherMessageThreadsQueryKey() });
         },
       },
     );

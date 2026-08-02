@@ -1,5 +1,5 @@
 import {
-  useListAdminLessonTypes,
+  useListTeacherLessonTypes,
   useUpdateLessonType,
   useCreateLessonType,
 } from "@workspace/api-client-react";
@@ -12,14 +12,14 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  getListAdminLessonTypesQueryKey,
+  getListTeacherLessonTypesQueryKey,
   getListLessonTypesQueryKey,
 } from "@workspace/api-client-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
-export default function AdminLessonTypes() {
-  const { data: lessonTypes, isLoading, error, refetch } = useListAdminLessonTypes();
+export default function TeacherLessonTypes() {
+  const { data: lessonTypes, isLoading, error, refetch } = useListTeacherLessonTypes();
   const updateMutation = useUpdateLessonType();
   const createMutation = useCreateLessonType();
   const qc = useQueryClient();
@@ -34,7 +34,7 @@ export default function AdminLessonTypes() {
     updateMutation.mutate({ id, data: { isActive } }, {
       onSuccess: () => {
         toast({ title: isActive ? "Lesson activated" : "Lesson deactivated" });
-        qc.invalidateQueries({ queryKey: getListAdminLessonTypesQueryKey() });
+        qc.invalidateQueries({ queryKey: getListTeacherLessonTypesQueryKey() });
         qc.invalidateQueries({ queryKey: getListLessonTypesQueryKey() });
       }
     });
@@ -44,7 +44,7 @@ export default function AdminLessonTypes() {
     updateMutation.mutate({ id, data: { isTrial } }, {
       onSuccess: () => {
         toast({ title: isTrial ? "Set as the free trial lesson" : "No longer the free trial lesson" });
-        qc.invalidateQueries({ queryKey: getListAdminLessonTypesQueryKey() });
+        qc.invalidateQueries({ queryKey: getListTeacherLessonTypesQueryKey() });
         qc.invalidateQueries({ queryKey: getListLessonTypesQueryKey() });
       }
     });
@@ -60,7 +60,7 @@ export default function AdminLessonTypes() {
     updateMutation.mutate({ id: editingId, data: editForm }, {
       onSuccess: () => {
         toast({ title: "Lesson updated" });
-        qc.invalidateQueries({ queryKey: getListAdminLessonTypesQueryKey() });
+        qc.invalidateQueries({ queryKey: getListTeacherLessonTypesQueryKey() });
         qc.invalidateQueries({ queryKey: getListLessonTypesQueryKey() });
         setEditingId(null);
       }
@@ -71,7 +71,7 @@ export default function AdminLessonTypes() {
     createMutation.mutate({ data: { ...newLesson, isActive: true } }, {
       onSuccess: () => {
         toast({ title: "Lesson created" });
-        qc.invalidateQueries({ queryKey: getListAdminLessonTypesQueryKey() });
+        qc.invalidateQueries({ queryKey: getListTeacherLessonTypesQueryKey() });
         setIsCreateOpen(false);
         setNewLesson({ name: "", durationMinutes: 30, creditCost: 1, description: "", isTrial: false });
       }

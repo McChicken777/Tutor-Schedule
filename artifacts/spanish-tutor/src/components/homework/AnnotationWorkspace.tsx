@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useAttachHomeworkFile,
   useRelinkHomeworkFile,
-  getListAdminHomeworkQueryKey,
+  getListTeacherHomeworkQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -67,7 +67,7 @@ export default function AnnotationWorkspace({ hw, onClose }: AnnotationWorkspace
     hw.assignedFiles[originalIndex] ??
     hw.assignedFiles[0];
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: getListAdminHomeworkQueryKey() });
+  const invalidate = () => qc.invalidateQueries({ queryKey: getListTeacherHomeworkQueryKey() });
 
   const handleRelink = (assignedFileId: number) => {
     if (!currentFileId) return;

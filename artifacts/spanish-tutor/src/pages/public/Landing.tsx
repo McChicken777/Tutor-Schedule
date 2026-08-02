@@ -290,6 +290,8 @@ export default function Landing() {
             <a href={`mailto:${contactEmail}`} className="hover:text-foreground hover:underline">{contactEmail}</a>
             <span className="mx-2">·</span>
             © {new Date().getFullYear()} Loquu
+            <span className="mx-2">·</span>
+            <Link href="/teacher/sign-in" className="hover:text-foreground hover:underline">Teacher login</Link>
           </p>
         </div>
       </footer>

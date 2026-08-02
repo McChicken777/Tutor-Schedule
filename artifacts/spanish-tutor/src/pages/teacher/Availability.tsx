@@ -4,13 +4,16 @@ import {
   useListAvailabilityOverrides,
   useSetDayAvailabilityOverrides,
   useDeleteAvailabilityOverride,
-  useGetAdminSiteSettings,
+  useGetTeacherSiteSettings,
   useUpdateSiteSettings,
   useGetCalendarBusy,
+  useGetCalendarStatus,
+  useDisconnectCalendar,
   getListAvailabilityOverridesQueryKey,
   getGetCalendarBusyQueryKey,
-  getGetAdminSiteSettingsQueryKey,
+  getGetTeacherSiteSettingsQueryKey,
   getGetSiteSettingsQueryKey,
+  getGetCalendarStatusQueryKey,
 } from "@workspace/api-client-react";
 import type { WeeklyHours, DayHours } from "@workspace/api-client-react";
 import { Calendar } from "@/components/ui/calendar";
@@ -20,7 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2, CalendarOff, Clock } from "lucide-react";
+import { Trash2, CalendarOff, Clock, Calendar as CalendarIcon, CheckCircle2, AlertCircle, Unlink } from "lucide-react";
 
 const DAY_LABELS: Array<{ key: keyof WeeklyHours; label: string }> = [
   { key: "mon", label: "Monday" },
@@ -128,17 +131,47 @@ function mergeBlockedChips(chips: { startTime: Date; endTime: Date }[], blocked:
   return ranges;
 }
 
-export default function AdminAvailability() {
+export default function TeacherAvailability() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [blockedChips, setBlockedChips] = useState<Set<number>>(new Set());
   const { toast } = useToast();
   const qc = useQueryClient();
 
   const { data: overrides } = useListAvailabilityOverrides();
-  const { data: settings, isLoading: settingsLoading } = useGetAdminSiteSettings();
+  const { data: settings, isLoading: settingsLoading } = useGetTeacherSiteSettings();
   const setDayMutation = useSetDayAvailabilityOverrides();
   const deleteMutation = useDeleteAvailabilityOverride();
   const updateSettings = useUpdateSiteSettings();
+
+  const { data: calendarStatus, refetch: refetchCalendarStatus } = useGetCalendarStatus();
+  const disconnectMutation = useDisconnectCalendar();
+
+  // Handle OAuth callback params in the hash
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.split("?")[1] ?? "");
+    if (params.get("calendarConnected") === "1") {
+      toast({ title: "Google Calendar connected!" });
+      refetchCalendarStatus();
+      window.history.replaceState(null, "", window.location.pathname + window.location.search + "#/availability");
+    } else if (params.get("calendarError")) {
+      const reason = params.get("calendarError");
+      toast({
+        title: "Failed to connect Google Calendar",
+        description: reason === "missing_refresh_token" ? "No refresh token returned. Try revoking access in Google and reconnecting." : "An error occurred during authorization.",
+        variant: "destructive",
+      });
+      window.history.replaceState(null, "", window.location.pathname + window.location.search + "#/availability");
+    }
+  }, []);
+
+  const handleDisconnect = () => {
+    disconnectMutation.mutate(undefined, {
+      onSuccess: () => {
+        toast({ title: "Google Calendar disconnected" });
+        qc.invalidateQueries({ queryKey: getGetCalendarStatusQueryKey() });
+      },
+    });
+  };
 
   const weeklyHours: WeeklyHours = settings?.weeklyHours ?? DEFAULT_WEEKLY_HOURS;
 
@@ -183,7 +216,7 @@ export default function AdminAvailability() {
       {
         onSuccess: () => {
           toast({ title: "Working hours saved" });
-          qc.invalidateQueries({ queryKey: getGetAdminSiteSettingsQueryKey() });
+          qc.invalidateQueries({ queryKey: getGetTeacherSiteSettingsQueryKey() });
           qc.invalidateQueries({ queryKey: getGetSiteSettingsQueryKey() });
         },
       },
@@ -318,6 +351,47 @@ export default function AdminAvailability() {
         Set your weekly working hours, then block specific times or full days on top of them.
         Times are shown in your timezone ({tz.replace(/_/g, " ")}).
       </p>
+
+      {/* Google Calendar Integration */}
+      <div className="bg-card border border-border rounded-3xl p-6 md:p-8 mb-8">
+        <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+          <CalendarIcon className="w-5 h-5 text-primary" /> Google Calendar Integration
+        </h2>
+        {calendarStatus?.connected ? (
+          <div className="flex items-center justify-between p-4 bg-secondary/10 rounded-xl border border-secondary/20">
+            <div className="flex items-center gap-3 text-secondary">
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+              <div>
+                <p className="font-bold">Connected</p>
+                <p className="text-sm opacity-90">{calendarStatus.calendarEmail}</p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDisconnect}
+              disabled={disconnectMutation.isPending}
+              className="flex items-center gap-2 text-destructive border-destructive/40 hover:bg-destructive/10"
+            >
+              <Unlink className="w-4 h-4" />
+              Disconnect
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between p-4 bg-accent rounded-xl border border-border">
+            <div className="flex items-center gap-3 text-muted-foreground">
+              <AlertCircle className="w-5 h-5 text-[#f59e0b]" />
+              <p className="font-medium">Not connected</p>
+            </div>
+            <Button asChild>
+              <a href="/api/calendar/auth">Connect Google Calendar</a>
+            </Button>
+          </div>
+        )}
+        <p className="text-sm text-muted-foreground mt-4">
+          Connect your Google Calendar to automatically block busy times and add new lessons to your schedule.
+        </p>
+      </div>
 
       {/* Working hours + timezone editor */}
       <div className="bg-card border border-border rounded-3xl p-6 md:p-8 mb-8">

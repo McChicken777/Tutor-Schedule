@@ -24,20 +24,24 @@ import StudentHomework from "@/pages/student/Homework";
 import TeacherSignIn from "@/pages/teacher/sign-in";
 import TeacherSignUp from "@/pages/teacher/sign-up";
 import TeacherOnboarding from "@/pages/teacher/onboarding";
+import TeacherDashboard from "@/pages/teacher/Dashboard";
+import TeacherBookings from "@/pages/teacher/Bookings";
+import TeacherLessonTypes from "@/pages/teacher/LessonTypes";
+import TeacherHomework from "@/pages/teacher/Homework";
+import TeacherStudents from "@/pages/teacher/Students";
+import TeacherMessages from "@/pages/teacher/Messages";
+import TeacherAvailability from "@/pages/teacher/Availability";
+import TeacherFeedback from "@/pages/teacher/Feedback";
 import AdminDashboard from "@/pages/admin/Dashboard";
-import AdminBookings from "@/pages/admin/Bookings";
-import AdminLessonTypes from "@/pages/admin/LessonTypes";
-import AdminHomework from "@/pages/admin/Homework";
-import AdminStudents from "@/pages/admin/Students";
 import AdminTestimonials from "@/pages/admin/Testimonials";
 import AdminFaqs from "@/pages/admin/Faqs";
 import AdminSettings from "@/pages/admin/Settings";
-import AdminMessages from "@/pages/admin/Messages";
-import AdminAvailability from "@/pages/admin/Availability";
+import AdminComplaints from "@/pages/admin/Complaints";
 
 import NotFound from "@/pages/not-found";
 
 import StudentLayout from "@/components/layout/StudentLayout";
+import TeacherLayout from "@/components/layout/TeacherLayout";
 import AdminLayout from "@/components/layout/AdminLayout";
 
 const clerkPubKey = publishableKeyFromHost(
@@ -227,7 +231,7 @@ function RequireTeacherRow({ children }: { children: React.ReactNode }) {
     return <div className="min-h-[100dvh] bg-background" />;
   }
 
-  return <AdminLayout>{children}</AdminLayout>;
+  return <TeacherLayout>{children}</TeacherLayout>;
 }
 
 function TeacherPortal({ children }: { children: React.ReactNode }) {
@@ -235,6 +239,38 @@ function TeacherPortal({ children }: { children: React.ReactNode }) {
     <>
       <Show when="signed-in">
         <RequireTeacherRow>{children}</RequireTeacherRow>
+      </Show>
+      <Show when="signed-out">
+        <Redirect to="/teacher/sign-in" />
+      </Show>
+    </>
+  );
+}
+
+function RequireAdminRow({ children }: { children: React.ReactNode }) {
+  const { data: teacher, isLoading, error } = useGetTeacherMe();
+
+  if (isLoading) {
+    return <div className="min-h-[100dvh] bg-background" />;
+  }
+  if (!teacher) {
+    if ((error as { status?: number } | null)?.status === 404) {
+      return <Redirect to="/teacher/onboarding" />;
+    }
+    return <div className="min-h-[100dvh] bg-background" />;
+  }
+  if (!teacher.isAdmin) {
+    return <Redirect to="/teacher" />;
+  }
+
+  return <AdminLayout>{children}</AdminLayout>;
+}
+
+function AdminPortal({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <Show when="signed-in">
+        <RequireAdminRow>{children}</RequireAdminRow>
       </Show>
       <Show when="signed-out">
         <Redirect to="/teacher/sign-in" />
@@ -286,35 +322,46 @@ function ClerkProviderWithRoutes() {
             <Route path="/teacher/onboarding" component={TeacherOnboardingGate} />
 
             {/* Teacher Portal (Clerk + teacher-row gated) */}
+            <Route path="/teacher">
+              <TeacherPortal><TeacherDashboard /></TeacherPortal>
+            </Route>
+            <Route path="/teacher/bookings">
+              <TeacherPortal><TeacherBookings /></TeacherPortal>
+            </Route>
+            <Route path="/teacher/lesson-types">
+              <TeacherPortal><TeacherLessonTypes /></TeacherPortal>
+            </Route>
+            <Route path="/teacher/homework">
+              <TeacherPortal><TeacherHomework /></TeacherPortal>
+            </Route>
+            <Route path="/teacher/students">
+              <TeacherPortal><TeacherStudents /></TeacherPortal>
+            </Route>
+            <Route path="/teacher/messages">
+              <TeacherPortal><TeacherMessages /></TeacherPortal>
+            </Route>
+            <Route path="/teacher/availability">
+              <TeacherPortal><TeacherAvailability /></TeacherPortal>
+            </Route>
+            <Route path="/teacher/feedback">
+              <TeacherPortal><TeacherFeedback /></TeacherPortal>
+            </Route>
+
+            {/* Admin Portal (Clerk + teacher-row + isAdmin gated) */}
             <Route path="/admin">
-              <TeacherPortal><AdminDashboard /></TeacherPortal>
-            </Route>
-            <Route path="/admin/bookings">
-              <TeacherPortal><AdminBookings /></TeacherPortal>
-            </Route>
-            <Route path="/admin/lesson-types">
-              <TeacherPortal><AdminLessonTypes /></TeacherPortal>
-            </Route>
-            <Route path="/admin/homework">
-              <TeacherPortal><AdminHomework /></TeacherPortal>
-            </Route>
-            <Route path="/admin/students">
-              <TeacherPortal><AdminStudents /></TeacherPortal>
+              <AdminPortal><AdminDashboard /></AdminPortal>
             </Route>
             <Route path="/admin/testimonials">
-              <TeacherPortal><AdminTestimonials /></TeacherPortal>
+              <AdminPortal><AdminTestimonials /></AdminPortal>
             </Route>
             <Route path="/admin/faqs">
-              <TeacherPortal><AdminFaqs /></TeacherPortal>
+              <AdminPortal><AdminFaqs /></AdminPortal>
             </Route>
             <Route path="/admin/settings">
-              <TeacherPortal><AdminSettings /></TeacherPortal>
+              <AdminPortal><AdminSettings /></AdminPortal>
             </Route>
-            <Route path="/admin/messages">
-              <TeacherPortal><AdminMessages /></TeacherPortal>
-            </Route>
-            <Route path="/admin/availability">
-              <TeacherPortal><AdminAvailability /></TeacherPortal>
+            <Route path="/admin/complaints">
+              <AdminPortal><AdminComplaints /></AdminPortal>
             </Route>
 
             {/* Student Portal */}

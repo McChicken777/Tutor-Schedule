@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListAdminBookings, useUpdateAdminBooking, useCompleteBooking, useAttachHomeworkFile } from "@workspace/api-client-react";
+import { useListTeacherBookings, useUpdateTeacherBooking, useCompleteBooking, useAttachHomeworkFile } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,14 +10,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { getListAdminBookingsQueryKey } from "@workspace/api-client-react";
+import { getListTeacherBookingsQueryKey } from "@workspace/api-client-react";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import MultiFilePicker from "@/components/homework/MultiFilePicker";
 
-export default function AdminBookings() {
+export default function TeacherBookings() {
   const [statusFilter, setStatusFilter] = useState<string>("upcoming");
-  const { data: bookings, isLoading, error, refetch } = useListAdminBookings({ status: statusFilter !== "all" ? statusFilter : undefined });
-  const updateMutation = useUpdateAdminBooking();
+  const { data: bookings, isLoading, error, refetch } = useListTeacherBookings({ status: statusFilter !== "all" ? statusFilter : undefined });
+  const updateMutation = useUpdateTeacherBooking();
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -34,7 +34,7 @@ export default function AdminBookings() {
     updateMutation.mutate({ id, data: { status: newStatus as any } }, {
       onSuccess: () => {
         toast({ title: "Status updated" });
-        qc.invalidateQueries({ queryKey: getListAdminBookingsQueryKey() });
+        qc.invalidateQueries({ queryKey: getListTeacherBookingsQueryKey() });
       }
     });
   };
@@ -81,7 +81,7 @@ export default function AdminBookings() {
       }
 
       toast({ title: "Lesson completed" });
-      qc.invalidateQueries({ queryKey: getListAdminBookingsQueryKey() });
+      qc.invalidateQueries({ queryKey: getListTeacherBookingsQueryKey() });
       setCompletingId(null);
     } catch (err) {
       toast({ title: "Failed to complete lesson", description: err instanceof Error ? err.message : undefined, variant: "destructive" });

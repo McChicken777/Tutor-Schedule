@@ -30,14 +30,14 @@ export default function TeacherOnboardingPage() {
   });
 
   useEffect(() => {
-    if (teacher) setLocation("/admin");
+    if (teacher) setLocation("/teacher");
   }, [teacher, setLocation]);
 
   function handleRegister() {
     registerMutation.mutate(undefined, {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: getGetTeacherMeQueryKey() });
-        setLocation("/admin");
+        setLocation("/teacher");
       },
     });
   }
@@ -48,7 +48,7 @@ export default function TeacherOnboardingPage() {
       {
         onSuccess: () => {
           qc.invalidateQueries({ queryKey: getGetTeacherMeQueryKey() });
-          setLocation("/admin");
+          setLocation("/teacher");
         },
       },
     );

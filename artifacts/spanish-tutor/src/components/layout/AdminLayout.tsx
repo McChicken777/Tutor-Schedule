@@ -1,32 +1,24 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useClerk } from "@clerk/react";
-import { LogOut, Users, BookOpen, Settings, LayoutDashboard, Calendar, CalendarOff, FileText, MessageSquare, MessageCircle, HelpCircle } from "lucide-react";
+import { LogOut, LayoutDashboard, MessageSquare, HelpCircle, Settings, MessageCircle, ArrowLeftCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PingDot from "@/components/ui/ping-dot";
-import { useGetAdminDashboard, useListAdminHomework, useListAdminMessageThreads } from "@workspace/api-client-react";
+import { useGetAdminDashboard } from "@workspace/api-client-react";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { signOut } = useClerk();
   const { data: dashboard } = useGetAdminDashboard();
-  const { data: needsReviewList } = useListAdminHomework({ reviewed: false });
-  const hasNeedsReview = (needsReviewList?.length ?? 0) > 0;
-  const { data: messageThreads } = useListAdminMessageThreads();
-  const hasUnreadMessages = (messageThreads ?? []).some((t) => t.unreadCount > 0);
+  const hasOpenComplaints = (dashboard?.openComplaintsCount ?? 0) > 0;
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   const navItems = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { label: "Bookings", href: "/admin/bookings", icon: Calendar },
-    { label: "Availability", href: "/admin/availability", icon: CalendarOff },
-    { label: "Students", href: "/admin/students", icon: Users },
-    { label: "Messages", href: "/admin/messages", icon: MessageCircle },
-    { label: "Homework", href: "/admin/homework", icon: FileText },
-    { label: "Lesson Types", href: "/admin/lesson-types", icon: BookOpen },
     { label: "Testimonials", href: "/admin/testimonials", icon: MessageSquare },
     { label: "FAQs", href: "/admin/faqs", icon: HelpCircle },
     { label: "Settings", href: "/admin/settings", icon: Settings },
+    { label: "Complaints", href: "/admin/complaints", icon: MessageCircle },
   ];
 
   return (
@@ -36,14 +28,20 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <div className="p-6">
           <Link href="/admin" className="flex items-center gap-3">
             <img src={`${basePath}/logo.svg`} alt="Logo" className="w-8 h-8 rounded" />
-            <span className="font-serif text-xl font-bold text-foreground">Loquu</span>
+            <span className="font-serif text-xl font-bold text-foreground">Loquu Admin</span>
           </Link>
         </div>
 
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+          <Link
+            href="/teacher"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-foreground mb-2 pb-4 border-b border-border"
+          >
+            <ArrowLeftCircle className="w-5 h-5" />
+            <span className="flex-1">Back to Teacher Portal</span>
+          </Link>
           {navItems.map((item) => {
             const active = location === item.href;
-            const badgeCount = item.href === "/admin/homework" ? dashboard?.pendingHomeworkCount ?? 0 : 0;
             return (
               <Link
                 key={item.href}
@@ -56,13 +54,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               >
                 <item.icon className="w-5 h-5" />
                 <span className="flex-1">{item.label}</span>
-                {item.href === "/admin/homework" && hasNeedsReview && <PingDot />}
-                {item.href === "/admin/messages" && hasUnreadMessages && <PingDot />}
-                {badgeCount > 0 && (
-                  <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-xs font-bold">
-                    {badgeCount}
-                  </span>
-                )}
+                {item.href === "/admin/complaints" && hasOpenComplaints && <PingDot />}
               </Link>
             );
           })}
