@@ -284,6 +284,7 @@ function HomeworkCard({ hw }: { hw: any }) {
               <MultiFilePicker files={files} onFilesChange={setFiles} allowCamera />
               <Button
                 onClick={handleSubmit}
+                className="min-h-11"
                 disabled={submitMutation.isPending || uploadMutation.isPending || (!text && !url && files.length === 0)}
               >
                 {uploadMutation.isPending ? "Uploading..." : submitMutation.isPending ? "Sending..." : "Send for Review"}

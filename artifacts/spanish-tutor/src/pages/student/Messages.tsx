@@ -84,7 +84,7 @@ export default function StudentMessages() {
           placeholder="Write a message..."
           className="min-h-11 h-11 resize-none"
         />
-        <Button onClick={handleSend} disabled={sendMutation.isPending || !draft.trim()} size="icon">
+        <Button onClick={handleSend} disabled={sendMutation.isPending || !draft.trim()} size="icon" className="h-11 w-11">
           <Send className="w-4 h-4" />
         </Button>
       </div>
