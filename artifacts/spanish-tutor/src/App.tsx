@@ -170,6 +170,37 @@ function TeacherOnboardingGate() {
   );
 }
 
+// Teachers share the same Clerk app/session as students, so an already
+// signed-in user hitting these routes must never see the Clerk widget (it
+// auto-redirects an authenticated session to the app's default landing,
+// i.e. the student dashboard) — route them to onboarding instead, which
+// itself forwards on to /admin if they already have a teacher row.
+function TeacherSignInGate() {
+  return (
+    <>
+      <Show when="signed-in">
+        <Redirect to="/teacher/onboarding" />
+      </Show>
+      <Show when="signed-out">
+        <TeacherSignIn />
+      </Show>
+    </>
+  );
+}
+
+function TeacherSignUpGate() {
+  return (
+    <>
+      <Show when="signed-in">
+        <Redirect to="/teacher/onboarding" />
+      </Show>
+      <Show when="signed-out">
+        <TeacherSignUp />
+      </Show>
+    </>
+  );
+}
+
 function StudentPortal({ children }: { children: React.ReactNode }) {
   return (
     <>
@@ -250,8 +281,8 @@ function ClerkProviderWithRoutes() {
             <Route path="/sign-up/*?" component={SignUpPage} />
 
             {/* Teacher registration */}
-            <Route path="/teacher/sign-in/*?" component={TeacherSignIn} />
-            <Route path="/teacher/sign-up/*?" component={TeacherSignUp} />
+            <Route path="/teacher/sign-in/*?" component={TeacherSignInGate} />
+            <Route path="/teacher/sign-up/*?" component={TeacherSignUpGate} />
             <Route path="/teacher/onboarding" component={TeacherOnboardingGate} />
 
             {/* Teacher Portal (Clerk + teacher-row gated) */}
