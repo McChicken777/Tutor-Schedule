@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { seed } from "./lib/seed";
+import { startScheduledJobs } from "./lib/scheduledJobs";
 
 // Without these, a rejected promise or a throw outside a request handler kills
 // the process with a bare V8 trace and no logger context — which is exactly the
@@ -37,4 +38,5 @@ app.listen(port, (err) => {
   logger.info({ port }, "Server listening");
 
   seed().catch((e) => logger.error({ err: e }, "Seed failed"));
+  startScheduledJobs();
 });
