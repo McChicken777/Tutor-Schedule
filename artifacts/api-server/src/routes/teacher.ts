@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, ne, and, desc, asc, gte, lt, sql, inArray } from "drizzle-orm";
+import { eq, ne, and, desc, asc, gte, lt, sql, inArray, isNull } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   usersTable,
@@ -12,7 +12,7 @@ import {
   siteSettingsTable,
   messagesTable,
   availabilityOverridesTable,
-  complaintsTable,
+  reportsTable,
 } from "@workspace/db";
 import {
   UpdateTeacherBookingBody,
@@ -35,7 +35,7 @@ import {
   SendTeacherMessageBody,
   SetDayAvailabilityOverridesBody,
   DeleteAvailabilityOverrideParams,
-  SubmitComplaintBody,
+  CreateTeacherReportBody,
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
 import { requireTeacher } from "../middlewares/requireTeacher";
@@ -43,6 +43,7 @@ import { isCalendarConnected, getCalendarEmail, deleteCalendarEvent, createOAuth
 import { google } from "googleapis";
 import { calendarTokensTable } from "@workspace/db";
 import { mapHomeworkRow } from "../lib/homeworkMapper";
+import { mapReportRow } from "../lib/reportMapper";
 
 const router: IRouter = Router();
 
@@ -506,12 +507,18 @@ router.delete("/teacher/credit-bundles/:id", requireTeacher, async (req, res): P
 // a join through the parent booking's teacherId instead.
 
 async function getHomeworkFiles(homeworkId: number) {
-  return db.select().from(homeworkFilesTable).where(eq(homeworkFilesTable.homeworkId, homeworkId));
+  return db
+    .select()
+    .from(homeworkFilesTable)
+    .where(and(eq(homeworkFilesTable.homeworkId, homeworkId), isNull(homeworkFilesTable.deletedAt)));
 }
 
 async function getHomeworkFilesByIds(ids: number[]) {
   if (ids.length === 0) return new Map<number, (typeof homeworkFilesTable.$inferSelect)[]>();
-  const rows = await db.select().from(homeworkFilesTable).where(inArray(homeworkFilesTable.homeworkId, ids));
+  const rows = await db
+    .select()
+    .from(homeworkFilesTable)
+    .where(and(inArray(homeworkFilesTable.homeworkId, ids), isNull(homeworkFilesTable.deletedAt)));
   const byId = new Map<number, (typeof homeworkFilesTable.$inferSelect)[]>();
   for (const row of rows) {
     const list = byId.get(row.homeworkId) ?? [];
@@ -1222,31 +1229,83 @@ router.delete("/teacher/calendar/disconnect", requireTeacher, async (req, res): 
   res.json({ success: true });
 });
 
-// ─── Complaints ───────────────────────────────────────────────────────────────
+// ─── Reports ──────────────────────────────────────────────────────────────────
+// Message/homework-file targets must belong to one of this teacher's own
+// students — reports can't be filed against content outside the teacher's
+// own roster. "general" carries no target and no reported user.
 
-router.post("/teacher/complaints", requireTeacher, async (req, res): Promise<void> => {
+async function validateTeacherReportTarget(
+  teacherId: number,
+  targetType: "message" | "homework_file" | "general",
+  targetId: number | null,
+): Promise<{ ok: true; preview: string | null; reportedStudentId: number | null } | { ok: false }> {
+  if (targetType === "general") {
+    return targetId == null ? { ok: true, preview: null, reportedStudentId: null } : { ok: false };
+  }
+  if (targetId == null) return { ok: false };
+
+  if (targetType === "message") {
+    const [row] = await db
+      .select({ message: messagesTable, user: usersTable })
+      .from(messagesTable)
+      .innerJoin(usersTable, eq(messagesTable.studentId, usersTable.id))
+      .where(and(eq(messagesTable.id, targetId), eq(usersTable.teacherId, teacherId)));
+    return row
+      ? { ok: true, preview: row.message.body.slice(0, 140), reportedStudentId: row.message.studentId }
+      : { ok: false };
+  }
+
+  const [row] = await db
+    .select({ file: homeworkFilesTable, booking: bookingsTable })
+    .from(homeworkFilesTable)
+    .innerJoin(homeworkTable, eq(homeworkFilesTable.homeworkId, homeworkTable.id))
+    .innerJoin(bookingsTable, eq(homeworkTable.bookingId, bookingsTable.id))
+    .where(and(eq(homeworkFilesTable.id, targetId), eq(bookingsTable.teacherId, teacherId)));
+  return row ? { ok: true, preview: row.file.name, reportedStudentId: row.booking.studentId } : { ok: false };
+}
+
+router.post("/teacher/reports", requireTeacher, async (req, res): Promise<void> => {
   const teacherId = (req as any).teacherId as number;
   const teacher = (req as any).teacher as { displayName: string };
 
-  const parsed = SubmitComplaintBody.safeParse(req.body);
+  const parsed = CreateTeacherReportBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
 
-  const [complaint] = await db
-    .insert(complaintsTable)
-    .values({ teacherId, body: parsed.data.body })
+  const targetId = parsed.data.targetId ?? null;
+  const validation = await validateTeacherReportTarget(teacherId, parsed.data.targetType, targetId);
+  if (!validation.ok) {
+    res.status(400).json({ error: "Invalid target for this report type" });
+    return;
+  }
+
+  const reportedUserRole = validation.reportedStudentId != null ? "student" : null;
+
+  const [report] = await db
+    .insert(reportsTable)
+    .values({
+      reporterRole: "teacher",
+      reporterTeacherId: teacherId,
+      targetType: parsed.data.targetType,
+      targetId,
+      reportedUserRole,
+      reportedStudentId: validation.reportedStudentId,
+      body: parsed.data.body,
+    })
     .returning();
 
-  res.status(201).json({
-    id: complaint.id,
-    teacherId: complaint.teacherId,
-    teacherName: teacher.displayName,
-    body: complaint.body,
-    status: complaint.status,
-    createdAt: complaint.createdAt,
-  });
+  let reportedUserName: string | null = null;
+  if (validation.reportedStudentId != null) {
+    const [s] = await db
+      .select({ displayName: usersTable.displayName })
+      .from(usersTable)
+      .where(eq(usersTable.id, validation.reportedStudentId));
+    reportedUserName = s?.displayName ?? null;
+  }
+
+  res.status(201).json(mapReportRow(report, teacher.displayName, validation.preview, reportedUserName));
 });
 
 export default router;

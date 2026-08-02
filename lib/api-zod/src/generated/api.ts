@@ -28,6 +28,18 @@ export const RunHomeworkReminderSweepResponse = zod.object({
 
 
 /**
+ * Guarded by an X-Internal-Secret header (compared against INTERNAL_CRON_SECRET), not a user session. Intended to be hit daily by a Replit Scheduled Deployment. Skips files with an open report against them.
+ * @summary Delete homework file blobs (and soft-delete their rows) 28 days after the lesson date
+ */
+export const RunHomeworkFilesCleanupSweepResponse = zod.object({
+  "checkedAt": zod.coerce.date(),
+  "filesDeleted": zod.number(),
+  "skippedDueToOpenReport": zod.number(),
+  "homeworkFileIds": zod.array(zod.number())
+})
+
+
+/**
  * @summary List active lesson types
  */
 export const ListLessonTypesResponseItem = zod.object({
@@ -771,6 +783,35 @@ export const SendStudentMessageResponse = zod.object({
   "body": zod.string(),
   "createdAt": zod.coerce.date(),
   "readAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Report a message, homework file, or file general feedback about your teacher
+ */
+
+
+
+export const CreateStudentReportBody = zod.object({
+  "targetType": zod.enum(['message', 'homework_file', 'general']),
+  "targetId": zod.number().nullish(),
+  "body": zod.string().min(1)
+})
+
+export const CreateStudentReportResponse = zod.object({
+  "id": zod.number(),
+  "reporterRole": zod.enum(['student', 'teacher']),
+  "reporterId": zod.number(),
+  "reporterName": zod.string(),
+  "targetType": zod.enum(['message', 'homework_file', 'general']),
+  "targetId": zod.number().nullable(),
+  "targetPreview": zod.string().nullable(),
+  "reportedUserRole": zod.union([zod.literal('student'),zod.literal('teacher'),zod.literal(null)]).nullable(),
+  "reportedUserId": zod.number().nullable(),
+  "reportedUserName": zod.string().nullable(),
+  "body": zod.string(),
+  "status": zod.enum(['open', 'resolved', 'actioned']),
+  "createdAt": zod.coerce.date()
 })
 
 
@@ -1781,21 +1822,30 @@ export const DisconnectCalendarResponse = zod.object({
 
 
 /**
- * @summary Submit a complaint or suggestion to the platform admin
+ * @summary Report a message, homework file, or file general feedback to the admin
  */
 
 
 
-export const SubmitComplaintBody = zod.object({
+export const CreateTeacherReportBody = zod.object({
+  "targetType": zod.enum(['message', 'homework_file', 'general']),
+  "targetId": zod.number().nullish(),
   "body": zod.string().min(1)
 })
 
-export const SubmitComplaintResponse = zod.object({
+export const CreateTeacherReportResponse = zod.object({
   "id": zod.number(),
-  "teacherId": zod.number(),
-  "teacherName": zod.string(),
+  "reporterRole": zod.enum(['student', 'teacher']),
+  "reporterId": zod.number(),
+  "reporterName": zod.string(),
+  "targetType": zod.enum(['message', 'homework_file', 'general']),
+  "targetId": zod.number().nullable(),
+  "targetPreview": zod.string().nullable(),
+  "reportedUserRole": zod.union([zod.literal('student'),zod.literal('teacher'),zod.literal(null)]).nullable(),
+  "reportedUserId": zod.number().nullable(),
+  "reportedUserName": zod.string().nullable(),
   "body": zod.string(),
-  "status": zod.enum(['open', 'resolved']),
+  "status": zod.enum(['open', 'resolved', 'actioned']),
   "createdAt": zod.coerce.date()
 })
 
@@ -1808,42 +1858,180 @@ export const GetAdminDashboardResponse = zod.object({
   "totalStudents": zod.number(),
   "totalBookingsThisWeek": zod.number(),
   "totalPendingHomework": zod.number(),
-  "openComplaintsCount": zod.number()
+  "openReportsCount": zod.number()
 })
 
 
 /**
- * @summary List all teacher complaints/suggestions
+ * @summary List reports filed by students and teachers
  */
-export const ListComplaintsResponseItem = zod.object({
+export const ListReportsQueryParams = zod.object({
+  "status": zod.enum(['open', 'resolved', 'actioned']).optional()
+})
+
+export const ListReportsResponseItem = zod.object({
   "id": zod.number(),
-  "teacherId": zod.number(),
-  "teacherName": zod.string(),
+  "reporterRole": zod.enum(['student', 'teacher']),
+  "reporterId": zod.number(),
+  "reporterName": zod.string(),
+  "targetType": zod.enum(['message', 'homework_file', 'general']),
+  "targetId": zod.number().nullable(),
+  "targetPreview": zod.string().nullable(),
+  "reportedUserRole": zod.union([zod.literal('student'),zod.literal('teacher'),zod.literal(null)]).nullable(),
+  "reportedUserId": zod.number().nullable(),
+  "reportedUserName": zod.string().nullable(),
   "body": zod.string(),
-  "status": zod.enum(['open', 'resolved']),
+  "status": zod.enum(['open', 'resolved', 'actioned']),
   "createdAt": zod.coerce.date()
 })
-export const ListComplaintsResponse = zod.array(ListComplaintsResponseItem)
+export const ListReportsResponse = zod.array(ListReportsResponseItem)
 
 
 /**
- * @summary Update a complaint's status
+ * @summary Update a report's status
  */
-export const UpdateComplaintParams = zod.object({
+export const UpdateReportParams = zod.object({
   "id": zod.coerce.number()
 })
 
-export const UpdateComplaintBody = zod.object({
+export const UpdateReportBody = zod.object({
   "status": zod.enum(['open', 'resolved'])
 })
 
-export const UpdateComplaintResponse = zod.object({
+export const UpdateReportResponse = zod.object({
   "id": zod.number(),
-  "teacherId": zod.number(),
-  "teacherName": zod.string(),
+  "reporterRole": zod.enum(['student', 'teacher']),
+  "reporterId": zod.number(),
+  "reporterName": zod.string(),
+  "targetType": zod.enum(['message', 'homework_file', 'general']),
+  "targetId": zod.number().nullable(),
+  "targetPreview": zod.string().nullable(),
+  "reportedUserRole": zod.union([zod.literal('student'),zod.literal('teacher'),zod.literal(null)]).nullable(),
+  "reportedUserId": zod.number().nullable(),
+  "reportedUserName": zod.string().nullable(),
   "body": zod.string(),
-  "status": zod.enum(['open', 'resolved']),
+  "status": zod.enum(['open', 'resolved', 'actioned']),
   "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Ban the user/teacher this report is about, and mark the report actioned
+ */
+export const BanReportedUserParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const BanReportedUserResponse = zod.object({
+  "id": zod.number(),
+  "reporterRole": zod.enum(['student', 'teacher']),
+  "reporterId": zod.number(),
+  "reporterName": zod.string(),
+  "targetType": zod.enum(['message', 'homework_file', 'general']),
+  "targetId": zod.number().nullable(),
+  "targetPreview": zod.string().nullable(),
+  "reportedUserRole": zod.union([zod.literal('student'),zod.literal('teacher'),zod.literal(null)]).nullable(),
+  "reportedUserId": zod.number().nullable(),
+  "reportedUserName": zod.string().nullable(),
+  "body": zod.string(),
+  "status": zod.enum(['open', 'resolved', 'actioned']),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List all teacher accounts, for moderation
+ */
+export const ListAdminTeacherAccountsResponseItem = zod.object({
+  "id": zod.number(),
+  "role": zod.enum(['student', 'teacher']),
+  "name": zod.string(),
+  "email": zod.string(),
+  "isAdmin": zod.boolean(),
+  "isBanned": zod.boolean()
+})
+export const ListAdminTeacherAccountsResponse = zod.array(ListAdminTeacherAccountsResponseItem)
+
+
+/**
+ * @summary Ban a teacher account
+ */
+export const BanTeacherAccountParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const BanTeacherAccountResponse = zod.object({
+  "id": zod.number(),
+  "role": zod.enum(['student', 'teacher']),
+  "name": zod.string(),
+  "email": zod.string(),
+  "isAdmin": zod.boolean(),
+  "isBanned": zod.boolean()
+})
+
+
+/**
+ * @summary Unban a teacher account
+ */
+export const UnbanTeacherAccountParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UnbanTeacherAccountResponse = zod.object({
+  "id": zod.number(),
+  "role": zod.enum(['student', 'teacher']),
+  "name": zod.string(),
+  "email": zod.string(),
+  "isAdmin": zod.boolean(),
+  "isBanned": zod.boolean()
+})
+
+
+/**
+ * @summary List all student accounts, for moderation
+ */
+export const ListAdminStudentAccountsResponseItem = zod.object({
+  "id": zod.number(),
+  "role": zod.enum(['student', 'teacher']),
+  "name": zod.string(),
+  "email": zod.string(),
+  "isAdmin": zod.boolean(),
+  "isBanned": zod.boolean()
+})
+export const ListAdminStudentAccountsResponse = zod.array(ListAdminStudentAccountsResponseItem)
+
+
+/**
+ * @summary Ban a student account
+ */
+export const BanStudentAccountParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const BanStudentAccountResponse = zod.object({
+  "id": zod.number(),
+  "role": zod.enum(['student', 'teacher']),
+  "name": zod.string(),
+  "email": zod.string(),
+  "isAdmin": zod.boolean(),
+  "isBanned": zod.boolean()
+})
+
+
+/**
+ * @summary Unban a student account
+ */
+export const UnbanStudentAccountParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UnbanStudentAccountResponse = zod.object({
+  "id": zod.number(),
+  "role": zod.enum(['student', 'teacher']),
+  "name": zod.string(),
+  "email": zod.string(),
+  "isAdmin": zod.boolean(),
+  "isBanned": zod.boolean()
 })
 
 

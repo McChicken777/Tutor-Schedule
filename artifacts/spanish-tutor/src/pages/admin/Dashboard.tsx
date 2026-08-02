@@ -1,5 +1,5 @@
 import { useGetAdminDashboard } from "@workspace/api-client-react";
-import { Users, GraduationCap, Calendar, FileText, MessageCircle } from "lucide-react";
+import { Users, GraduationCap, Calendar, FileText, Flag } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import ErrorState from "@/components/ErrorState";
 
@@ -55,10 +55,10 @@ export default function AdminDashboard() {
         </div>
         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-2 text-muted-foreground">
-            <MessageCircle className="w-5 h-5 text-destructive" />
-            <span className="font-medium">Open Complaints</span>
+            <Flag className="w-5 h-5 text-destructive" />
+            <span className="font-medium">Open Reports</span>
           </div>
-          <p className="text-4xl font-serif font-bold text-foreground">{dashboard.openComplaintsCount}</p>
+          <p className="text-4xl font-serif font-bold text-foreground">{dashboard.openReportsCount}</p>
         </div>
       </div>
     </div>

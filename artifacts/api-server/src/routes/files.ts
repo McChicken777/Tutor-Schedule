@@ -27,6 +27,11 @@ router.get("/files/homework-file/:fileId", async (req, res): Promise<void> => {
     return;
   }
 
+  if (row.file.deletedAt) {
+    res.status(410).json({ error: "This file has been deleted" });
+    return;
+  }
+
   const auth = getAuth(req);
   const clerkUserId = (auth?.sessionClaims?.userId as string | undefined) || auth?.userId;
   if (!clerkUserId) {
@@ -35,7 +40,7 @@ router.get("/files/homework-file/:fileId", async (req, res): Promise<void> => {
   }
 
   const [teacher] = await db.select().from(teachersTable).where(eq(teachersTable.clerkUserId, clerkUserId));
-  const isOwningTeacher = !!teacher && row.booking.teacherId === teacher.id;
+  const isOwningTeacher = !!teacher && (row.booking.teacherId === teacher.id || teacher.isAdmin);
 
   if (!isOwningTeacher) {
     const [owner] = await db

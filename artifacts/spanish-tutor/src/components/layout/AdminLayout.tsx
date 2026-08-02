@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useClerk } from "@clerk/react";
-import { LogOut, LayoutDashboard, MessageSquare, HelpCircle, Settings, MessageCircle, ArrowLeftCircle } from "lucide-react";
+import { LogOut, LayoutDashboard, MessageSquare, HelpCircle, Settings, Flag, Users, ArrowLeftCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PingDot from "@/components/ui/ping-dot";
 import { useGetAdminDashboard } from "@workspace/api-client-react";
@@ -10,7 +10,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { signOut } = useClerk();
   const { data: dashboard } = useGetAdminDashboard();
-  const hasOpenComplaints = (dashboard?.openComplaintsCount ?? 0) > 0;
+  const hasOpenReports = (dashboard?.openReportsCount ?? 0) > 0;
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   const navItems = [
@@ -18,7 +18,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     { label: "Testimonials", href: "/admin/testimonials", icon: MessageSquare },
     { label: "FAQs", href: "/admin/faqs", icon: HelpCircle },
     { label: "Settings", href: "/admin/settings", icon: Settings },
-    { label: "Complaints", href: "/admin/complaints", icon: MessageCircle },
+    { label: "Reports", href: "/admin/reports", icon: Flag },
+    { label: "Accounts", href: "/admin/accounts", icon: Users },
   ];
 
   return (
@@ -54,7 +55,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               >
                 <item.icon className="w-5 h-5" />
                 <span className="flex-1">{item.label}</span>
-                {item.href === "/admin/complaints" && hasOpenComplaints && <PingDot />}
+                {item.href === "/admin/reports" && hasOpenReports && <PingDot />}
               </Link>
             );
           })}

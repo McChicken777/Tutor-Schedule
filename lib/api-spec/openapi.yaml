@@ -54,6 +54,22 @@ paths:
         "401":
           description: Missing or invalid X-Internal-Secret header
 
+  /internal/homework-files-cleanup/run:
+    post:
+      operationId: runHomeworkFilesCleanupSweep
+      tags: [internal]
+      summary: Delete homework file blobs (and soft-delete their rows) 28 days after the lesson date
+      description: Guarded by an X-Internal-Secret header (compared against INTERNAL_CRON_SECRET), not a user session. Intended to be hit daily by a Replit Scheduled Deployment. Skips files with an open report against them.
+      responses:
+        "200":
+          description: Sweep result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeworkFilesCleanupSweepResult"
+        "401":
+          description: Missing or invalid X-Internal-Secret header
+
   # ─── PUBLIC ───────────────────────────────────────────────────────────────
   /lesson-types:
     get:
@@ -499,6 +515,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Message"
+        "401":
+          description: Unauthorized
+
+  /student/reports:
+    post:
+      operationId: createStudentReport
+      tags: [student]
+      summary: Report a message, homework file, or file general feedback about your teacher
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportInput"
+      responses:
+        "201":
+          description: Report created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "400":
+          description: Invalid target for this report type
         "401":
           description: Unauthorized
 
@@ -1222,24 +1261,26 @@ paths:
                 required:
                   - success
 
-  /teacher/complaints:
+  /teacher/reports:
     post:
-      operationId: submitComplaint
+      operationId: createTeacherReport
       tags: [teacher]
-      summary: Submit a complaint or suggestion to the platform admin
+      summary: Report a message, homework file, or file general feedback to the admin
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ComplaintInput"
+              $ref: "#/components/schemas/ReportInput"
       responses:
         "201":
-          description: Complaint submitted
+          description: Report created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Complaint"
+                $ref: "#/components/schemas/Report"
+        "400":
+          description: Invalid target for this report type
         "401":
           description: Unauthorized
 
@@ -1259,28 +1300,35 @@ paths:
         "401":
           description: Unauthorized
 
-  /admin/complaints:
+  /admin/reports:
     get:
-      operationId: listComplaints
+      operationId: listReports
       tags: [admin]
-      summary: List all teacher complaints/suggestions
+      summary: List reports filed by students and teachers
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, resolved, actioned]
       responses:
         "200":
-          description: All complaints
+          description: All reports
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Complaint"
+                  $ref: "#/components/schemas/Report"
         "401":
           description: Unauthorized
 
-  /admin/complaints/{id}:
+  /admin/reports/{id}:
     patch:
-      operationId: updateComplaint
+      operationId: updateReport
       tags: [admin]
-      summary: Update a complaint's status
+      summary: Update a report's status
       parameters:
         - name: id
           in: path
@@ -1292,14 +1340,151 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ComplaintUpdate"
+              $ref: "#/components/schemas/ReportUpdate"
       responses:
         "200":
-          description: Updated complaint
+          description: Updated report
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Complaint"
+                $ref: "#/components/schemas/Report"
+        "404":
+          description: Not found
+
+  /admin/reports/{id}/ban:
+    post:
+      operationId: banReportedUser
+      tags: [admin]
+      summary: Ban the user/teacher this report is about, and mark the report actioned
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Report actioned, reported user banned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "400":
+          description: This report has no reported user to ban
+        "404":
+          description: Not found
+
+  /admin/teachers:
+    get:
+      operationId: listAdminTeacherAccounts
+      tags: [admin]
+      summary: List all teacher accounts, for moderation
+      responses:
+        "200":
+          description: All teacher accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminAccount"
+        "401":
+          description: Unauthorized
+
+  /admin/teachers/{id}/ban:
+    post:
+      operationId: banTeacherAccount
+      tags: [admin]
+      summary: Ban a teacher account
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Teacher banned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAccount"
+        "404":
+          description: Not found
+    delete:
+      operationId: unbanTeacherAccount
+      tags: [admin]
+      summary: Unban a teacher account
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Teacher unbanned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAccount"
+        "404":
+          description: Not found
+
+  /admin/students:
+    get:
+      operationId: listAdminStudentAccounts
+      tags: [admin]
+      summary: List all student accounts, for moderation
+      responses:
+        "200":
+          description: All student accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminAccount"
+        "401":
+          description: Unauthorized
+
+  /admin/students/{id}/ban:
+    post:
+      operationId: banStudentAccount
+      tags: [admin]
+      summary: Ban a student account
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Student banned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAccount"
+        "404":
+          description: Not found
+    delete:
+      operationId: unbanStudentAccount
+      tags: [admin]
+      summary: Unban a student account
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Student unbanned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAccount"
         "404":
           description: Not found
 
@@ -2405,14 +2590,14 @@ components:
           type: number
         totalPendingHomework:
           type: number
-        openComplaintsCount:
+        openReportsCount:
           type: number
       required:
         - totalTeachers
         - totalStudents
         - totalBookingsThisWeek
         - totalPendingHomework
-        - openComplaintsCount
+        - openReportsCount
 
     TeacherBooking:
       type: object
@@ -2714,41 +2899,71 @@ components:
         - connected
         - calendarEmail
 
-    Complaint:
+    ReportInput:
+      type: object
+      properties:
+        targetType:
+          type: string
+          enum: [message, homework_file, general]
+        targetId:
+          type: ["number", "null"]
+        body:
+          type: string
+          minLength: 1
+      required:
+        - targetType
+        - body
+
+    Report:
       type: object
       properties:
         id:
           type: number
-        teacherId:
-          type: number
-        teacherName:
+        reporterRole:
           type: string
+          enum: [student, teacher]
+        reporterId:
+          type: number
+        reporterName:
+          type: string
+        targetType:
+          type: string
+          enum: [message, homework_file, general]
+        targetId:
+          type: ["number", "null"]
+        targetPreview:
+          type: ["string", "null"]
+        reportedUserRole:
+          type: ["string", "null"]
+          enum: [student, teacher, null]
+        reportedUserId:
+          type: ["number", "null"]
+        reportedUserName:
+          type: ["string", "null"]
         body:
           type: string
         status:
           type: string
-          enum: [open, resolved]
+          enum: [open, resolved, actioned]
         createdAt:
           type: string
           format: date-time
       required:
         - id
-        - teacherId
-        - teacherName
+        - reporterRole
+        - reporterId
+        - reporterName
+        - targetType
+        - targetId
+        - targetPreview
+        - reportedUserRole
+        - reportedUserId
+        - reportedUserName
         - body
         - status
         - createdAt
 
-    ComplaintInput:
-      type: object
-      properties:
-        body:
-          type: string
-          minLength: 1
-      required:
-        - body
-
-    ComplaintUpdate:
+    ReportUpdate:
       type: object
       properties:
         status:
@@ -2756,3 +2971,47 @@ components:
           enum: [open, resolved]
       required:
         - status
+
+    AdminAccount:
+      type: object
+      properties:
+        id:
+          type: number
+        role:
+          type: string
+          enum: [student, teacher]
+        name:
+          type: string
+        email:
+          type: string
+        isAdmin:
+          type: boolean
+        isBanned:
+          type: boolean
+      required:
+        - id
+        - role
+        - name
+        - email
+        - isAdmin
+        - isBanned
+
+    HomeworkFilesCleanupSweepResult:
+      type: object
+      properties:
+        checkedAt:
+          type: string
+          format: date-time
+        filesDeleted:
+          type: number
+        skippedDueToOpenReport:
+          type: number
+        homeworkFileIds:
+          type: array
+          items:
+            type: number
+      required:
+        - checkedAt
+        - filesDeleted
+        - skippedDueToOpenReport
+        - homeworkFileIds

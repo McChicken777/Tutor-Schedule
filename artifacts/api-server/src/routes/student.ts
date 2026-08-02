@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { clerkClient } from "@clerk/express";
-import { eq, ne, lt, gt, and, asc, desc, sql, inArray } from "drizzle-orm";
+import { eq, ne, lt, gt, and, asc, desc, sql, inArray, isNull } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   usersTable,
@@ -13,6 +13,8 @@ import {
   messagesTable,
   siteSettingsTable,
   availabilityOverridesTable,
+  reportsTable,
+  teachersTable,
 } from "@workspace/db";
 import {
   CreateBookingBody,
@@ -28,6 +30,7 @@ import {
   SubmitReviewParams,
   ListStudentBookingsQueryParams,
   SendStudentMessageBody,
+  CreateStudentReportBody,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/requireAuth";
 import {
@@ -36,16 +39,23 @@ import {
   getFreeBusySlots,
 } from "../lib/calendar";
 import { mapHomeworkFields, mapHomeworkRow } from "../lib/homeworkMapper";
+import { mapReportRow } from "../lib/reportMapper";
 
 const router: IRouter = Router();
 
 async function getHomeworkFiles(homeworkId: number) {
-  return db.select().from(homeworkFilesTable).where(eq(homeworkFilesTable.homeworkId, homeworkId));
+  return db
+    .select()
+    .from(homeworkFilesTable)
+    .where(and(eq(homeworkFilesTable.homeworkId, homeworkId), isNull(homeworkFilesTable.deletedAt)));
 }
 
 async function getHomeworkFilesByIds(ids: number[]) {
   if (ids.length === 0) return new Map<number, (typeof homeworkFilesTable.$inferSelect)[]>();
-  const rows = await db.select().from(homeworkFilesTable).where(inArray(homeworkFilesTable.homeworkId, ids));
+  const rows = await db
+    .select()
+    .from(homeworkFilesTable)
+    .where(and(inArray(homeworkFilesTable.homeworkId, ids), isNull(homeworkFilesTable.deletedAt)));
   const byId = new Map<number, (typeof homeworkFilesTable.$inferSelect)[]>();
   for (const row of rows) {
     const list = byId.get(row.homeworkId) ?? [];
@@ -988,6 +998,81 @@ router.post("/student/messages", requireAuth, async (req, res): Promise<void> =>
     .returning();
 
   res.status(201).json(message);
+});
+
+// ─── Reports ──────────────────────────────────────────────────────────────────
+// Message/homework-file targets must belong to this student's own thread/
+// bookings — reports can't be filed against content the student can't see.
+// "general" (and every target type) attributes the reported user to this
+// student's own assigned teacher, since neither messages nor homework files
+// carry per-author identity beyond the student side of the thread.
+
+async function validateStudentReportTarget(
+  studentId: number,
+  targetType: "message" | "homework_file" | "general",
+  targetId: number | null,
+): Promise<{ ok: true; preview: string | null } | { ok: false }> {
+  if (targetType === "general") {
+    return targetId == null ? { ok: true, preview: null } : { ok: false };
+  }
+  if (targetId == null) return { ok: false };
+
+  if (targetType === "message") {
+    const [m] = await db
+      .select()
+      .from(messagesTable)
+      .where(and(eq(messagesTable.id, targetId), eq(messagesTable.studentId, studentId)));
+    return m ? { ok: true, preview: m.body.slice(0, 140) } : { ok: false };
+  }
+
+  const [row] = await db
+    .select({ file: homeworkFilesTable })
+    .from(homeworkFilesTable)
+    .innerJoin(homeworkTable, eq(homeworkFilesTable.homeworkId, homeworkTable.id))
+    .innerJoin(bookingsTable, eq(homeworkTable.bookingId, bookingsTable.id))
+    .where(and(eq(homeworkFilesTable.id, targetId), eq(bookingsTable.studentId, studentId)));
+  return row ? { ok: true, preview: row.file.name } : { ok: false };
+}
+
+router.post("/student/reports", requireAuth, async (req, res): Promise<void> => {
+  const clerkUserId = (req as any).clerkUserId;
+  const user = await getOrCreateUser(clerkUserId);
+
+  const parsed = CreateStudentReportBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const targetId = parsed.data.targetId ?? null;
+  const validation = await validateStudentReportTarget(user.id, parsed.data.targetType, targetId);
+  if (!validation.ok) {
+    res.status(400).json({ error: "Invalid target for this report type" });
+    return;
+  }
+
+  const reportedUserRole = user.teacherId != null ? "teacher" : null;
+
+  const [report] = await db
+    .insert(reportsTable)
+    .values({
+      reporterRole: "student",
+      reporterStudentId: user.id,
+      targetType: parsed.data.targetType,
+      targetId,
+      reportedUserRole,
+      reportedTeacherId: user.teacherId ?? null,
+      body: parsed.data.body,
+    })
+    .returning();
+
+  let reportedUserName: string | null = null;
+  if (reportedUserRole === "teacher" && user.teacherId != null) {
+    const [t] = await db.select({ displayName: teachersTable.displayName }).from(teachersTable).where(eq(teachersTable.id, user.teacherId));
+    reportedUserName = t?.displayName ?? null;
+  }
+
+  res.status(201).json(mapReportRow(report, user.displayName, validation.preview, reportedUserName));
 });
 
 export default router;

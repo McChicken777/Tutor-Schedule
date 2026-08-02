@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ComplaintUpdateStatus = typeof ComplaintUpdateStatus[keyof typeof ComplaintUpdateStatus];
+export type ReportUpdateStatus = typeof ReportUpdateStatus[keyof typeof ReportUpdateStatus];
 
 
-export const ComplaintUpdateStatus = {
+export const ReportUpdateStatus = {
   open: 'open',
   resolved: 'resolved',
 } as const;

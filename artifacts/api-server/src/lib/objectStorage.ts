@@ -39,3 +39,10 @@ export async function getObject(key: string): Promise<Buffer> {
   }
   return result.value[0];
 }
+
+export async function deleteObject(key: string): Promise<void> {
+  const { ok, error } = await client.delete(key, { ignoreNotFound: true });
+  if (!ok) {
+    throw new Error(`Failed to delete object ${key}: ${error?.message ?? "unknown error"}`);
+  }
+}

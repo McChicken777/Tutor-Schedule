@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import ErrorState from "@/components/ErrorState";
+import ReportButton from "@/components/reports/ReportButton";
 import { useQueryClient } from "@tanstack/react-query";
 import { Send, MessageSquare } from "lucide-react";
 
@@ -36,9 +37,12 @@ export default function StudentMessages() {
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="p-6 md:p-10 pb-6 border-b border-border">
-        <h1 className="text-3xl font-serif font-bold text-foreground">Messages</h1>
-        <p className="text-muted-foreground mt-1">Chat with your teacher</p>
+      <div className="p-6 md:p-10 pb-6 border-b border-border flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-serif font-bold text-foreground">Messages</h1>
+          <p className="text-muted-foreground mt-1">Chat with your teacher</p>
+        </div>
+        <ReportButton role="student" target={{ type: "general" }} variant="header" />
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 md:px-10 space-y-4">
@@ -53,7 +57,10 @@ export default function StudentMessages() {
           </div>
         ) : (
           messages.map((m) => (
-            <div key={m.id} className={`flex ${m.senderRole === "student" ? "justify-end" : "justify-start"}`}>
+            <div
+              key={m.id}
+              className={`flex items-end gap-1.5 ${m.senderRole === "student" ? "justify-end" : "justify-start"}`}
+            >
               <div
                 className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
                   m.senderRole === "student"
@@ -66,6 +73,9 @@ export default function StudentMessages() {
                   {format(new Date(m.createdAt), "MMM d, h:mm a")}
                 </p>
               </div>
+              {m.senderRole !== "student" && (
+                <ReportButton role="student" target={{ type: "message", id: m.id }} />
+              )}
             </div>
           ))
         )}

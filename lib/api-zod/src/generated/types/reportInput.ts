@@ -5,8 +5,12 @@
  * Spanish Tutor Booking Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { ReportInputTargetType } from './reportInputTargetType';
 
-export interface ComplaintInput {
+export interface ReportInput {
+  targetType: ReportInputTargetType;
+  /** @nullable */
+  targetId?: number | null;
   /** @minLength 1 */
   body: string;
 }

@@ -11,5 +11,5 @@ export interface AdminDashboard {
   totalStudents: number;
   totalBookingsThisWeek: number;
   totalPendingHomework: number;
-  openComplaintsCount: number;
+  openReportsCount: number;
 }

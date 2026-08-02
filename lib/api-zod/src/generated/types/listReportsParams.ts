@@ -5,8 +5,8 @@
  * Spanish Tutor Booking Platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { ComplaintUpdateStatus } from './complaintUpdateStatus';
+import type { ListReportsStatus } from './listReportsStatus';
 
-export interface ComplaintUpdate {
-  status: ComplaintUpdateStatus;
-}
+export type ListReportsParams = {
+status?: ListReportsStatus;
+};

@@ -25,7 +25,6 @@ export default function TeacherLayout({ children }: { children: ReactNode }) {
     { label: "Messages", href: "/teacher/messages", icon: MessageCircle },
     { label: "Homework", href: "/teacher/homework", icon: FileText },
     { label: "Lesson Types", href: "/teacher/lesson-types", icon: BookOpen },
-    { label: "Feedback", href: "/teacher/feedback", icon: MessageCircle },
   ];
 
   return (
