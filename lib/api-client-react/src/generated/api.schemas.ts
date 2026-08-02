@@ -641,40 +641,6 @@ export interface CalendarStatus {
   calendarEmail: string | null;
 }
 
-export type ComplaintStatus = typeof ComplaintStatus[keyof typeof ComplaintStatus];
-
-
-export const ComplaintStatus = {
-  open: 'open',
-  resolved: 'resolved',
-} as const;
-
-export interface Complaint {
-  id: number;
-  teacherId: number;
-  teacherName: string;
-  body: string;
-  status: ComplaintStatus;
-  createdAt: string;
-}
-
-export interface ComplaintInput {
-  /** @minLength 1 */
-  body: string;
-}
-
-export type ComplaintUpdateStatus = typeof ComplaintUpdateStatus[keyof typeof ComplaintUpdateStatus];
-
-
-export const ComplaintUpdateStatus = {
-  open: 'open',
-  resolved: 'resolved',
-} as const;
-
-export interface ComplaintUpdate {
-  status: ComplaintUpdateStatus;
-}
-
 export type ReportInputTargetType = typeof ReportInputTargetType[keyof typeof ReportInputTargetType];
 
 

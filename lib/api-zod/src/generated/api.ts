@@ -1822,26 +1822,6 @@ export const DisconnectCalendarResponse = zod.object({
 
 
 /**
- * @summary Submit a complaint or suggestion to the platform admin
- */
-
-
-
-export const SubmitComplaintBody = zod.object({
-  "body": zod.string().min(1)
-})
-
-export const SubmitComplaintResponse = zod.object({
-  "id": zod.number(),
-  "teacherId": zod.number(),
-  "teacherName": zod.string(),
-  "body": zod.string(),
-  "status": zod.enum(['open', 'resolved']),
-  "createdAt": zod.coerce.date()
-})
-
-
-/**
  * @summary Report a message, homework file, or file general feedback to the admin
  */
 
@@ -1879,41 +1859,6 @@ export const GetAdminDashboardResponse = zod.object({
   "totalBookingsThisWeek": zod.number(),
   "totalPendingHomework": zod.number(),
   "openReportsCount": zod.number()
-})
-
-
-/**
- * @summary List all teacher complaints/suggestions
- */
-export const ListComplaintsResponseItem = zod.object({
-  "id": zod.number(),
-  "teacherId": zod.number(),
-  "teacherName": zod.string(),
-  "body": zod.string(),
-  "status": zod.enum(['open', 'resolved']),
-  "createdAt": zod.coerce.date()
-})
-export const ListComplaintsResponse = zod.array(ListComplaintsResponseItem)
-
-
-/**
- * @summary Update a complaint's status
- */
-export const UpdateComplaintParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const UpdateComplaintBody = zod.object({
-  "status": zod.enum(['open', 'resolved'])
-})
-
-export const UpdateComplaintResponse = zod.object({
-  "id": zod.number(),
-  "teacherId": zod.number(),
-  "teacherName": zod.string(),
-  "body": zod.string(),
-  "status": zod.enum(['open', 'resolved']),
-  "createdAt": zod.coerce.date()
 })
 
 

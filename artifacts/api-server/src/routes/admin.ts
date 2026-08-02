@@ -8,7 +8,6 @@ import {
   teachersTable,
   testimonialsTable,
   faqsTable,
-  complaintsTable,
   reportsTable,
   messagesTable,
   homeworkFilesTable,
@@ -18,8 +17,6 @@ import {
   UpdateTestimonialBody,
   CreateFaqBody,
   UpdateFaqBody,
-  UpdateComplaintParams,
-  UpdateComplaintBody,
   UpdateReportParams,
   UpdateReportBody,
 } from "@workspace/api-zod";
@@ -76,66 +73,6 @@ router.get("/admin/dashboard", requireAdmin, async (_req, res): Promise<void> =>
     totalBookingsThisWeek,
     totalPendingHomework,
     openReportsCount,
-  });
-});
-
-// ─── Complaints ───────────────────────────────────────────────────────────────
-
-router.get("/admin/complaints", requireAdmin, async (_req, res): Promise<void> => {
-  const rows = await db
-    .select({ complaint: complaintsTable, teacher: teachersTable })
-    .from(complaintsTable)
-    .innerJoin(teachersTable, eq(complaintsTable.teacherId, teachersTable.id))
-    .orderBy(desc(complaintsTable.createdAt));
-
-  res.json(
-    rows.map((r) => ({
-      id: r.complaint.id,
-      teacherId: r.complaint.teacherId,
-      teacherName: r.teacher.displayName,
-      body: r.complaint.body,
-      status: r.complaint.status,
-      createdAt: r.complaint.createdAt,
-    })),
-  );
-});
-
-router.patch("/admin/complaints/:id", requireAdmin, async (req, res): Promise<void> => {
-  const parsedParams = UpdateComplaintParams.safeParse(req.params);
-  if (!parsedParams.success) {
-    res.status(400).json({ error: "Invalid id" });
-    return;
-  }
-
-  const parsed = UpdateComplaintBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-
-  const [existing] = await db
-    .select({ complaint: complaintsTable, teacher: teachersTable })
-    .from(complaintsTable)
-    .innerJoin(teachersTable, eq(complaintsTable.teacherId, teachersTable.id))
-    .where(eq(complaintsTable.id, parsedParams.data.id));
-  if (!existing) {
-    res.status(404).json({ error: "Complaint not found" });
-    return;
-  }
-
-  const [updated] = await db
-    .update(complaintsTable)
-    .set({ status: parsed.data.status })
-    .where(eq(complaintsTable.id, parsedParams.data.id))
-    .returning();
-
-  res.json({
-    id: updated.id,
-    teacherId: updated.teacherId,
-    teacherName: existing.teacher.displayName,
-    body: updated.body,
-    status: updated.status,
-    createdAt: updated.createdAt,
   });
 });
 

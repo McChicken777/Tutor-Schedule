@@ -1261,27 +1261,6 @@ paths:
                 required:
                   - success
 
-  /teacher/complaints:
-    post:
-      operationId: submitComplaint
-      tags: [teacher]
-      summary: Submit a complaint or suggestion to the platform admin
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ComplaintInput"
-      responses:
-        "201":
-          description: Complaint submitted
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Complaint"
-        "401":
-          description: Unauthorized
-
   /teacher/reports:
     post:
       operationId: createTeacherReport
@@ -1320,50 +1299,6 @@ paths:
                 $ref: "#/components/schemas/AdminDashboard"
         "401":
           description: Unauthorized
-
-  /admin/complaints:
-    get:
-      operationId: listComplaints
-      tags: [admin]
-      summary: List all teacher complaints/suggestions
-      responses:
-        "200":
-          description: All complaints
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Complaint"
-        "401":
-          description: Unauthorized
-
-  /admin/complaints/{id}:
-    patch:
-      operationId: updateComplaint
-      tags: [admin]
-      summary: Update a complaint's status
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: number
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ComplaintUpdate"
-      responses:
-        "200":
-          description: Updated complaint
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Complaint"
-        "404":
-          description: Not found
 
   /admin/reports:
     get:
@@ -2963,49 +2898,6 @@ components:
       required:
         - connected
         - calendarEmail
-
-    Complaint:
-      type: object
-      properties:
-        id:
-          type: number
-        teacherId:
-          type: number
-        teacherName:
-          type: string
-        body:
-          type: string
-        status:
-          type: string
-          enum: [open, resolved]
-        createdAt:
-          type: string
-          format: date-time
-      required:
-        - id
-        - teacherId
-        - teacherName
-        - body
-        - status
-        - createdAt
-
-    ComplaintInput:
-      type: object
-      properties:
-        body:
-          type: string
-          minLength: 1
-      required:
-        - body
-
-    ComplaintUpdate:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: [open, resolved]
-      required:
-        - status
 
     ReportInput:
       type: object

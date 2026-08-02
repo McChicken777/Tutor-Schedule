@@ -12,7 +12,6 @@ import {
   siteSettingsTable,
   messagesTable,
   availabilityOverridesTable,
-  complaintsTable,
   reportsTable,
 } from "@workspace/db";
 import {
@@ -36,7 +35,6 @@ import {
   SendTeacherMessageBody,
   SetDayAvailabilityOverridesBody,
   DeleteAvailabilityOverrideParams,
-  SubmitComplaintBody,
   CreateTeacherReportBody,
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
@@ -1231,38 +1229,10 @@ router.delete("/teacher/calendar/disconnect", requireTeacher, async (req, res): 
   res.json({ success: true });
 });
 
-// ─── Complaints ───────────────────────────────────────────────────────────────
-
-router.post("/teacher/complaints", requireTeacher, async (req, res): Promise<void> => {
-  const teacherId = (req as any).teacherId as number;
-  const teacher = (req as any).teacher as { displayName: string };
-
-  const parsed = SubmitComplaintBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-
-  const [complaint] = await db
-    .insert(complaintsTable)
-    .values({ teacherId, body: parsed.data.body })
-    .returning();
-
-  res.status(201).json({
-    id: complaint.id,
-    teacherId: complaint.teacherId,
-    teacherName: teacher.displayName,
-    body: complaint.body,
-    status: complaint.status,
-    createdAt: complaint.createdAt,
-  });
-});
-
 // ─── Reports ──────────────────────────────────────────────────────────────────
 // Message/homework-file targets must belong to one of this teacher's own
 // students — reports can't be filed against content outside the teacher's
-// own roster. "general" carries no target and no reported user, matching the
-// old complaints feature's untargeted-feedback semantics.
+// own roster. "general" carries no target and no reported user.
 
 async function validateTeacherReportTarget(
   teacherId: number,
