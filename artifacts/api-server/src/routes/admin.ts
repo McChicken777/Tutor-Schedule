@@ -9,6 +9,9 @@ import {
   testimonialsTable,
   faqsTable,
   complaintsTable,
+  reportsTable,
+  messagesTable,
+  homeworkFilesTable,
 } from "@workspace/db";
 import {
   CreateTestimonialBody,
@@ -17,8 +20,11 @@ import {
   UpdateFaqBody,
   UpdateComplaintParams,
   UpdateComplaintBody,
+  UpdateReportParams,
+  UpdateReportBody,
 } from "@workspace/api-zod";
 import { requireAdmin } from "../middlewares/requireAdmin";
+import { mapReportRow } from "../lib/reportMapper";
 
 const router: IRouter = Router();
 
@@ -59,17 +65,17 @@ router.get("/admin/dashboard", requireAdmin, async (_req, res): Promise<void> =>
       ),
     );
 
-  const [{ count: openComplaintsCount }] = await db
+  const [{ count: openReportsCount }] = await db
     .select({ count: sql<number>`count(*)::int` })
-    .from(complaintsTable)
-    .where(eq(complaintsTable.status, "open"));
+    .from(reportsTable)
+    .where(eq(reportsTable.status, "open"));
 
   res.json({
     totalTeachers,
     totalStudents,
     totalBookingsThisWeek,
     totalPendingHomework,
-    openComplaintsCount,
+    openReportsCount,
   });
 });
 
@@ -131,6 +137,217 @@ router.patch("/admin/complaints/:id", requireAdmin, async (req, res): Promise<vo
     status: updated.status,
     createdAt: updated.createdAt,
   });
+});
+
+// ─── Reports ──────────────────────────────────────────────────────────────────
+
+async function resolveAccountName(
+  role: "student" | "teacher",
+  studentId: number | null,
+  teacherId: number | null,
+): Promise<string> {
+  if (role === "student" && studentId != null) {
+    const [u] = await db.select({ displayName: usersTable.displayName }).from(usersTable).where(eq(usersTable.id, studentId));
+    return u?.displayName ?? "Unknown";
+  }
+  if (role === "teacher" && teacherId != null) {
+    const [t] = await db.select({ displayName: teachersTable.displayName }).from(teachersTable).where(eq(teachersTable.id, teacherId));
+    return t?.displayName ?? "Unknown";
+  }
+  return "Unknown";
+}
+
+async function resolveTargetPreview(targetType: string, targetId: number | null): Promise<string | null> {
+  if (targetId == null) return null;
+  if (targetType === "message") {
+    const [m] = await db.select({ body: messagesTable.body }).from(messagesTable).where(eq(messagesTable.id, targetId));
+    return m ? m.body.slice(0, 140) : null;
+  }
+  if (targetType === "homework_file") {
+    const [f] = await db.select({ name: homeworkFilesTable.name }).from(homeworkFilesTable).where(eq(homeworkFilesTable.id, targetId));
+    return f ? f.name : null;
+  }
+  return null;
+}
+
+async function buildReportResponse(report: typeof reportsTable.$inferSelect) {
+  const reporterName = await resolveAccountName(
+    report.reporterRole as "student" | "teacher",
+    report.reporterStudentId,
+    report.reporterTeacherId,
+  );
+  const targetPreview = await resolveTargetPreview(report.targetType, report.targetId);
+  const reportedUserName = report.reportedUserRole
+    ? await resolveAccountName(report.reportedUserRole as "student" | "teacher", report.reportedStudentId, report.reportedTeacherId)
+    : null;
+  return mapReportRow(report, reporterName, targetPreview, reportedUserName);
+}
+
+router.get("/admin/reports", requireAdmin, async (req, res): Promise<void> => {
+  const { status } = req.query;
+  const rows =
+    status === "open" || status === "resolved" || status === "actioned"
+      ? await db.select().from(reportsTable).where(eq(reportsTable.status, status)).orderBy(desc(reportsTable.createdAt))
+      : await db.select().from(reportsTable).orderBy(desc(reportsTable.createdAt));
+
+  res.json(await Promise.all(rows.map(buildReportResponse)));
+});
+
+router.patch("/admin/reports/:id", requireAdmin, async (req, res): Promise<void> => {
+  const parsedParams = UpdateReportParams.safeParse(req.params);
+  if (!parsedParams.success) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  const parsed = UpdateReportBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [existing] = await db.select().from(reportsTable).where(eq(reportsTable.id, parsedParams.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Report not found" });
+    return;
+  }
+
+  const [updated] = await db
+    .update(reportsTable)
+    .set({ status: parsed.data.status })
+    .where(eq(reportsTable.id, parsedParams.data.id))
+    .returning();
+
+  res.json(await buildReportResponse(updated));
+});
+
+router.post("/admin/reports/:id/ban", requireAdmin, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+
+  const [existing] = await db.select().from(reportsTable).where(eq(reportsTable.id, id));
+  if (!existing) {
+    res.status(404).json({ error: "Report not found" });
+    return;
+  }
+
+  if (!existing.reportedUserRole) {
+    res.status(400).json({ error: "This report has no reported user to ban" });
+    return;
+  }
+
+  if (existing.reportedUserRole === "teacher" && existing.reportedTeacherId != null) {
+    await db
+      .update(teachersTable)
+      .set({ isBanned: true, bannedAt: new Date() })
+      .where(eq(teachersTable.id, existing.reportedTeacherId));
+  } else if (existing.reportedUserRole === "student" && existing.reportedStudentId != null) {
+    await db
+      .update(usersTable)
+      .set({ isBanned: true, bannedAt: new Date() })
+      .where(eq(usersTable.id, existing.reportedStudentId));
+  }
+
+  const [updated] = await db
+    .update(reportsTable)
+    .set({ status: "actioned", actionedAt: new Date() })
+    .where(eq(reportsTable.id, id))
+    .returning();
+
+  res.json(await buildReportResponse(updated));
+});
+
+// ─── Accounts (ban / unban) ───────────────────────────────────────────────────
+// The report-detail "Ban this user" action above and the standalone Accounts
+// page below both terminate here — one shared ban/unban path per role, no
+// duplicated moderation logic.
+
+router.get("/admin/teachers", requireAdmin, async (_req, res): Promise<void> => {
+  const rows = await db.select().from(teachersTable).orderBy(asc(teachersTable.id));
+  res.json(
+    rows.map((t) => ({
+      id: t.id,
+      role: "teacher" as const,
+      name: t.displayName,
+      email: t.email,
+      isAdmin: t.isAdmin,
+      isBanned: t.isBanned,
+    })),
+  );
+});
+
+router.post("/admin/teachers/:id/ban", requireAdmin, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+  const [updated] = await db
+    .update(teachersTable)
+    .set({ isBanned: true, bannedAt: new Date() })
+    .where(eq(teachersTable.id, id))
+    .returning();
+  if (!updated) {
+    res.status(404).json({ error: "Teacher not found" });
+    return;
+  }
+  res.json({ id: updated.id, role: "teacher", name: updated.displayName, email: updated.email, isAdmin: updated.isAdmin, isBanned: updated.isBanned });
+});
+
+router.delete("/admin/teachers/:id/ban", requireAdmin, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+  const [updated] = await db
+    .update(teachersTable)
+    .set({ isBanned: false, bannedAt: null })
+    .where(eq(teachersTable.id, id))
+    .returning();
+  if (!updated) {
+    res.status(404).json({ error: "Teacher not found" });
+    return;
+  }
+  res.json({ id: updated.id, role: "teacher", name: updated.displayName, email: updated.email, isAdmin: updated.isAdmin, isBanned: updated.isBanned });
+});
+
+router.get("/admin/students", requireAdmin, async (_req, res): Promise<void> => {
+  const rows = await db.select().from(usersTable).orderBy(asc(usersTable.id));
+  res.json(
+    rows.map((u) => ({
+      id: u.id,
+      role: "student" as const,
+      name: u.displayName,
+      email: u.email,
+      isAdmin: false,
+      isBanned: u.isBanned,
+    })),
+  );
+});
+
+router.post("/admin/students/:id/ban", requireAdmin, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+  const [updated] = await db
+    .update(usersTable)
+    .set({ isBanned: true, bannedAt: new Date() })
+    .where(eq(usersTable.id, id))
+    .returning();
+  if (!updated) {
+    res.status(404).json({ error: "Student not found" });
+    return;
+  }
+  res.json({ id: updated.id, role: "student", name: updated.displayName, email: updated.email, isAdmin: false, isBanned: updated.isBanned });
+});
+
+router.delete("/admin/students/:id/ban", requireAdmin, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+  const [updated] = await db
+    .update(usersTable)
+    .set({ isBanned: false, bannedAt: null })
+    .where(eq(usersTable.id, id))
+    .returning();
+  if (!updated) {
+    res.status(404).json({ error: "Student not found" });
+    return;
+  }
+  res.json({ id: updated.id, role: "student", name: updated.displayName, email: updated.email, isAdmin: false, isBanned: updated.isBanned });
 });
 
 // ─── Testimonials ─────────────────────────────────────────────────────────────

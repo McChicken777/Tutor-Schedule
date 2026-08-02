@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './adminAccount';
+export * from './adminAccountRole';
 export * from './adminDashboard';
 export * from './attachHomeworkFileInput';
 export * from './attachHomeworkFileInputSlot';
@@ -42,6 +44,7 @@ export * from './healthStatus';
 export * from './homework';
 export * from './homeworkFeedbackInput';
 export * from './homeworkFile';
+export * from './homeworkFilesCleanupSweepResult';
 export * from './homeworkFileSlot';
 export * from './homeworkInput';
 export * from './homeworkInputFilesItem';
@@ -50,6 +53,8 @@ export * from './lessonPackage';
 export * from './lessonType';
 export * from './lessonTypeInput';
 export * from './lessonTypeUpdate';
+export * from './listReportsParams';
+export * from './listReportsStatus';
 export * from './listStudentBookingsParams';
 export * from './listStudentBookingsStatus';
 export * from './listTeacherBookingsParams';
@@ -60,6 +65,15 @@ export * from './messageSenderRole';
 export * from './messageThread';
 export * from './packageGrantInput';
 export * from './relinkHomeworkFileInput';
+export * from './report';
+export * from './reportInput';
+export * from './reportInputTargetType';
+export * from './reportReportedUserRole';
+export * from './reportReporterRole';
+export * from './reportStatus';
+export * from './reportTargetType';
+export * from './reportUpdate';
+export * from './reportUpdateStatus';
 export * from './rescheduleInput';
 export * from './review';
 export * from './reviewInput';

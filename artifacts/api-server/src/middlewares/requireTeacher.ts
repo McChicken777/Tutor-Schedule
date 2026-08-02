@@ -21,6 +21,10 @@ export async function requireTeacher(req: Request, res: Response, next: NextFunc
     res.status(403).json({ error: "No teacher account linked to this user", code: "NO_TEACHER_ACCOUNT" });
     return;
   }
+  if (teacher.isBanned) {
+    res.status(403).json({ error: "Account suspended", code: "BANNED" });
+    return;
+  }
 
   (req as any).clerkUserId = clerkUserId;
   (req as any).teacherId = teacher.id;

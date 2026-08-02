@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdminAccount,
   AdminDashboard,
   AttachHomeworkFileInput,
   AvailabilityOverride,
@@ -48,12 +49,14 @@ import type {
   HealthStatus,
   Homework,
   HomeworkFeedbackInput,
+  HomeworkFilesCleanupSweepResult,
   HomeworkInput,
   HomeworkReminderSweepResult,
   LessonPackage,
   LessonType,
   LessonTypeInput,
   LessonTypeUpdate,
+  ListReportsParams,
   ListStudentBookingsParams,
   ListTeacherBookingsParams,
   ListTeacherHomeworkParams,
@@ -62,6 +65,9 @@ import type {
   MessageThread,
   PackageGrantInput,
   RelinkHomeworkFileInput,
+  Report,
+  ReportInput,
+  ReportUpdate,
   RescheduleInput,
   Review,
   ReviewInput,
@@ -259,6 +265,78 @@ export const useRunHomeworkReminderSweep = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getRunHomeworkReminderSweepMutationOptions(options));
+    }
+
+export const getRunHomeworkFilesCleanupSweepUrl = () => {
+
+
+
+
+  return `/api/internal/homework-files-cleanup/run`
+}
+
+/**
+ * Guarded by an X-Internal-Secret header (compared against INTERNAL_CRON_SECRET), not a user session. Intended to be hit daily by a Replit Scheduled Deployment. Skips files with an open report against them.
+ * @summary Delete homework file blobs (and soft-delete their rows) 28 days after the lesson date
+ */
+export const runHomeworkFilesCleanupSweep = async ( options?: Parameters<typeof customFetch>[1]): Promise<HomeworkFilesCleanupSweepResult> => {
+
+  return customFetch<HomeworkFilesCleanupSweepResult>(getRunHomeworkFilesCleanupSweepUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRunHomeworkFilesCleanupSweepMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runHomeworkFilesCleanupSweep>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof runHomeworkFilesCleanupSweep>>, TError,void, TContext> => {
+
+const mutationKey = ['runHomeworkFilesCleanupSweep'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runHomeworkFilesCleanupSweep>>, void> = () => {
+
+
+          return  runHomeworkFilesCleanupSweep(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunHomeworkFilesCleanupSweepMutationResult = NonNullable<Awaited<ReturnType<typeof runHomeworkFilesCleanupSweep>>>
+
+    export type RunHomeworkFilesCleanupSweepMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete homework file blobs (and soft-delete their rows) 28 days after the lesson date
+ */
+export const useRunHomeworkFilesCleanupSweep = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runHomeworkFilesCleanupSweep>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof runHomeworkFilesCleanupSweep>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getRunHomeworkFilesCleanupSweepMutationOptions(options));
     }
 
 export const getListLessonTypesUrl = () => {
@@ -1923,6 +2001,77 @@ export const useSendStudentMessage = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getSendStudentMessageMutationOptions(options));
+    }
+
+export const getCreateStudentReportUrl = () => {
+
+
+
+
+  return `/api/student/reports`
+}
+
+/**
+ * @summary Report a message, homework file, or file general feedback about your teacher
+ */
+export const createStudentReport = async (reportInput: ReportInput, options?: Parameters<typeof customFetch>[1]): Promise<Report> => {
+
+  return customFetch<Report>(getCreateStudentReportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reportInput)
+  }
+);}
+
+
+
+
+
+export const getCreateStudentReportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStudentReport>>, TError,{data: BodyType<ReportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createStudentReport>>, TError,{data: BodyType<ReportInput>}, TContext> => {
+
+const mutationKey = ['createStudentReport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createStudentReport>>, {data: BodyType<ReportInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createStudentReport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateStudentReportMutationResult = NonNullable<Awaited<ReturnType<typeof createStudentReport>>>
+    export type CreateStudentReportMutationBody = BodyType<ReportInput>
+    export type CreateStudentReportMutationError = ErrorType<void>
+
+    /**
+ * @summary Report a message, homework file, or file general feedback about your teacher
+ */
+export const useCreateStudentReport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStudentReport>>, TError,{data: BodyType<ReportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createStudentReport>>,
+        TError,
+        {data: BodyType<ReportInput>},
+        TContext
+      > => {
+      return useMutation(getCreateStudentReportMutationOptions(options));
     }
 
 export const getGetTeacherMeUrl = () => {
@@ -4527,6 +4676,77 @@ export const useSubmitComplaint = <TError = ErrorType<void>,
       return useMutation(getSubmitComplaintMutationOptions(options));
     }
 
+export const getCreateTeacherReportUrl = () => {
+
+
+
+
+  return `/api/teacher/reports`
+}
+
+/**
+ * @summary Report a message, homework file, or file general feedback to the admin
+ */
+export const createTeacherReport = async (reportInput: ReportInput, options?: Parameters<typeof customFetch>[1]): Promise<Report> => {
+
+  return customFetch<Report>(getCreateTeacherReportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reportInput)
+  }
+);}
+
+
+
+
+
+export const getCreateTeacherReportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTeacherReport>>, TError,{data: BodyType<ReportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTeacherReport>>, TError,{data: BodyType<ReportInput>}, TContext> => {
+
+const mutationKey = ['createTeacherReport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTeacherReport>>, {data: BodyType<ReportInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createTeacherReport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTeacherReportMutationResult = NonNullable<Awaited<ReturnType<typeof createTeacherReport>>>
+    export type CreateTeacherReportMutationBody = BodyType<ReportInput>
+    export type CreateTeacherReportMutationError = ErrorType<void>
+
+    /**
+ * @summary Report a message, homework file, or file general feedback to the admin
+ */
+export const useCreateTeacherReport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTeacherReport>>, TError,{data: BodyType<ReportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTeacherReport>>,
+        TError,
+        {data: BodyType<ReportInput>},
+        TContext
+      > => {
+      return useMutation(getCreateTeacherReportMutationOptions(options));
+    }
+
 export const getGetAdminDashboardUrl = () => {
 
 
@@ -4751,6 +4971,671 @@ export const useUpdateComplaint = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUpdateComplaintMutationOptions(options));
+    }
+
+export const getListReportsUrl = (params?: ListReportsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/reports?${stringifiedParams}` : `/api/admin/reports`
+}
+
+/**
+ * @summary List reports filed by students and teachers
+ */
+export const listReports = async (params?: ListReportsParams, options?: Parameters<typeof customFetch>[1]): Promise<Report[]> => {
+
+  return customFetch<Report[]>(getListReportsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListReportsQueryKey = (params?: ListReportsParams,) => {
+    return [
+    `/api/admin/reports`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListReportsQueryOptions = <TData = Awaited<ReturnType<typeof listReports>>, TError = ErrorType<void>>(params?: ListReportsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListReportsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listReports>>> = ({ signal }) => listReports(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listReports>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListReportsQueryResult = NonNullable<Awaited<ReturnType<typeof listReports>>>
+export type ListReportsQueryError = ErrorType<void>
+
+
+/**
+ * @summary List reports filed by students and teachers
+ */
+
+export function useListReports<TData = Awaited<ReturnType<typeof listReports>>, TError = ErrorType<void>>(
+ params?: ListReportsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListReportsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateReportUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/reports/${id}`
+}
+
+/**
+ * @summary Update a report's status
+ */
+export const updateReport = async (id: number,
+    reportUpdate: ReportUpdate, options?: Parameters<typeof customFetch>[1]): Promise<Report> => {
+
+  return customFetch<Report>(getUpdateReportUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reportUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateReportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateReport>>, TError,{id: number;data: BodyType<ReportUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateReport>>, TError,{id: number;data: BodyType<ReportUpdate>}, TContext> => {
+
+const mutationKey = ['updateReport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateReport>>, {id: number;data: BodyType<ReportUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateReport(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateReportMutationResult = NonNullable<Awaited<ReturnType<typeof updateReport>>>
+    export type UpdateReportMutationBody = BodyType<ReportUpdate>
+    export type UpdateReportMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a report's status
+ */
+export const useUpdateReport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateReport>>, TError,{id: number;data: BodyType<ReportUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateReport>>,
+        TError,
+        {id: number;data: BodyType<ReportUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateReportMutationOptions(options));
+    }
+
+export const getBanReportedUserUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/reports/${id}/ban`
+}
+
+/**
+ * @summary Ban the user/teacher this report is about, and mark the report actioned
+ */
+export const banReportedUser = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<Report> => {
+
+  return customFetch<Report>(getBanReportedUserUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getBanReportedUserMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof banReportedUser>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof banReportedUser>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['banReportedUser'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof banReportedUser>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  banReportedUser(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BanReportedUserMutationResult = NonNullable<Awaited<ReturnType<typeof banReportedUser>>>
+
+    export type BanReportedUserMutationError = ErrorType<void>
+
+    /**
+ * @summary Ban the user/teacher this report is about, and mark the report actioned
+ */
+export const useBanReportedUser = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof banReportedUser>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof banReportedUser>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getBanReportedUserMutationOptions(options));
+    }
+
+export const getListAdminTeacherAccountsUrl = () => {
+
+
+
+
+  return `/api/admin/teachers`
+}
+
+/**
+ * @summary List all teacher accounts, for moderation
+ */
+export const listAdminTeacherAccounts = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminAccount[]> => {
+
+  return customFetch<AdminAccount[]>(getListAdminTeacherAccountsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminTeacherAccountsQueryKey = () => {
+    return [
+    `/api/admin/teachers`
+    ] as const;
+    }
+
+
+export const getListAdminTeacherAccountsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminTeacherAccounts>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminTeacherAccounts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminTeacherAccountsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminTeacherAccounts>>> = ({ signal }) => listAdminTeacherAccounts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminTeacherAccounts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminTeacherAccountsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminTeacherAccounts>>>
+export type ListAdminTeacherAccountsQueryError = ErrorType<void>
+
+
+/**
+ * @summary List all teacher accounts, for moderation
+ */
+
+export function useListAdminTeacherAccounts<TData = Awaited<ReturnType<typeof listAdminTeacherAccounts>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminTeacherAccounts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminTeacherAccountsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getBanTeacherAccountUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/teachers/${id}/ban`
+}
+
+/**
+ * @summary Ban a teacher account
+ */
+export const banTeacherAccount = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<AdminAccount> => {
+
+  return customFetch<AdminAccount>(getBanTeacherAccountUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getBanTeacherAccountMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof banTeacherAccount>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof banTeacherAccount>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['banTeacherAccount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof banTeacherAccount>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  banTeacherAccount(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BanTeacherAccountMutationResult = NonNullable<Awaited<ReturnType<typeof banTeacherAccount>>>
+
+    export type BanTeacherAccountMutationError = ErrorType<void>
+
+    /**
+ * @summary Ban a teacher account
+ */
+export const useBanTeacherAccount = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof banTeacherAccount>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof banTeacherAccount>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getBanTeacherAccountMutationOptions(options));
+    }
+
+export const getUnbanTeacherAccountUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/teachers/${id}/ban`
+}
+
+/**
+ * @summary Unban a teacher account
+ */
+export const unbanTeacherAccount = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<AdminAccount> => {
+
+  return customFetch<AdminAccount>(getUnbanTeacherAccountUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getUnbanTeacherAccountMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unbanTeacherAccount>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unbanTeacherAccount>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['unbanTeacherAccount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unbanTeacherAccount>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  unbanTeacherAccount(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnbanTeacherAccountMutationResult = NonNullable<Awaited<ReturnType<typeof unbanTeacherAccount>>>
+
+    export type UnbanTeacherAccountMutationError = ErrorType<void>
+
+    /**
+ * @summary Unban a teacher account
+ */
+export const useUnbanTeacherAccount = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unbanTeacherAccount>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unbanTeacherAccount>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getUnbanTeacherAccountMutationOptions(options));
+    }
+
+export const getListAdminStudentAccountsUrl = () => {
+
+
+
+
+  return `/api/admin/students`
+}
+
+/**
+ * @summary List all student accounts, for moderation
+ */
+export const listAdminStudentAccounts = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminAccount[]> => {
+
+  return customFetch<AdminAccount[]>(getListAdminStudentAccountsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminStudentAccountsQueryKey = () => {
+    return [
+    `/api/admin/students`
+    ] as const;
+    }
+
+
+export const getListAdminStudentAccountsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminStudentAccounts>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminStudentAccounts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminStudentAccountsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminStudentAccounts>>> = ({ signal }) => listAdminStudentAccounts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminStudentAccounts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminStudentAccountsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminStudentAccounts>>>
+export type ListAdminStudentAccountsQueryError = ErrorType<void>
+
+
+/**
+ * @summary List all student accounts, for moderation
+ */
+
+export function useListAdminStudentAccounts<TData = Awaited<ReturnType<typeof listAdminStudentAccounts>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminStudentAccounts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminStudentAccountsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getBanStudentAccountUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/students/${id}/ban`
+}
+
+/**
+ * @summary Ban a student account
+ */
+export const banStudentAccount = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<AdminAccount> => {
+
+  return customFetch<AdminAccount>(getBanStudentAccountUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getBanStudentAccountMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof banStudentAccount>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof banStudentAccount>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['banStudentAccount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof banStudentAccount>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  banStudentAccount(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BanStudentAccountMutationResult = NonNullable<Awaited<ReturnType<typeof banStudentAccount>>>
+
+    export type BanStudentAccountMutationError = ErrorType<void>
+
+    /**
+ * @summary Ban a student account
+ */
+export const useBanStudentAccount = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof banStudentAccount>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof banStudentAccount>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getBanStudentAccountMutationOptions(options));
+    }
+
+export const getUnbanStudentAccountUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/students/${id}/ban`
+}
+
+/**
+ * @summary Unban a student account
+ */
+export const unbanStudentAccount = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<AdminAccount> => {
+
+  return customFetch<AdminAccount>(getUnbanStudentAccountUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getUnbanStudentAccountMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unbanStudentAccount>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unbanStudentAccount>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['unbanStudentAccount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unbanStudentAccount>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  unbanStudentAccount(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnbanStudentAccountMutationResult = NonNullable<Awaited<ReturnType<typeof unbanStudentAccount>>>
+
+    export type UnbanStudentAccountMutationError = ErrorType<void>
+
+    /**
+ * @summary Unban a student account
+ */
+export const useUnbanStudentAccount = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unbanStudentAccount>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unbanStudentAccount>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getUnbanStudentAccountMutationOptions(options));
     }
 
 export const getListAdminTestimonialsUrl = () => {

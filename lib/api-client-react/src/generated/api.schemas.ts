@@ -538,7 +538,7 @@ export interface AdminDashboard {
   totalStudents: number;
   totalBookingsThisWeek: number;
   totalPendingHomework: number;
-  openComplaintsCount: number;
+  openReportsCount: number;
 }
 
 export type TeacherBookingUpdateStatus = typeof TeacherBookingUpdateStatus[keyof typeof TeacherBookingUpdateStatus];
@@ -675,6 +675,117 @@ export interface ComplaintUpdate {
   status: ComplaintUpdateStatus;
 }
 
+export type ReportInputTargetType = typeof ReportInputTargetType[keyof typeof ReportInputTargetType];
+
+
+export const ReportInputTargetType = {
+  message: 'message',
+  homework_file: 'homework_file',
+  general: 'general',
+} as const;
+
+export interface ReportInput {
+  targetType: ReportInputTargetType;
+  /** @nullable */
+  targetId?: number | null;
+  /** @minLength 1 */
+  body: string;
+}
+
+export type ReportReporterRole = typeof ReportReporterRole[keyof typeof ReportReporterRole];
+
+
+export const ReportReporterRole = {
+  student: 'student',
+  teacher: 'teacher',
+} as const;
+
+export type ReportTargetType = typeof ReportTargetType[keyof typeof ReportTargetType];
+
+
+export const ReportTargetType = {
+  message: 'message',
+  homework_file: 'homework_file',
+  general: 'general',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ReportReportedUserRole = typeof ReportReportedUserRole[keyof typeof ReportReportedUserRole] | null;
+
+
+export const ReportReportedUserRole = {
+  student: 'student',
+  teacher: 'teacher',
+} as const;
+
+export type ReportStatus = typeof ReportStatus[keyof typeof ReportStatus];
+
+
+export const ReportStatus = {
+  open: 'open',
+  resolved: 'resolved',
+  actioned: 'actioned',
+} as const;
+
+export interface Report {
+  id: number;
+  reporterRole: ReportReporterRole;
+  reporterId: number;
+  reporterName: string;
+  targetType: ReportTargetType;
+  /** @nullable */
+  targetId: number | null;
+  /** @nullable */
+  targetPreview: string | null;
+  /** @nullable */
+  reportedUserRole: ReportReportedUserRole;
+  /** @nullable */
+  reportedUserId: number | null;
+  /** @nullable */
+  reportedUserName: string | null;
+  body: string;
+  status: ReportStatus;
+  createdAt: string;
+}
+
+export type ReportUpdateStatus = typeof ReportUpdateStatus[keyof typeof ReportUpdateStatus];
+
+
+export const ReportUpdateStatus = {
+  open: 'open',
+  resolved: 'resolved',
+} as const;
+
+export interface ReportUpdate {
+  status: ReportUpdateStatus;
+}
+
+export type AdminAccountRole = typeof AdminAccountRole[keyof typeof AdminAccountRole];
+
+
+export const AdminAccountRole = {
+  student: 'student',
+  teacher: 'teacher',
+} as const;
+
+export interface AdminAccount {
+  id: number;
+  role: AdminAccountRole;
+  name: string;
+  email: string;
+  isAdmin: boolean;
+  isBanned: boolean;
+}
+
+export interface HomeworkFilesCleanupSweepResult {
+  checkedAt: string;
+  filesDeleted: number;
+  skippedDueToOpenReport: number;
+  homeworkFileIds: number[];
+}
+
 export type GetAvailableSlotsParams = {
 lessonTypeId: number;
 startDate: string;
@@ -722,4 +833,17 @@ date: string;
 export type DisconnectCalendar200 = {
   success: boolean;
 };
+
+export type ListReportsParams = {
+status?: ListReportsStatus;
+};
+
+export type ListReportsStatus = typeof ListReportsStatus[keyof typeof ListReportsStatus];
+
+
+export const ListReportsStatus = {
+  open: 'open',
+  resolved: 'resolved',
+  actioned: 'actioned',
+} as const;
 
