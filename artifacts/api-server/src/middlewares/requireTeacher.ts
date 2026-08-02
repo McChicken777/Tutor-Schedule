@@ -24,5 +24,6 @@ export async function requireTeacher(req: Request, res: Response, next: NextFunc
 
   (req as any).clerkUserId = clerkUserId;
   (req as any).teacherId = teacher.id;
+  (req as any).teacher = teacher;
   next();
 }
