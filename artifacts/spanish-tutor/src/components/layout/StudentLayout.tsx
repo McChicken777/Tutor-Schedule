@@ -3,10 +3,18 @@ import { createPortal } from "react-dom";
 import { Link, useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { LogOut, LayoutDashboard, Calendar, BookOpen, MessageCircle, FileText } from "lucide-react";
+import { LogOut, LayoutDashboard, Calendar, BookOpen, MessageCircle, FileText, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PingDot from "@/components/ui/ping-dot";
 import PurchaseCreditsDialog from "@/components/PurchaseCreditsDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   useGetStudentDashboard,
   useCompleteTour,
@@ -62,8 +70,50 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col md:flex-row">
+      {/* Mobile top bar */}
+      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 h-14 border-b border-border bg-card">
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <img src={`${basePath}/logo.svg`} alt="Logo" className="w-7 h-7 rounded" />
+          <span className="font-serif text-lg font-bold text-foreground">Loquu</span>
+        </Link>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-card">
+            <img
+              src={user?.imageUrl}
+              alt={user?.fullName || "User"}
+              className="w-9 h-9 rounded-full border-2 border-border object-cover"
+            />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuLabel>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-foreground truncate">{user?.fullName}</span>
+                <span className="text-xs font-normal text-muted-foreground truncate">
+                  {user?.primaryEmailAddress?.emailAddress}
+                </span>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setPurchaseOpen(true)}>
+              <UserIcon className="w-4 h-4 mr-2" />
+              <span className={isLowOnCredits ? "text-destructive" : ""}>
+                {dashboard ? totalRemainingCredits : "–"} credits remaining
+              </span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => signOut({ redirectUrl: basePath || "/" })}
+              className="text-destructive focus:text-destructive"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </header>
+
       {/* Sidebar */}
-      <aside className="w-full md:w-64 border-r border-border bg-card flex-shrink-0 flex flex-col md:sticky md:top-0 md:h-[100dvh] md:self-start">
+      <aside className="hidden md:flex w-full md:w-64 border-r border-border bg-card flex-shrink-0 flex-col md:sticky md:top-0 md:h-[100dvh] md:self-start">
         <div className="p-6">
           <Link href="/dashboard" className="flex items-center gap-3">
             <img src={`${basePath}/logo.svg`} alt="Logo" className="w-8 h-8 rounded" />
@@ -177,9 +227,80 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col max-w-full overflow-hidden">
+      <main className="flex-1 flex flex-col max-w-full overflow-hidden pb-16 md:pb-0">
         {children}
       </main>
+
+      {/* Mobile bottom tab bar */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 flex items-stretch border-t border-border bg-card pb-[env(safe-area-inset-bottom)]">
+        {navItems.map((item, index) => {
+          const active = location === item.href || (item.href !== "/dashboard" && location.startsWith(item.href));
+          const isTourStep = tourActive && index === tourStep;
+          return (
+            <div key={item.href} className="relative flex-1">
+              <Link
+                href={item.href}
+                className={`flex flex-col items-center justify-center gap-0.5 py-2 min-h-[3rem] text-[11px] font-medium transition-colors ${
+                  isTourStep ? "relative z-50" : ""
+                } ${active ? "text-primary" : "text-muted-foreground"}`}
+              >
+                <span className="relative">
+                  <item.icon className="w-5 h-5" />
+                  {item.href === "/homework" && hasPendingHomework && (
+                    <span className="absolute -top-0.5 -right-1.5">
+                      <PingDot />
+                    </span>
+                  )}
+                  {item.href === "/messages" && hasUnreadMessages && (
+                    <span className="absolute -top-0.5 -right-1.5">
+                      <PingDot />
+                    </span>
+                  )}
+                </span>
+                {item.label === "Book a Lesson" ? "Book" : item.label}
+              </Link>
+              {isTourStep && (
+                <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-card p-5 shadow-xl text-left">
+                  <div className="flex items-center gap-1.5 mb-3">
+                    {TOUR_STEPS.map((_, i) => (
+                      <span
+                        key={i}
+                        className={`h-1.5 rounded-full transition-all ${i === tourStep ? "w-5 bg-primary" : "w-1.5 bg-border"}`}
+                      />
+                    ))}
+                  </div>
+                  <h3 className="font-bold text-foreground mb-1">{TOUR_STEPS[tourStep].title}</h3>
+                  <p className="text-sm text-muted-foreground mb-4">{TOUR_STEPS[tourStep].description}</p>
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={handleTourComplete}
+                      className="text-sm text-muted-foreground hover:text-foreground font-medium"
+                    >
+                      Skip
+                    </button>
+                    <div className="flex items-center gap-2">
+                      {tourStep > 0 && (
+                        <Button variant="outline" size="sm" onClick={() => setTourStep((s) => s - 1)}>
+                          Back
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (tourStep === TOUR_STEPS.length - 1) handleTourComplete();
+                          else setTourStep((s) => s + 1);
+                        }}
+                      >
+                        {tourStep === TOUR_STEPS.length - 1 ? "Got it" : "Next"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </nav>
 
       <PurchaseCreditsDialog open={purchaseOpen} onOpenChange={setPurchaseOpen} />
     </div>
