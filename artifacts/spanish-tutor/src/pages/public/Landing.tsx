@@ -292,6 +292,8 @@ export default function Landing() {
             © {new Date().getFullYear()} Loquu
             <span className="mx-2">·</span>
             <Link href="/teacher/sign-in" className="hover:text-foreground hover:underline">Teacher login</Link>
+            <span className="mx-2">·</span>
+            <Link href="/teacher/sign-up" className="hover:text-foreground hover:underline">Become a tutor</Link>
           </p>
         </div>
       </footer>

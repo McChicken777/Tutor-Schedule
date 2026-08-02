@@ -18,12 +18,12 @@ export default function TeacherLayout({ children }: { children: ReactNode }) {
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   const navItems = [
-    { label: "Dashboard", href: "/teacher", icon: LayoutDashboard },
     { label: "Bookings", href: "/teacher/bookings", icon: Calendar },
-    { label: "Availability", href: "/teacher/availability", icon: CalendarOff },
-    { label: "Students", href: "/teacher/students", icon: Users },
     { label: "Messages", href: "/teacher/messages", icon: MessageCircle },
     { label: "Homework", href: "/teacher/homework", icon: FileText },
+    { label: "Dashboard", href: "/teacher", icon: LayoutDashboard },
+    { label: "Students", href: "/teacher/students", icon: Users },
+    { label: "Availability", href: "/teacher/availability", icon: CalendarOff },
     { label: "Lesson Types", href: "/teacher/lesson-types", icon: BookOpen },
   ];
 
