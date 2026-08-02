@@ -377,7 +377,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/AdminHomework"
+                  $ref: "#/components/schemas/TeacherHomework"
 
   /student/homework/{id}/seen:
     post:
@@ -396,7 +396,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AdminHomework"
+                $ref: "#/components/schemas/TeacherHomework"
         "404":
           description: Not found
 
@@ -560,26 +560,26 @@ paths:
         "409":
           description: No unclaimed teacher row is available to claim, or this Clerk user already has one
 
-  # ─── ADMIN ────────────────────────────────────────────────────────────────
-  /admin/dashboard:
+  # ─── TEACHER (operational) ─────────────────────────────────────────────────
+  /teacher/dashboard:
     get:
-      operationId: getAdminDashboard
-      tags: [admin]
-      summary: Get admin dashboard summary
+      operationId: getTeacherDashboard
+      tags: [teacher]
+      summary: Get teacher dashboard summary
       responses:
         "200":
           description: Dashboard data
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AdminDashboard"
+                $ref: "#/components/schemas/TeacherDashboard"
         "401":
           description: Unauthorized
 
-  /admin/bookings:
+  /teacher/bookings:
     get:
-      operationId: listAdminBookings
-      tags: [admin]
+      operationId: listTeacherBookings
+      tags: [teacher]
       summary: List all bookings
       parameters:
         - name: status
@@ -601,14 +601,14 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/AdminBooking"
+                  $ref: "#/components/schemas/TeacherBooking"
         "401":
           description: Unauthorized
 
-  /admin/bookings/{id}:
+  /teacher/bookings/{id}:
     patch:
-      operationId: updateAdminBooking
-      tags: [admin]
+      operationId: updateTeacherBooking
+      tags: [teacher]
       summary: Update a booking status or notes
       parameters:
         - name: id
@@ -621,21 +621,21 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AdminBookingUpdate"
+              $ref: "#/components/schemas/TeacherBookingUpdate"
       responses:
         "200":
           description: Updated booking
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AdminBooking"
+                $ref: "#/components/schemas/TeacherBooking"
         "404":
           description: Not found
 
-  /admin/bookings/{id}/complete:
+  /teacher/bookings/{id}/complete:
     patch:
       operationId: completeBooking
-      tags: [admin]
+      tags: [teacher]
       summary: Complete a lesson with a recap and optional homework assignment
       parameters:
         - name: id
@@ -661,10 +661,10 @@ paths:
         "404":
           description: Not found
 
-  /admin/lesson-types:
+  /teacher/lesson-types:
     get:
-      operationId: listAdminLessonTypes
-      tags: [admin]
+      operationId: listTeacherLessonTypes
+      tags: [teacher]
       summary: List all lesson types (including inactive)
       responses:
         "200":
@@ -677,7 +677,7 @@ paths:
                   $ref: "#/components/schemas/LessonType"
     post:
       operationId: createLessonType
-      tags: [admin]
+      tags: [teacher]
       summary: Create a new lesson type
       requestBody:
         required: true
@@ -693,10 +693,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/LessonType"
 
-  /admin/lesson-types/{id}:
+  /teacher/lesson-types/{id}:
     patch:
       operationId: updateLessonType
-      tags: [admin]
+      tags: [teacher]
       summary: Update a lesson type
       parameters:
         - name: id
@@ -721,7 +721,7 @@ paths:
           description: Not found
     delete:
       operationId: deleteLessonType
-      tags: [admin]
+      tags: [teacher]
       summary: Delete a lesson type
       parameters:
         - name: id
@@ -733,10 +733,10 @@ paths:
         "204":
           description: Deleted
 
-  /admin/credit-bundles:
+  /teacher/credit-bundles:
     get:
-      operationId: listAdminCreditBundles
-      tags: [admin]
+      operationId: listTeacherCreditBundles
+      tags: [teacher]
       summary: List all credit bundles (including inactive)
       responses:
         "200":
@@ -749,7 +749,7 @@ paths:
                   $ref: "#/components/schemas/CreditBundle"
     post:
       operationId: createCreditBundle
-      tags: [admin]
+      tags: [teacher]
       summary: Create a purchasable credit bundle
       requestBody:
         required: true
@@ -765,10 +765,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/CreditBundle"
 
-  /admin/credit-bundles/{id}:
+  /teacher/credit-bundles/{id}:
     patch:
       operationId: updateCreditBundle
-      tags: [admin]
+      tags: [teacher]
       summary: Update a credit bundle
       parameters:
         - name: id
@@ -793,7 +793,7 @@ paths:
           description: Not found
     delete:
       operationId: deleteCreditBundle
-      tags: [admin]
+      tags: [teacher]
       summary: Delete a credit bundle
       parameters:
         - name: id
@@ -805,10 +805,10 @@ paths:
         "204":
           description: Deleted
 
-  /admin/homework:
+  /teacher/homework:
     get:
-      operationId: listAdminHomework
-      tags: [admin]
+      operationId: listTeacherHomework
+      tags: [teacher]
       summary: List all homework submissions
       parameters:
         - name: reviewed
@@ -835,14 +835,14 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/AdminHomework"
+                  $ref: "#/components/schemas/TeacherHomework"
         "401":
           description: Unauthorized
 
-  /admin/homework/{id}:
+  /teacher/homework/{id}:
     patch:
       operationId: updateHomework
-      tags: [admin]
+      tags: [teacher]
       summary: Add tutor feedback and grade to homework
       parameters:
         - name: id
@@ -862,14 +862,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AdminHomework"
+                $ref: "#/components/schemas/TeacherHomework"
         "404":
           description: Not found
 
-  /admin/homework/{id}/files:
+  /teacher/homework/{id}/files:
     post:
       operationId: attachHomeworkFile
-      tags: [admin]
+      tags: [teacher]
       summary: Attach an assigned or review file to a homework row
       parameters:
         - name: id
@@ -889,14 +889,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AdminHomework"
+                $ref: "#/components/schemas/TeacherHomework"
         "404":
           description: Not found
 
-  /admin/homework/{id}/files/{fileId}:
+  /teacher/homework/{id}/files/{fileId}:
     delete:
       operationId: deleteHomeworkFile
-      tags: [admin]
+      tags: [teacher]
       summary: Delete one attached homework file
       parameters:
         - name: id
@@ -915,12 +915,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AdminHomework"
+                $ref: "#/components/schemas/TeacherHomework"
         "404":
           description: Not found
     patch:
       operationId: relinkHomeworkFile
-      tags: [admin]
+      tags: [teacher]
       summary: Re-pair a submission/review file with a different original/submission file
       parameters:
         - name: id
@@ -945,14 +945,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AdminHomework"
+                $ref: "#/components/schemas/TeacherHomework"
         "404":
           description: Not found
 
-  /admin/students:
+  /teacher/students:
     get:
-      operationId: listAdminStudents
-      tags: [admin]
+      operationId: listTeacherStudents
+      tags: [teacher]
       summary: List all students
       responses:
         "200":
@@ -962,14 +962,14 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/AdminStudent"
+                  $ref: "#/components/schemas/TeacherStudent"
         "401":
           description: Unauthorized
 
-  /admin/students/{id}:
+  /teacher/students/{id}:
     get:
-      operationId: getAdminStudent
-      tags: [admin]
+      operationId: getTeacherStudent
+      tags: [teacher]
       summary: Get student details with history
       parameters:
         - name: id
@@ -983,14 +983,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AdminStudentDetail"
+                $ref: "#/components/schemas/TeacherStudentDetail"
         "404":
           description: Not found
 
-  /admin/messages:
+  /teacher/messages:
     get:
-      operationId: listAdminMessageThreads
-      tags: [admin]
+      operationId: listTeacherMessageThreads
+      tags: [teacher]
       summary: List message threads (one per student), most recent first
       responses:
         "200":
@@ -1004,10 +1004,10 @@ paths:
         "401":
           description: Unauthorized
 
-  /admin/students/{id}/messages:
+  /teacher/students/{id}/messages:
     get:
-      operationId: listAdminStudentMessages
-      tags: [admin]
+      operationId: listTeacherStudentMessages
+      tags: [teacher]
       summary: Get the message thread with a specific student
       parameters:
         - name: id
@@ -1029,8 +1029,8 @@ paths:
         "404":
           description: Not found
     post:
-      operationId: sendAdminMessage
-      tags: [admin]
+      operationId: sendTeacherMessage
+      tags: [teacher]
       summary: Send a message to a student
       parameters:
         - name: id
@@ -1056,10 +1056,10 @@ paths:
         "404":
           description: Not found
 
-  /admin/packages:
+  /teacher/packages:
     post:
       operationId: grantPackage
-      tags: [admin]
+      tags: [teacher]
       summary: Grant a lesson package to a student
       requestBody:
         required: true
@@ -1076,6 +1076,232 @@ paths:
                 $ref: "#/components/schemas/LessonPackage"
         "400":
           description: Invalid input
+
+  /teacher/site-settings:
+    get:
+      operationId: getTeacherSiteSettings
+      tags: [teacher]
+      summary: Get full site settings
+      responses:
+        "200":
+          description: Site settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteSettings"
+    patch:
+      operationId: updateSiteSettings
+      tags: [teacher]
+      summary: Update site settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SiteSettingsUpdate"
+      responses:
+        "200":
+          description: Updated site settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteSettings"
+
+  /teacher/availability-overrides:
+    get:
+      operationId: listAvailabilityOverrides
+      tags: [teacher]
+      summary: List upcoming teacher time-off blocks
+      responses:
+        "200":
+          description: Upcoming availability overrides
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AvailabilityOverride"
+        "401":
+          description: Unauthorized
+
+  /teacher/availability-overrides/day:
+    put:
+      operationId: setDayAvailabilityOverrides
+      tags: [teacher]
+      summary: Replace all time-off blocks for a single date
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetDayOverridesInput"
+      responses:
+        "200":
+          description: The date's new set of overrides
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AvailabilityOverride"
+        "400":
+          description: Invalid input
+        "401":
+          description: Unauthorized
+
+  /teacher/availability-overrides/{id}:
+    delete:
+      operationId: deleteAvailabilityOverride
+      tags: [teacher]
+      summary: Delete a single time-off block
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Unauthorized
+
+  /teacher/calendar/busy:
+    get:
+      operationId: getCalendarBusy
+      tags: [teacher]
+      summary: Get Google Calendar busy blocks for a single date
+      parameters:
+        - in: query
+          name: date
+          required: true
+          schema:
+            type: string
+            format: date
+          description: The date to query in "YYYY-MM-DD" format
+      responses:
+        "200":
+          description: List of busy time ranges from Google Calendar
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CalendarBusyBlock"
+        "401":
+          description: Unauthorized
+
+  /teacher/calendar/status:
+    get:
+      operationId: getCalendarStatus
+      tags: [teacher]
+      summary: Check Google Calendar connection status
+      responses:
+        "200":
+          description: Calendar status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarStatus"
+
+  /teacher/calendar/disconnect:
+    delete:
+      operationId: disconnectCalendar
+      tags: [teacher]
+      summary: Disconnect Google Calendar
+      responses:
+        "200":
+          description: Disconnected successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
+
+  /teacher/complaints:
+    post:
+      operationId: submitComplaint
+      tags: [teacher]
+      summary: Submit a complaint or suggestion to the platform admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplaintInput"
+      responses:
+        "201":
+          description: Complaint submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Complaint"
+        "401":
+          description: Unauthorized
+
+  # ─── ADMIN ────────────────────────────────────────────────────────────────
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      tags: [admin]
+      summary: Get platform-wide admin dashboard summary
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+        "401":
+          description: Unauthorized
+
+  /admin/complaints:
+    get:
+      operationId: listComplaints
+      tags: [admin]
+      summary: List all teacher complaints/suggestions
+      responses:
+        "200":
+          description: All complaints
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Complaint"
+        "401":
+          description: Unauthorized
+
+  /admin/complaints/{id}:
+    patch:
+      operationId: updateComplaint
+      tags: [admin]
+      summary: Update a complaint's status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplaintUpdate"
+      responses:
+        "200":
+          description: Updated complaint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Complaint"
+        "404":
+          description: Not found
 
   /admin/testimonials:
     get:
@@ -1220,151 +1446,6 @@ paths:
       responses:
         "204":
           description: Deleted
-
-  /admin/site-settings:
-    get:
-      operationId: getAdminSiteSettings
-      tags: [admin]
-      summary: Get full site settings
-      responses:
-        "200":
-          description: Site settings
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SiteSettings"
-    patch:
-      operationId: updateSiteSettings
-      tags: [admin]
-      summary: Update site settings
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SiteSettingsUpdate"
-      responses:
-        "200":
-          description: Updated site settings
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SiteSettings"
-
-  /admin/availability-overrides:
-    get:
-      operationId: listAvailabilityOverrides
-      tags: [admin]
-      summary: List upcoming teacher time-off blocks
-      responses:
-        "200":
-          description: Upcoming availability overrides
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AvailabilityOverride"
-        "401":
-          description: Unauthorized
-
-  /admin/availability-overrides/day:
-    put:
-      operationId: setDayAvailabilityOverrides
-      tags: [admin]
-      summary: Replace all time-off blocks for a single date
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SetDayOverridesInput"
-      responses:
-        "200":
-          description: The date's new set of overrides
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AvailabilityOverride"
-        "400":
-          description: Invalid input
-        "401":
-          description: Unauthorized
-
-  /admin/availability-overrides/{id}:
-    delete:
-      operationId: deleteAvailabilityOverride
-      tags: [admin]
-      summary: Delete a single time-off block
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: number
-      responses:
-        "204":
-          description: Deleted
-        "401":
-          description: Unauthorized
-
-  /admin/calendar/busy:
-    get:
-      operationId: getCalendarBusy
-      tags: [admin]
-      summary: Get Google Calendar busy blocks for a single date
-      parameters:
-        - in: query
-          name: date
-          required: true
-          schema:
-            type: string
-            format: date
-          description: The date to query in "YYYY-MM-DD" format
-      responses:
-        "200":
-          description: List of busy time ranges from Google Calendar
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/CalendarBusyBlock"
-        "401":
-          description: Unauthorized
-
-  /admin/calendar/status:
-    get:
-      operationId: getCalendarStatus
-      tags: [admin]
-      summary: Check Google Calendar connection status
-      responses:
-        "200":
-          description: Calendar status
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CalendarStatus"
-
-  /admin/calendar/disconnect:
-    delete:
-      operationId: disconnectCalendar
-      tags: [admin]
-      summary: Disconnect Google Calendar
-      responses:
-        "200":
-          description: Disconnected successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                required:
-                  - success
 
   # ─── UPLOADS ──────────────────────────────────────────────────────────────
   /uploads:
@@ -2056,7 +2137,7 @@ components:
         recentHomework:
           type: array
           items:
-            $ref: "#/components/schemas/AdminHomework"
+            $ref: "#/components/schemas/TeacherHomework"
       required:
         - upcomingBookings
         - totalRemainingCredits
@@ -2275,10 +2356,13 @@ components:
           type: string
         displayName:
           type: string
+        isAdmin:
+          type: boolean
       required:
         - id
         - email
         - displayName
+        - isAdmin
 
     ClaimTeacherInput:
       type: object
@@ -2288,20 +2372,18 @@ components:
       required:
         - password
 
-    AdminDashboard:
+    TeacherDashboard:
       type: object
       properties:
         todayBookings:
           type: array
           items:
-            $ref: "#/components/schemas/AdminBooking"
+            $ref: "#/components/schemas/TeacherBooking"
         upcomingBookingsCount:
           type: number
         totalStudents:
           type: number
         pendingHomeworkCount:
-          type: number
-        pendingTestimonialsCount:
           type: number
         thisWeekBookings:
           type: number
@@ -2310,10 +2392,29 @@ components:
         - upcomingBookingsCount
         - totalStudents
         - pendingHomeworkCount
-        - pendingTestimonialsCount
         - thisWeekBookings
 
-    AdminBooking:
+    AdminDashboard:
+      type: object
+      properties:
+        totalTeachers:
+          type: number
+        totalStudents:
+          type: number
+        totalBookingsThisWeek:
+          type: number
+        totalPendingHomework:
+          type: number
+        openComplaintsCount:
+          type: number
+      required:
+        - totalTeachers
+        - totalStudents
+        - totalBookingsThisWeek
+        - totalPendingHomework
+        - openComplaintsCount
+
+    TeacherBooking:
       type: object
       properties:
         id:
@@ -2358,7 +2459,7 @@ components:
         - notes
         - createdAt
 
-    AdminBookingUpdate:
+    TeacherBookingUpdate:
       type: object
       properties:
         status:
@@ -2392,7 +2493,7 @@ components:
 
     CompletedBooking:
       allOf:
-        - $ref: "#/components/schemas/AdminBooking"
+        - $ref: "#/components/schemas/TeacherBooking"
         - type: object
           properties:
             homeworkId:
@@ -2401,7 +2502,7 @@ components:
           required:
             - homeworkId
 
-    AdminHomework:
+    TeacherHomework:
       type: object
       properties:
         id:
@@ -2476,7 +2577,7 @@ components:
         - submissionFiles
         - reviewFiles
 
-    AdminStudent:
+    TeacherStudent:
       type: object
       properties:
         id:
@@ -2562,7 +2663,7 @@ components:
         - lastMessageAt
         - unreadCount
 
-    AdminStudentDetail:
+    TeacherStudentDetail:
       type: object
       properties:
         id:
@@ -2612,3 +2713,46 @@ components:
       required:
         - connected
         - calendarEmail
+
+    Complaint:
+      type: object
+      properties:
+        id:
+          type: number
+        teacherId:
+          type: number
+        teacherName:
+          type: string
+        body:
+          type: string
+        status:
+          type: string
+          enum: [open, resolved]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - teacherId
+        - teacherName
+        - body
+        - status
+        - createdAt
+
+    ComplaintInput:
+      type: object
+      properties:
+        body:
+          type: string
+          minLength: 1
+      required:
+        - body
+
+    ComplaintUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [open, resolved]
+      required:
+        - status

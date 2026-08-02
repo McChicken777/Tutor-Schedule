@@ -5,14 +5,13 @@
  * Spanish Tutor Booking Platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { Booking } from './booking';
-import type { LessonPackage } from './lessonPackage';
 
-export interface AdminStudentDetail {
+export interface TeacherStudent {
   id: number;
   email: string;
   displayName: string;
-  packages: LessonPackage[];
-  bookings: Booking[];
+  totalCredits: number;
+  usedCredits: number;
+  totalBookings: number;
   createdAt: Date;
 }

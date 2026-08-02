@@ -5,9 +5,9 @@
  * Spanish Tutor Booking Platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { AdminBookingUpdateStatus } from './adminBookingUpdateStatus';
+import type { TeacherBookingUpdateStatus } from './teacherBookingUpdateStatus';
 
-export interface AdminBookingUpdate {
-  status?: AdminBookingUpdateStatus;
+export interface TeacherBookingUpdate {
+  status?: TeacherBookingUpdateStatus;
   notes?: string;
 }

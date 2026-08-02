@@ -5,9 +5,9 @@
  * Spanish Tutor Booking Platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { AdminHomework } from './adminHomework';
 import type { Booking } from './booking';
 import type { LessonPackage } from './lessonPackage';
+import type { TeacherHomework } from './teacherHomework';
 
 export interface StudentDashboard {
   nextBooking?: Booking;
@@ -21,5 +21,5 @@ export interface StudentDashboard {
   /** Whether the student has any unread messages from the tutor. */
   hasUnreadMessages: boolean;
   packages: LessonPackage[];
-  recentHomework: AdminHomework[];
+  recentHomework: TeacherHomework[];
 }

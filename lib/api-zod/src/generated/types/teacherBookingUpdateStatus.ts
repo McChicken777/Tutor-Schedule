@@ -6,11 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type AdminBookingStatus = typeof AdminBookingStatus[keyof typeof AdminBookingStatus];
+export type TeacherBookingUpdateStatus = typeof TeacherBookingUpdateStatus[keyof typeof TeacherBookingUpdateStatus];
 
 
-export const AdminBookingStatus = {
+export const TeacherBookingUpdateStatus = {
   upcoming: 'upcoming',
-  completed: 'completed',
   cancelled: 'cancelled',
 } as const;

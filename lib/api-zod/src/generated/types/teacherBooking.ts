@@ -5,9 +5,9 @@
  * Spanish Tutor Booking Platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { AdminBookingStatus } from './adminBookingStatus';
+import type { TeacherBookingStatus } from './teacherBookingStatus';
 
-export interface AdminBooking {
+export interface TeacherBooking {
   id: number;
   studentId: number;
   studentName: string;
@@ -16,7 +16,7 @@ export interface AdminBooking {
   lessonTypeName: string;
   startTime: Date;
   endTime: Date;
-  status: AdminBookingStatus;
+  status: TeacherBookingStatus;
   /** @nullable */
   meetLink: string | null;
   /** @nullable */

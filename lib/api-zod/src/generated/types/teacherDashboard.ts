@@ -7,7 +7,10 @@
  */
 import type { TeacherBooking } from './teacherBooking';
 
-export type CompletedBooking = TeacherBooking & {
-  /** The id of the homework row created/updated for this booking, so the client can attach files to it next. */
-  homeworkId: number;
-};
+export interface TeacherDashboard {
+  todayBookings: TeacherBooking[];
+  upcomingBookingsCount: number;
+  totalStudents: number;
+  pendingHomeworkCount: number;
+  thisWeekBookings: number;
+}

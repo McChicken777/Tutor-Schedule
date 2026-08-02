@@ -5,13 +5,11 @@
  * Spanish Tutor Booking Platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { AdminBooking } from './adminBooking';
 
 export interface AdminDashboard {
-  todayBookings: AdminBooking[];
-  upcomingBookingsCount: number;
+  totalTeachers: number;
   totalStudents: number;
-  pendingHomeworkCount: number;
-  pendingTestimonialsCount: number;
-  thisWeekBookings: number;
+  totalBookingsThisWeek: number;
+  totalPendingHomework: number;
+  openComplaintsCount: number;
 }

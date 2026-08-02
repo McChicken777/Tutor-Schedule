@@ -6,9 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface Teacher {
-  id: number;
-  email: string;
-  displayName: string;
-  isAdmin: boolean;
-}
+export type ListTeacherBookingsParams = {
+status?: string;
+date?: Date;
+};

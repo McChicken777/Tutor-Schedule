@@ -339,7 +339,7 @@ export interface StudentProfile {
   createdAt: string;
 }
 
-export interface AdminHomework {
+export interface TeacherHomework {
   id: number;
   bookingId: number;
   studentId: number;
@@ -383,7 +383,7 @@ export interface StudentDashboard {
   /** Whether the student has any unread messages from the tutor. */
   hasUnreadMessages: boolean;
   packages: LessonPackage[];
-  recentHomework: AdminHomework[];
+  recentHomework: TeacherHomework[];
 }
 
 export interface Testimonial {
@@ -492,22 +492,23 @@ export interface Teacher {
   id: number;
   email: string;
   displayName: string;
+  isAdmin: boolean;
 }
 
 export interface ClaimTeacherInput {
   password: string;
 }
 
-export type AdminBookingStatus = typeof AdminBookingStatus[keyof typeof AdminBookingStatus];
+export type TeacherBookingStatus = typeof TeacherBookingStatus[keyof typeof TeacherBookingStatus];
 
 
-export const AdminBookingStatus = {
+export const TeacherBookingStatus = {
   upcoming: 'upcoming',
   completed: 'completed',
   cancelled: 'cancelled',
 } as const;
 
-export interface AdminBooking {
+export interface TeacherBooking {
   id: number;
   studentId: number;
   studentName: string;
@@ -516,7 +517,7 @@ export interface AdminBooking {
   lessonTypeName: string;
   startTime: string;
   endTime: string;
-  status: AdminBookingStatus;
+  status: TeacherBookingStatus;
   /** @nullable */
   meetLink: string | null;
   /** @nullable */
@@ -524,25 +525,32 @@ export interface AdminBooking {
   createdAt: string;
 }
 
-export interface AdminDashboard {
-  todayBookings: AdminBooking[];
+export interface TeacherDashboard {
+  todayBookings: TeacherBooking[];
   upcomingBookingsCount: number;
   totalStudents: number;
   pendingHomeworkCount: number;
-  pendingTestimonialsCount: number;
   thisWeekBookings: number;
 }
 
-export type AdminBookingUpdateStatus = typeof AdminBookingUpdateStatus[keyof typeof AdminBookingUpdateStatus];
+export interface AdminDashboard {
+  totalTeachers: number;
+  totalStudents: number;
+  totalBookingsThisWeek: number;
+  totalPendingHomework: number;
+  openComplaintsCount: number;
+}
+
+export type TeacherBookingUpdateStatus = typeof TeacherBookingUpdateStatus[keyof typeof TeacherBookingUpdateStatus];
 
 
-export const AdminBookingUpdateStatus = {
+export const TeacherBookingUpdateStatus = {
   upcoming: 'upcoming',
   cancelled: 'cancelled',
 } as const;
 
-export interface AdminBookingUpdate {
-  status?: AdminBookingUpdateStatus;
+export interface TeacherBookingUpdate {
+  status?: TeacherBookingUpdateStatus;
   notes?: string;
 }
 
@@ -565,12 +573,12 @@ export interface CompleteBookingInput {
   homework: CompleteBookingInputHomework;
 }
 
-export type CompletedBooking = AdminBooking & {
+export type CompletedBooking = TeacherBooking & {
   /** The id of the homework row created/updated for this booking, so the client can attach files to it next. */
   homeworkId: number;
 };
 
-export interface AdminStudent {
+export interface TeacherStudent {
   id: number;
   email: string;
   displayName: string;
@@ -612,7 +620,7 @@ export interface MessageThread {
   unreadCount: number;
 }
 
-export interface AdminStudentDetail {
+export interface TeacherStudentDetail {
   id: number;
   email: string;
   displayName: string;
@@ -631,6 +639,40 @@ export interface CalendarStatus {
   connected: boolean;
   /** @nullable */
   calendarEmail: string | null;
+}
+
+export type ComplaintStatus = typeof ComplaintStatus[keyof typeof ComplaintStatus];
+
+
+export const ComplaintStatus = {
+  open: 'open',
+  resolved: 'resolved',
+} as const;
+
+export interface Complaint {
+  id: number;
+  teacherId: number;
+  teacherName: string;
+  body: string;
+  status: ComplaintStatus;
+  createdAt: string;
+}
+
+export interface ComplaintInput {
+  /** @minLength 1 */
+  body: string;
+}
+
+export type ComplaintUpdateStatus = typeof ComplaintUpdateStatus[keyof typeof ComplaintUpdateStatus];
+
+
+export const ComplaintUpdateStatus = {
+  open: 'open',
+  resolved: 'resolved',
+} as const;
+
+export interface ComplaintUpdate {
+  status: ComplaintUpdateStatus;
 }
 
 export type GetAvailableSlotsParams = {
@@ -656,12 +698,12 @@ export type CompleteTour200 = {
   hasSeenTour: boolean;
 };
 
-export type ListAdminBookingsParams = {
+export type ListTeacherBookingsParams = {
 status?: string;
 date?: string;
 };
 
-export type ListAdminHomeworkParams = {
+export type ListTeacherHomeworkParams = {
 reviewed?: boolean;
 studentId?: number;
 /**

@@ -5,13 +5,13 @@
  * Spanish Tutor Booking Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { ComplaintStatus } from './complaintStatus';
 
-export interface AdminStudent {
+export interface Complaint {
   id: number;
-  email: string;
-  displayName: string;
-  totalCredits: number;
-  usedCredits: number;
-  totalBookings: number;
+  teacherId: number;
+  teacherName: string;
+  body: string;
+  status: ComplaintStatus;
   createdAt: Date;
 }

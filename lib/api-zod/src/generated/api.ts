@@ -780,7 +780,8 @@ export const SendStudentMessageResponse = zod.object({
 export const GetTeacherMeResponse = zod.object({
   "id": zod.number(),
   "email": zod.string(),
-  "displayName": zod.string()
+  "displayName": zod.string(),
+  "isAdmin": zod.boolean()
 })
 
 
@@ -790,7 +791,8 @@ export const GetTeacherMeResponse = zod.object({
 export const RegisterTeacherResponse = zod.object({
   "id": zod.number(),
   "email": zod.string(),
-  "displayName": zod.string()
+  "displayName": zod.string(),
+  "isAdmin": zod.boolean()
 })
 
 
@@ -804,14 +806,15 @@ export const ClaimTeacherBody = zod.object({
 export const ClaimTeacherResponse = zod.object({
   "id": zod.number(),
   "email": zod.string(),
-  "displayName": zod.string()
+  "displayName": zod.string(),
+  "isAdmin": zod.boolean()
 })
 
 
 /**
- * @summary Get admin dashboard summary
+ * @summary Get teacher dashboard summary
  */
-export const GetAdminDashboardResponse = zod.object({
+export const GetTeacherDashboardResponse = zod.object({
   "todayBookings": zod.array(zod.object({
   "id": zod.number(),
   "studentId": zod.number(),
@@ -829,7 +832,6 @@ export const GetAdminDashboardResponse = zod.object({
   "upcomingBookingsCount": zod.number(),
   "totalStudents": zod.number(),
   "pendingHomeworkCount": zod.number(),
-  "pendingTestimonialsCount": zod.number(),
   "thisWeekBookings": zod.number()
 })
 
@@ -837,12 +839,12 @@ export const GetAdminDashboardResponse = zod.object({
 /**
  * @summary List all bookings
  */
-export const ListAdminBookingsQueryParams = zod.object({
+export const ListTeacherBookingsQueryParams = zod.object({
   "status": zod.coerce.string().optional(),
   "date": zod.date().optional()
 })
 
-export const ListAdminBookingsResponseItem = zod.object({
+export const ListTeacherBookingsResponseItem = zod.object({
   "id": zod.number(),
   "studentId": zod.number(),
   "studentName": zod.string(),
@@ -856,22 +858,22 @@ export const ListAdminBookingsResponseItem = zod.object({
   "notes": zod.string().nullable(),
   "createdAt": zod.coerce.date()
 })
-export const ListAdminBookingsResponse = zod.array(ListAdminBookingsResponseItem)
+export const ListTeacherBookingsResponse = zod.array(ListTeacherBookingsResponseItem)
 
 
 /**
  * @summary Update a booking status or notes
  */
-export const UpdateAdminBookingParams = zod.object({
+export const UpdateTeacherBookingParams = zod.object({
   "id": zod.coerce.number()
 })
 
-export const UpdateAdminBookingBody = zod.object({
+export const UpdateTeacherBookingBody = zod.object({
   "status": zod.enum(['upcoming', 'cancelled']).optional(),
   "notes": zod.string().optional()
 })
 
-export const UpdateAdminBookingResponse = zod.object({
+export const UpdateTeacherBookingResponse = zod.object({
   "id": zod.number(),
   "studentId": zod.number(),
   "studentName": zod.string(),
@@ -927,7 +929,7 @@ export const CompleteBookingResponse = zod.object({
 /**
  * @summary List all lesson types (including inactive)
  */
-export const ListAdminLessonTypesResponseItem = zod.object({
+export const ListTeacherLessonTypesResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "durationMinutes": zod.number(),
@@ -937,7 +939,7 @@ export const ListAdminLessonTypesResponseItem = zod.object({
   "isTrial": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
-export const ListAdminLessonTypesResponse = zod.array(ListAdminLessonTypesResponseItem)
+export const ListTeacherLessonTypesResponse = zod.array(ListTeacherLessonTypesResponseItem)
 
 
 /**
@@ -1017,7 +1019,7 @@ export const DeleteLessonTypeResponse = zod.void()
 /**
  * @summary List all credit bundles (including inactive)
  */
-export const ListAdminCreditBundlesResponseItem = zod.object({
+export const ListTeacherCreditBundlesResponseItem = zod.object({
   "id": zod.number(),
   "credits": zod.number(),
   "priceCents": zod.number(),
@@ -1025,7 +1027,7 @@ export const ListAdminCreditBundlesResponseItem = zod.object({
   "isActive": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
-export const ListAdminCreditBundlesResponse = zod.array(ListAdminCreditBundlesResponseItem)
+export const ListTeacherCreditBundlesResponse = zod.array(ListTeacherCreditBundlesResponseItem)
 
 
 /**
@@ -1095,13 +1097,13 @@ export const DeleteCreditBundleResponse = zod.void()
 /**
  * @summary List all homework submissions
  */
-export const ListAdminHomeworkQueryParams = zod.object({
+export const ListTeacherHomeworkQueryParams = zod.object({
   "reviewed": zod.coerce.boolean().optional(),
   "studentId": zod.coerce.number().optional(),
   "submitted": zod.coerce.boolean().optional().describe('Defaults to true (existing behavior — only submitted homework). Set to false to include assigned-but-unsubmitted homework too.')
 })
 
-export const ListAdminHomeworkResponseItem = zod.object({
+export const ListTeacherHomeworkResponseItem = zod.object({
   "id": zod.number(),
   "bookingId": zod.number(),
   "studentId": zod.number(),
@@ -1156,7 +1158,7 @@ export const ListAdminHomeworkResponseItem = zod.object({
   "createdAt": zod.coerce.date()
 }))
 })
-export const ListAdminHomeworkResponse = zod.array(ListAdminHomeworkResponseItem)
+export const ListTeacherHomeworkResponse = zod.array(ListTeacherHomeworkResponseItem)
 
 
 /**
@@ -1439,7 +1441,7 @@ export const RelinkHomeworkFileResponse = zod.object({
 /**
  * @summary List all students
  */
-export const ListAdminStudentsResponseItem = zod.object({
+export const ListTeacherStudentsResponseItem = zod.object({
   "id": zod.number(),
   "email": zod.string(),
   "displayName": zod.string(),
@@ -1448,17 +1450,17 @@ export const ListAdminStudentsResponseItem = zod.object({
   "totalBookings": zod.number(),
   "createdAt": zod.coerce.date()
 })
-export const ListAdminStudentsResponse = zod.array(ListAdminStudentsResponseItem)
+export const ListTeacherStudentsResponse = zod.array(ListTeacherStudentsResponseItem)
 
 
 /**
  * @summary Get student details with history
  */
-export const GetAdminStudentParams = zod.object({
+export const GetTeacherStudentParams = zod.object({
   "id": zod.coerce.number()
 })
 
-export const GetAdminStudentResponse = zod.object({
+export const GetTeacherStudentResponse = zod.object({
   "id": zod.number(),
   "email": zod.string(),
   "displayName": zod.string(),
@@ -1486,7 +1488,7 @@ export const GetAdminStudentResponse = zod.object({
 /**
  * @summary List message threads (one per student), most recent first
  */
-export const ListAdminMessageThreadsResponseItem = zod.object({
+export const ListTeacherMessageThreadsResponseItem = zod.object({
   "studentId": zod.number(),
   "studentName": zod.string(),
   "studentEmail": zod.string(),
@@ -1494,17 +1496,17 @@ export const ListAdminMessageThreadsResponseItem = zod.object({
   "lastMessageAt": zod.coerce.date(),
   "unreadCount": zod.number()
 })
-export const ListAdminMessageThreadsResponse = zod.array(ListAdminMessageThreadsResponseItem)
+export const ListTeacherMessageThreadsResponse = zod.array(ListTeacherMessageThreadsResponseItem)
 
 
 /**
  * @summary Get the message thread with a specific student
  */
-export const ListAdminStudentMessagesParams = zod.object({
+export const ListTeacherStudentMessagesParams = zod.object({
   "id": zod.coerce.number()
 })
 
-export const ListAdminStudentMessagesResponseItem = zod.object({
+export const ListTeacherStudentMessagesResponseItem = zod.object({
   "id": zod.number(),
   "studentId": zod.number(),
   "senderRole": zod.enum(['student', 'admin']),
@@ -1512,24 +1514,24 @@ export const ListAdminStudentMessagesResponseItem = zod.object({
   "createdAt": zod.coerce.date(),
   "readAt": zod.coerce.date().nullable()
 })
-export const ListAdminStudentMessagesResponse = zod.array(ListAdminStudentMessagesResponseItem)
+export const ListTeacherStudentMessagesResponse = zod.array(ListTeacherStudentMessagesResponseItem)
 
 
 /**
  * @summary Send a message to a student
  */
-export const SendAdminMessageParams = zod.object({
+export const SendTeacherMessageParams = zod.object({
   "id": zod.coerce.number()
 })
 
 
 
 
-export const SendAdminMessageBody = zod.object({
+export const SendTeacherMessageBody = zod.object({
   "body": zod.string().min(1)
 })
 
-export const SendAdminMessageResponse = zod.object({
+export const SendTeacherMessageResponse = zod.object({
   "id": zod.number(),
   "studentId": zod.number(),
   "senderRole": zod.enum(['student', 'admin']),
@@ -1560,168 +1562,9 @@ export const GrantPackageResponse = zod.object({
 
 
 /**
- * @summary List all testimonials
- */
-export const listAdminTestimonialsResponseRatingMax = 5;
-
-
-
-export const ListAdminTestimonialsResponseItem = zod.object({
-  "id": zod.number(),
-  "studentName": zod.string(),
-  "text": zod.string(),
-  "rating": zod.number().min(1).max(listAdminTestimonialsResponseRatingMax),
-  "isVisible": zod.boolean(),
-  "createdAt": zod.coerce.date()
-})
-export const ListAdminTestimonialsResponse = zod.array(ListAdminTestimonialsResponseItem)
-
-
-/**
- * @summary Create a testimonial
- */
-
-
-export const createTestimonialBodyRatingMax = 5;
-
-
-
-export const CreateTestimonialBody = zod.object({
-  "studentName": zod.string().min(1),
-  "text": zod.string().min(1),
-  "rating": zod.number().min(1).max(createTestimonialBodyRatingMax),
-  "isVisible": zod.boolean().optional()
-})
-
-export const createTestimonialResponseRatingMax = 5;
-
-
-
-export const CreateTestimonialResponse = zod.object({
-  "id": zod.number(),
-  "studentName": zod.string(),
-  "text": zod.string(),
-  "rating": zod.number().min(1).max(createTestimonialResponseRatingMax),
-  "isVisible": zod.boolean(),
-  "createdAt": zod.coerce.date()
-})
-
-
-/**
- * @summary Update testimonial visibility or content
- */
-export const UpdateTestimonialParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const updateTestimonialBodyRatingMax = 5;
-
-
-
-export const UpdateTestimonialBody = zod.object({
-  "studentName": zod.string().optional(),
-  "text": zod.string().optional(),
-  "rating": zod.number().min(1).max(updateTestimonialBodyRatingMax).optional(),
-  "isVisible": zod.boolean().optional()
-})
-
-export const updateTestimonialResponseRatingMax = 5;
-
-
-
-export const UpdateTestimonialResponse = zod.object({
-  "id": zod.number(),
-  "studentName": zod.string(),
-  "text": zod.string(),
-  "rating": zod.number().min(1).max(updateTestimonialResponseRatingMax),
-  "isVisible": zod.boolean(),
-  "createdAt": zod.coerce.date()
-})
-
-
-/**
- * @summary Delete a testimonial
- */
-export const DeleteTestimonialParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const DeleteTestimonialResponse = zod.void()
-
-
-/**
- * @summary List all FAQ entries
- */
-export const ListAdminFaqsResponseItem = zod.object({
-  "id": zod.number(),
-  "question": zod.string(),
-  "answer": zod.string(),
-  "displayOrder": zod.number(),
-  "isVisible": zod.boolean()
-})
-export const ListAdminFaqsResponse = zod.array(ListAdminFaqsResponseItem)
-
-
-/**
- * @summary Create a FAQ entry
- */
-
-
-
-
-export const CreateFaqBody = zod.object({
-  "question": zod.string().min(1),
-  "answer": zod.string().min(1),
-  "displayOrder": zod.number().optional(),
-  "isVisible": zod.boolean().optional()
-})
-
-export const CreateFaqResponse = zod.object({
-  "id": zod.number(),
-  "question": zod.string(),
-  "answer": zod.string(),
-  "displayOrder": zod.number(),
-  "isVisible": zod.boolean()
-})
-
-
-/**
- * @summary Update a FAQ entry
- */
-export const UpdateFaqParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const UpdateFaqBody = zod.object({
-  "question": zod.string().optional(),
-  "answer": zod.string().optional(),
-  "displayOrder": zod.number().optional(),
-  "isVisible": zod.boolean().optional()
-})
-
-export const UpdateFaqResponse = zod.object({
-  "id": zod.number(),
-  "question": zod.string(),
-  "answer": zod.string(),
-  "displayOrder": zod.number(),
-  "isVisible": zod.boolean()
-})
-
-
-/**
- * @summary Delete a FAQ entry
- */
-export const DeleteFaqParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const DeleteFaqResponse = zod.void()
-
-
-/**
  * @summary Get full site settings
  */
-export const GetAdminSiteSettingsResponse = zod.object({
+export const GetTeacherSiteSettingsResponse = zod.object({
   "id": zod.number(),
   "tutorName": zod.string(),
   "tutorBio": zod.string(),
@@ -1935,6 +1778,232 @@ export const GetCalendarStatusResponse = zod.object({
 export const DisconnectCalendarResponse = zod.object({
   "success": zod.boolean()
 })
+
+
+/**
+ * @summary Submit a complaint or suggestion to the platform admin
+ */
+
+
+
+export const SubmitComplaintBody = zod.object({
+  "body": zod.string().min(1)
+})
+
+export const SubmitComplaintResponse = zod.object({
+  "id": zod.number(),
+  "teacherId": zod.number(),
+  "teacherName": zod.string(),
+  "body": zod.string(),
+  "status": zod.enum(['open', 'resolved']),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get platform-wide admin dashboard summary
+ */
+export const GetAdminDashboardResponse = zod.object({
+  "totalTeachers": zod.number(),
+  "totalStudents": zod.number(),
+  "totalBookingsThisWeek": zod.number(),
+  "totalPendingHomework": zod.number(),
+  "openComplaintsCount": zod.number()
+})
+
+
+/**
+ * @summary List all teacher complaints/suggestions
+ */
+export const ListComplaintsResponseItem = zod.object({
+  "id": zod.number(),
+  "teacherId": zod.number(),
+  "teacherName": zod.string(),
+  "body": zod.string(),
+  "status": zod.enum(['open', 'resolved']),
+  "createdAt": zod.coerce.date()
+})
+export const ListComplaintsResponse = zod.array(ListComplaintsResponseItem)
+
+
+/**
+ * @summary Update a complaint's status
+ */
+export const UpdateComplaintParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateComplaintBody = zod.object({
+  "status": zod.enum(['open', 'resolved'])
+})
+
+export const UpdateComplaintResponse = zod.object({
+  "id": zod.number(),
+  "teacherId": zod.number(),
+  "teacherName": zod.string(),
+  "body": zod.string(),
+  "status": zod.enum(['open', 'resolved']),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List all testimonials
+ */
+export const listAdminTestimonialsResponseRatingMax = 5;
+
+
+
+export const ListAdminTestimonialsResponseItem = zod.object({
+  "id": zod.number(),
+  "studentName": zod.string(),
+  "text": zod.string(),
+  "rating": zod.number().min(1).max(listAdminTestimonialsResponseRatingMax),
+  "isVisible": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+export const ListAdminTestimonialsResponse = zod.array(ListAdminTestimonialsResponseItem)
+
+
+/**
+ * @summary Create a testimonial
+ */
+
+
+export const createTestimonialBodyRatingMax = 5;
+
+
+
+export const CreateTestimonialBody = zod.object({
+  "studentName": zod.string().min(1),
+  "text": zod.string().min(1),
+  "rating": zod.number().min(1).max(createTestimonialBodyRatingMax),
+  "isVisible": zod.boolean().optional()
+})
+
+export const createTestimonialResponseRatingMax = 5;
+
+
+
+export const CreateTestimonialResponse = zod.object({
+  "id": zod.number(),
+  "studentName": zod.string(),
+  "text": zod.string(),
+  "rating": zod.number().min(1).max(createTestimonialResponseRatingMax),
+  "isVisible": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update testimonial visibility or content
+ */
+export const UpdateTestimonialParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateTestimonialBodyRatingMax = 5;
+
+
+
+export const UpdateTestimonialBody = zod.object({
+  "studentName": zod.string().optional(),
+  "text": zod.string().optional(),
+  "rating": zod.number().min(1).max(updateTestimonialBodyRatingMax).optional(),
+  "isVisible": zod.boolean().optional()
+})
+
+export const updateTestimonialResponseRatingMax = 5;
+
+
+
+export const UpdateTestimonialResponse = zod.object({
+  "id": zod.number(),
+  "studentName": zod.string(),
+  "text": zod.string(),
+  "rating": zod.number().min(1).max(updateTestimonialResponseRatingMax),
+  "isVisible": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a testimonial
+ */
+export const DeleteTestimonialParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteTestimonialResponse = zod.void()
+
+
+/**
+ * @summary List all FAQ entries
+ */
+export const ListAdminFaqsResponseItem = zod.object({
+  "id": zod.number(),
+  "question": zod.string(),
+  "answer": zod.string(),
+  "displayOrder": zod.number(),
+  "isVisible": zod.boolean()
+})
+export const ListAdminFaqsResponse = zod.array(ListAdminFaqsResponseItem)
+
+
+/**
+ * @summary Create a FAQ entry
+ */
+
+
+
+
+export const CreateFaqBody = zod.object({
+  "question": zod.string().min(1),
+  "answer": zod.string().min(1),
+  "displayOrder": zod.number().optional(),
+  "isVisible": zod.boolean().optional()
+})
+
+export const CreateFaqResponse = zod.object({
+  "id": zod.number(),
+  "question": zod.string(),
+  "answer": zod.string(),
+  "displayOrder": zod.number(),
+  "isVisible": zod.boolean()
+})
+
+
+/**
+ * @summary Update a FAQ entry
+ */
+export const UpdateFaqParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateFaqBody = zod.object({
+  "question": zod.string().optional(),
+  "answer": zod.string().optional(),
+  "displayOrder": zod.number().optional(),
+  "isVisible": zod.boolean().optional()
+})
+
+export const UpdateFaqResponse = zod.object({
+  "id": zod.number(),
+  "question": zod.string(),
+  "answer": zod.string(),
+  "displayOrder": zod.number(),
+  "isVisible": zod.boolean()
+})
+
+
+/**
+ * @summary Delete a FAQ entry
+ */
+export const DeleteFaqParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteFaqResponse = zod.void()
 
 
 /**

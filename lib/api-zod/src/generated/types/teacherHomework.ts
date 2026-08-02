@@ -7,7 +7,7 @@
  */
 import type { HomeworkFile } from './homeworkFile';
 
-export interface AdminHomework {
+export interface TeacherHomework {
   id: number;
   bookingId: number;
   studentId: number;
