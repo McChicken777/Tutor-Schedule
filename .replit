@@ -18,17 +18,3 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
-
-[userenv]
-
-[userenv.shared]
-<<<<<<< HEAD
-
-[userenv.development]
-GOOGLE_REDIRECT_URI = "https://81ea024b-7dcc-4d12-8980-329ab76f41ef-00-3pfnigp3oiasq.janeway.replit.dev/api/admin/calendar/callback"
-
-[objectStorage]
-defaultBucketID = "replit-objstore-b5a4d00b-b292-4df1-92f2-0bb829145f9a"
-=======
-GOOGLE_REDIRECT_URI = "https://loquu.replit.app/api/admin/calendar/callback"
->>>>>>> 892205c700820cb3b068a647fe24145ed908bacd
