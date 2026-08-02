@@ -236,8 +236,15 @@ function StudentPortal({ children }: { children: React.ReactNode }) {
 }
 
 function RequireStudentNotBanned({ children }: { children: React.ReactNode }) {
+  const { data: teacher, isLoading: isTeacherLoading } = useGetTeacherMe();
   const { error } = useGetStudentDashboard();
 
+  if (isTeacherLoading) {
+    return <div className="min-h-[100dvh] bg-background" />;
+  }
+  if (teacher) {
+    return <Redirect to={teacher.isAdmin ? "/admin" : "/teacher"} />;
+  }
   if (isBannedError(error)) {
     return <BannedScreen />;
   }

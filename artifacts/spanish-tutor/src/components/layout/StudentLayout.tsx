@@ -1,5 +1,4 @@
 import { ReactNode, useState } from "react";
-import { createPortal } from "react-dom";
 import { Link, useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -200,8 +199,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        {tourActive &&
-          createPortal(<div className="fixed inset-0 z-40 bg-black/50" />, document.body)}
+        {tourActive && <div className="fixed inset-0 z-40 bg-black/50" />}
 
         <div className="p-4 border-t border-border mt-auto">
           <div className="flex items-center gap-3 mb-4 px-2">

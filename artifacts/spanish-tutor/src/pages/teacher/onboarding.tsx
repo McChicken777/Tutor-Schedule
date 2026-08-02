@@ -1,33 +1,17 @@
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { useGetTeacherMe, useRegisterTeacher, useClaimTeacher, getGetTeacherMeQueryKey } from "@workspace/api-client-react";
+import { useGetTeacherMe, useRegisterTeacher, getGetTeacherMeQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { describeError } from "@/lib/errors";
-
-const claimSchema = z.object({
-  password: z.string().min(1, "Password is required"),
-});
 
 export default function TeacherOnboardingPage() {
   const [, setLocation] = useLocation();
   const qc = useQueryClient();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
   const { data: teacher, error, isLoading } = useGetTeacherMe();
-  const [mode, setMode] = useState<"choose" | "claim">("choose");
 
   const registerMutation = useRegisterTeacher();
-  const claimMutation = useClaimTeacher();
-
-  const form = useForm<z.infer<typeof claimSchema>>({
-    resolver: zodResolver(claimSchema),
-    defaultValues: { password: "" },
-  });
 
   useEffect(() => {
     if (teacher) setLocation("/teacher");
@@ -40,18 +24,6 @@ export default function TeacherOnboardingPage() {
         setLocation("/teacher");
       },
     });
-  }
-
-  function handleClaim(values: z.infer<typeof claimSchema>) {
-    claimMutation.mutate(
-      { data: values },
-      {
-        onSuccess: () => {
-          qc.invalidateQueries({ queryKey: getGetTeacherMeQueryKey() });
-          setLocation("/teacher");
-        },
-      },
-    );
   }
 
   if (isLoading || teacher) {
@@ -77,59 +49,14 @@ export default function TeacherOnboardingPage() {
           </p>
         </div>
 
-        {mode === "choose" && (
-          <div className="space-y-3">
-            <Button className="w-full" onClick={() => setMode("claim")}>
-              Claim my existing account
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleRegister}
-              disabled={registerMutation.isPending}
-            >
-              {registerMutation.isPending ? "Registering..." : "Register as a new teacher"}
-            </Button>
-            {registerMutation.error && (
-              <p className="text-sm text-destructive text-center">{describeError(registerMutation.error).message}</p>
-            )}
-          </div>
-        )}
-
-        {mode === "claim" && (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleClaim)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Existing Admin Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="Enter password..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {claimMutation.error && (
-                <p className="text-sm text-destructive">
-                  {claimMutation.error.status === 401
-                    ? "That password didn't match."
-                    : describeError(claimMutation.error).message}
-                </p>
-              )}
-              <div className="space-y-3">
-                <Button type="submit" className="w-full" disabled={claimMutation.isPending}>
-                  {claimMutation.isPending ? "Claiming..." : "Claim account"}
-                </Button>
-                <Button type="button" variant="ghost" className="w-full" onClick={() => setMode("choose")}>
-                  Back
-                </Button>
-              </div>
-            </form>
-          </Form>
-        )}
+        <div className="space-y-3">
+          <Button className="w-full" onClick={handleRegister} disabled={registerMutation.isPending}>
+            {registerMutation.isPending ? "Registering..." : "Register as a new teacher"}
+          </Button>
+          {registerMutation.error && (
+            <p className="text-sm text-destructive text-center">{describeError(registerMutation.error).message}</p>
+          )}
+        </div>
       </div>
     </div>
   );
