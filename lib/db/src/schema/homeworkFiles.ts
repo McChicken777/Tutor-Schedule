@@ -15,6 +15,7 @@ export const homeworkFilesTable = pgTable("homework_files", {
   originalFileId: integer("original_file_id").references((): AnyPgColumn => homeworkFilesTable.id, { onDelete: "set null" }),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 
 export const insertHomeworkFileSchema = createInsertSchema(homeworkFilesTable).omit({ id: true, createdAt: true });
