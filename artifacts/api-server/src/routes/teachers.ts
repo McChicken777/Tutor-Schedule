@@ -21,8 +21,8 @@ async function fetchClerkIdentity(clerkUserId: string): Promise<{ email: string;
   }
 }
 
-function serializeTeacher(teacher: { id: number; email: string; displayName: string }) {
-  return { id: teacher.id, email: teacher.email, displayName: teacher.displayName };
+function serializeTeacher(teacher: { id: number; email: string; displayName: string; isAdmin: boolean }) {
+  return { id: teacher.id, email: teacher.email, displayName: teacher.displayName, isAdmin: teacher.isAdmin };
 }
 
 router.get("/teachers/me", requireAuth, async (req, res): Promise<void> => {
@@ -80,7 +80,7 @@ router.post("/teachers/claim", requireAuth, async (req, res): Promise<void> => {
   const identity = await fetchClerkIdentity(clerkUserId);
   const [teacher] = await db
     .update(teachersTable)
-    .set({ clerkUserId, email: identity.email, displayName: identity.displayName })
+    .set({ clerkUserId, email: identity.email, displayName: identity.displayName, isAdmin: true })
     .where(eq(teachersTable.id, unclaimed.id))
     .returning();
   res.json(serializeTeacher(teacher));
