@@ -17,6 +17,7 @@ import MultiFilePicker from "@/components/homework/MultiFilePicker";
 import FileViewer from "@/components/homework/FileViewer";
 import ErrorState from "@/components/ErrorState";
 import PingDot from "@/components/ui/ping-dot";
+import ReportButton from "@/components/reports/ReportButton";
 import { printFile } from "@/lib/printFile";
 import { truncateFileName } from "@/lib/truncateFileName";
 import { FileText, Download, MessageSquare, Bell, Printer, ChevronDown, ChevronUp } from "lucide-react";
@@ -35,7 +36,10 @@ export default function StudentHomework() {
 
   return (
     <div className="p-6 md:p-10 bg-background min-h-full">
-      <h1 className="text-3xl font-serif font-bold text-foreground mb-8">Homework</h1>
+      <div className="flex items-start justify-between gap-4 mb-8">
+        <h1 className="text-3xl font-serif font-bold text-foreground">Homework</h1>
+        <ReportButton role="student" target={{ type: "general" }} variant="header" />
+      </div>
 
       {isLoading ? (
         <div className="space-y-4">
@@ -74,6 +78,7 @@ function FileList({ files }: { files: HomeworkFileItem[] }) {
           >
             <Printer className="w-3.5 h-3.5" />
           </button>
+          <ReportButton role="student" target={{ type: "homework_file", id: f.id }} className="px-2 py-1.5 rounded-none" />
         </div>
       ))}
     </div>

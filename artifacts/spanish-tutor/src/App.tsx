@@ -4,9 +4,10 @@ import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
 import { QueryCache, MutationCache, QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
-import { useGetTeacherMe } from "@workspace/api-client-react";
+import { useGetTeacherMe, useGetStudentDashboard } from "@workspace/api-client-react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { toast } from "@/hooks/use-toast";
 import { describeError } from "@/lib/errors";
@@ -31,12 +32,12 @@ import TeacherHomework from "@/pages/teacher/Homework";
 import TeacherStudents from "@/pages/teacher/Students";
 import TeacherMessages from "@/pages/teacher/Messages";
 import TeacherAvailability from "@/pages/teacher/Availability";
-import TeacherFeedback from "@/pages/teacher/Feedback";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import AdminTestimonials from "@/pages/admin/Testimonials";
 import AdminFaqs from "@/pages/admin/Faqs";
 import AdminSettings from "@/pages/admin/Settings";
-import AdminComplaints from "@/pages/admin/Complaints";
+import AdminReports from "@/pages/admin/Reports";
+import AdminAccounts from "@/pages/admin/Accounts";
 
 import NotFound from "@/pages/not-found";
 
@@ -205,11 +206,27 @@ function TeacherSignUpGate() {
   );
 }
 
+function isBannedError(error: unknown): boolean {
+  return (error as { status?: number; data?: { code?: string } } | null)?.data?.code === "BANNED";
+}
+
+function BannedScreen() {
+  const { signOut } = useClerk();
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+  return (
+    <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center text-center p-6 gap-4">
+      <h1 className="text-2xl font-serif font-bold text-foreground">Your account has been suspended</h1>
+      <p className="text-muted-foreground max-w-md">Contact support if you believe this is a mistake.</p>
+      <Button onClick={() => signOut({ redirectUrl: basePath || "/" })}>Sign out</Button>
+    </div>
+  );
+}
+
 function StudentPortal({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Show when="signed-in">
-        <StudentLayout>{children}</StudentLayout>
+        <RequireStudentNotBanned>{children}</RequireStudentNotBanned>
       </Show>
       <Show when="signed-out">
         <Redirect to="/" />
@@ -218,11 +235,24 @@ function StudentPortal({ children }: { children: React.ReactNode }) {
   );
 }
 
+function RequireStudentNotBanned({ children }: { children: React.ReactNode }) {
+  const { error } = useGetStudentDashboard();
+
+  if (isBannedError(error)) {
+    return <BannedScreen />;
+  }
+
+  return <StudentLayout>{children}</StudentLayout>;
+}
+
 function RequireTeacherRow({ children }: { children: React.ReactNode }) {
   const { data: teacher, isLoading, error } = useGetTeacherMe();
 
   if (isLoading) {
     return <div className="min-h-[100dvh] bg-background" />;
+  }
+  if (isBannedError(error)) {
+    return <BannedScreen />;
   }
   if (!teacher) {
     if ((error as { status?: number } | null)?.status === 404) {
@@ -252,6 +282,9 @@ function RequireAdminRow({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return <div className="min-h-[100dvh] bg-background" />;
+  }
+  if (isBannedError(error)) {
+    return <BannedScreen />;
   }
   if (!teacher) {
     if ((error as { status?: number } | null)?.status === 404) {
@@ -343,9 +376,6 @@ function ClerkProviderWithRoutes() {
             <Route path="/teacher/availability">
               <TeacherPortal><TeacherAvailability /></TeacherPortal>
             </Route>
-            <Route path="/teacher/feedback">
-              <TeacherPortal><TeacherFeedback /></TeacherPortal>
-            </Route>
 
             {/* Admin Portal (Clerk + teacher-row + isAdmin gated) */}
             <Route path="/admin">
@@ -360,8 +390,11 @@ function ClerkProviderWithRoutes() {
             <Route path="/admin/settings">
               <AdminPortal><AdminSettings /></AdminPortal>
             </Route>
-            <Route path="/admin/complaints">
-              <AdminPortal><AdminComplaints /></AdminPortal>
+            <Route path="/admin/reports">
+              <AdminPortal><AdminReports /></AdminPortal>
+            </Route>
+            <Route path="/admin/accounts">
+              <AdminPortal><AdminAccounts /></AdminPortal>
             </Route>
 
             {/* Student Portal */}

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import ErrorState from "@/components/ErrorState";
+import ReportButton from "@/components/reports/ReportButton";
 import { useQueryClient } from "@tanstack/react-query";
 import { Send, MessageSquare } from "lucide-react";
 
@@ -116,8 +117,9 @@ function ConversationPane({ studentId, studentName }: { studentId: number; stude
 
   return (
     <>
-      <div className="p-6 border-b border-border">
+      <div className="p-6 border-b border-border flex items-center justify-between gap-4">
         <h2 className="font-bold text-foreground">{studentName}</h2>
+        <ReportButton role="teacher" target={{ type: "general" }} variant="header" />
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -125,7 +127,10 @@ function ConversationPane({ studentId, studentName }: { studentId: number; stude
           <Skeleton className="h-40 w-full" />
         ) : (
           messages?.map((m) => (
-            <div key={m.id} className={`flex ${m.senderRole === "admin" ? "justify-end" : "justify-start"}`}>
+            <div
+              key={m.id}
+              className={`flex items-end gap-1.5 ${m.senderRole === "admin" ? "justify-end" : "justify-start"}`}
+            >
               <div
                 className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
                   m.senderRole === "admin"
@@ -138,6 +143,9 @@ function ConversationPane({ studentId, studentName }: { studentId: number; stude
                   {format(new Date(m.createdAt), "MMM d, h:mm a")}
                 </p>
               </div>
+              {m.senderRole !== "admin" && (
+                <ReportButton role="teacher" target={{ type: "message", id: m.id }} />
+              )}
             </div>
           ))
         )}
