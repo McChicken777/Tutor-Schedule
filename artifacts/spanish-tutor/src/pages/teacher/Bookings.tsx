@@ -53,8 +53,9 @@ export default function TeacherBookings() {
     if (completingId == null || !recap.trim()) return;
     const bookingId = completingId;
 
+    let result: Awaited<ReturnType<typeof completeMutation.mutateAsync>>;
     try {
-      const result = await completeMutation.mutateAsync({
+      result = await completeMutation.mutateAsync({
         id: bookingId,
         data: {
           notes: recap,
@@ -65,8 +66,19 @@ export default function TeacherBookings() {
           },
         },
       });
+    } catch (err) {
+      toast({ title: "Failed to complete lesson", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+      return;
+    }
 
-      if (!noHomework) {
+    // The lesson is now marked complete regardless of what happens below, so
+    // close the dialog and refresh the list either way — otherwise a file
+    // failure would leave the dialog open implying the lesson wasn't completed.
+    qc.invalidateQueries({ queryKey: getListTeacherBookingsQueryKey() });
+    setCompletingId(null);
+
+    if (!noHomework && homeworkFiles.length > 0) {
+      try {
         for (const file of homeworkFiles) {
           const uploaded = await uploadMutation.mutateAsync({
             file,
@@ -78,13 +90,17 @@ export default function TeacherBookings() {
             data: { slot: "assigned", key: uploaded.key, name: uploaded.fileName, mime: uploaded.mimeType },
           });
         }
+        toast({ title: "Lesson completed" });
+      } catch (err) {
+        toast({
+          title: "Lesson completed, but homework files failed to attach",
+          description: err instanceof Error ? err.message : undefined,
+          variant: "destructive",
+        });
+        return;
       }
-
+    } else {
       toast({ title: "Lesson completed" });
-      qc.invalidateQueries({ queryKey: getListTeacherBookingsQueryKey() });
-      setCompletingId(null);
-    } catch (err) {
-      toast({ title: "Failed to complete lesson", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
     }
   };
 

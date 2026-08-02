@@ -69,6 +69,8 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col md:flex-row">
+      {tourActive && <div className="fixed inset-0 z-40 bg-black/50" />}
+
       {/* Mobile top bar */}
       <header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 h-14 border-b border-border bg-card">
         <Link href="/dashboard" className="flex items-center gap-2">
@@ -137,7 +139,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
 
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
           {navItems.map((item, index) => {
-            const active = location === item.href || (item.href !== "/dashboard" && location.startsWith(item.href));
+            const active = location === item.href || location.startsWith(`${item.href}/`);
             const isTourStep = tourActive && index === tourStep;
             return (
               <div key={item.href} className="relative">
@@ -199,8 +201,6 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        {tourActive && <div className="fixed inset-0 z-40 bg-black/50" />}
-
         <div className="p-4 border-t border-border mt-auto">
           <div className="flex items-center gap-3 mb-4 px-2">
             <img 
@@ -232,7 +232,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
       {/* Mobile bottom tab bar */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 flex items-stretch border-t border-border bg-card pb-[env(safe-area-inset-bottom)]">
         {navItems.map((item, index) => {
-          const active = location === item.href || (item.href !== "/dashboard" && location.startsWith(item.href));
+          const active = location === item.href || location.startsWith(`${item.href}/`);
           const isTourStep = tourActive && index === tourStep;
           return (
             <div key={item.href} className="relative flex-1">

@@ -332,17 +332,19 @@ export default function TeacherAvailability() {
     );
   };
 
-  // Group upcoming overrides by date for the summary list
+  // Group upcoming overrides by date for the summary list — grouped by the
+  // tutor's own timezone, not the raw UTC date, so a block near midnight
+  // doesn't land in the wrong day's bucket.
   const groupedOverrides = useMemo(() => {
     if (!overrides) return [];
     const map = new Map<string, typeof overrides>();
     for (const o of overrides) {
-      const d = o.startTime.slice(0, 10);
+      const d = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date(o.startTime));
       if (!map.has(d)) map.set(d, []);
       map.get(d)!.push(o);
     }
     return [...map.entries()].map(([d, rows]) => ({ dateLabel: d, rows }));
-  }, [overrides]);
+  }, [overrides, tz]);
 
   return (
     <div className="p-6 md:p-10 bg-background min-h-full max-w-5xl mx-auto w-full">

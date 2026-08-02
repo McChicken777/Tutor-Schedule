@@ -13,7 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { getGetStudentBookingQueryKey } from "@workspace/api-client-react";
+import {
+  getGetStudentBookingQueryKey,
+  getGetStudentDashboardQueryKey,
+  getListStudentBookingsQueryKey,
+} from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import MultiFilePicker from "@/components/homework/MultiFilePicker";
@@ -68,6 +72,8 @@ export default function BookingDetail() {
       onSuccess: () => {
         toast({ title: "Booking cancelled" });
         qc.invalidateQueries({ queryKey: getGetStudentBookingQueryKey(id) });
+        qc.invalidateQueries({ queryKey: getGetStudentDashboardQueryKey() });
+        qc.invalidateQueries({ queryKey: getListStudentBookingsQueryKey() });
       }
     });
   };

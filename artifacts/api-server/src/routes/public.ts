@@ -70,9 +70,13 @@ router.get("/available-slots", async (req, res): Promise<void> => {
     return;
   }
 
-  const start = new Date(startDate as unknown as string);
-  const end = new Date(endDate as unknown as string);
-  end.setHours(23, 59, 59, 999);
+  // startDate/endDate already arrive as full day-boundary instants (the client
+  // computes them via startOfDay/endOfDay in its own timezone) — use them as-is.
+  // Re-deriving the end boundary with setHours(23,59,59,999) would apply the
+  // *server's* local wall-clock to an already-correct instant, shifting it by
+  // the server/client timezone offset.
+  const start = new Date(startDate);
+  const end = new Date(endDate);
 
   const teacherId = lessonType.teacherId;
   const [settings] = await db.select().from(siteSettingsTable).where(eq(siteSettingsTable.teacherId, teacherId));

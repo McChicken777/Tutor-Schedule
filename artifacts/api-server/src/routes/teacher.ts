@@ -44,18 +44,35 @@ import { google } from "googleapis";
 import { calendarTokensTable } from "@workspace/db";
 import { mapHomeworkRow } from "../lib/homeworkMapper";
 import { mapReportRow } from "../lib/reportMapper";
+import { isKeyForBookingContext } from "../lib/objectStorage";
 
 const router: IRouter = Router();
+
+// Advisory lock namespace shared with student.ts's locking scheme (2 = per-student).
+// Serializes refund/credit writes against concurrent student-side booking/cancel
+// operations touching the same student's lessonPackages rows.
+const STUDENT_ADVISORY_LOCK_NAMESPACE = 2;
+
+async function withStudentLock<T>(studentId: number, fn: (tx: Parameters<Parameters<typeof db.transaction>[0]>[0]) => Promise<T>): Promise<T> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${STUDENT_ADVISORY_LOCK_NAMESPACE}, ${studentId})`);
+    return fn(tx);
+  });
+}
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 router.get("/teacher/dashboard", requireTeacher, async (req, res): Promise<void> => {
   const teacherId = (req as any).teacherId as number;
   const now = new Date();
-  const todayStart = new Date(now);
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date(now);
-  todayEnd.setHours(23, 59, 59, 999);
+
+  // Resolve "today" in the tutor's own timezone, not the server's — otherwise a
+  // tutor east/west of the server would see lessons drop off (or appear) at the
+  // wrong wall-clock moment.
+  const [tzSettings] = await db.select().from(siteSettingsTable).where(eq(siteSettingsTable.teacherId, teacherId));
+  const tz = tzSettings?.timezone || "UTC";
+  const todayDateStr = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(now);
+  const { start: todayStart, end: todayEnd } = zonedDayRange(todayDateStr, tz);
 
   const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
@@ -142,11 +159,18 @@ router.get("/teacher/bookings", requireTeacher, async (req, res): Promise<void> 
   }
 
   if (date && typeof date === "string") {
-    const d = new Date(date);
-    const dEnd = new Date(d);
-    dEnd.setHours(23, 59, 59, 999);
-    conditions.push(gte(bookingsTable.startTime, d));
-    conditions.push(lt(bookingsTable.startTime, dEnd));
+    const parsedDate = new Date(date);
+    if (!isNaN(parsedDate.getTime())) {
+      const [tzSettings] = await db.select().from(siteSettingsTable).where(eq(siteSettingsTable.teacherId, teacherId));
+      const tz = tzSettings?.timezone || "UTC";
+      // `date` may arrive as a bare "YYYY-MM-DD" or as a full instant (the
+      // generated client stringifies Date params via Date#toString()) — resolve
+      // whichever calendar day it falls on in the teacher's own timezone.
+      const dateStr = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(parsedDate);
+      const { start: dayStart, end: dayEnd } = zonedDayRange(dateStr, tz);
+      conditions.push(gte(bookingsTable.startTime, dayStart));
+      conditions.push(lt(bookingsTable.startTime, dayEnd));
+    }
   }
 
   const rows = await db
@@ -198,7 +222,9 @@ router.patch("/teacher/bookings/:id", requireTeacher, async (req, res): Promise<
     return;
   }
 
-  if (parsed.data.status === "cancelled" && row.booking.calendarEventId) {
+  const isNewlyCancelled = parsed.data.status === "cancelled" && row.booking.status === "upcoming";
+
+  if (isNewlyCancelled && row.booking.calendarEventId) {
     await deleteCalendarEvent(teacherId, row.booking.calendarEventId);
   }
 
@@ -206,11 +232,36 @@ router.patch("/teacher/bookings/:id", requireTeacher, async (req, res): Promise<
   if (parsed.data.status != null) updateData.status = parsed.data.status;
   if (parsed.data.notes != null) updateData.notes = parsed.data.notes;
 
-  const [updated] = await db
-    .update(bookingsTable)
-    .set(updateData)
-    .where(eq(bookingsTable.id, id))
-    .returning();
+  // A teacher-initiated cancellation always refunds the credit — unlike a
+  // student cancelling within 24h, the student isn't the one who caused the
+  // lesson not to happen, and the FAQ promises credits are always returned
+  // for a cancelled lesson. Locked per-student to match the same
+  // read-then-write pattern used for student-initiated cancel/booking.
+  const updated = isNewlyCancelled && !row.lessonType.isTrial
+    ? await withStudentLock(row.booking.studentId, async (tx) => {
+        const [u] = await tx.update(bookingsTable).set(updateData).where(eq(bookingsTable.id, id)).returning();
+
+        const packages = await tx
+          .select()
+          .from(lessonPackagesTable)
+          .where(eq(lessonPackagesTable.studentId, row.booking.studentId))
+          .orderBy(desc(lessonPackagesTable.purchasedAt));
+
+        let remainingToRefund = row.lessonType.creditCost;
+        for (const pkg of packages) {
+          if (remainingToRefund <= 0) break;
+          if (pkg.usedCredits <= 0) continue;
+          const refund = Math.min(pkg.usedCredits, remainingToRefund);
+          await tx
+            .update(lessonPackagesTable)
+            .set({ usedCredits: pkg.usedCredits - refund })
+            .where(eq(lessonPackagesTable.id, pkg.id));
+          remainingToRefund -= refund;
+        }
+
+        return u;
+      })
+    : (await db.update(bookingsTable).set(updateData).where(eq(bookingsTable.id, id)).returning())[0];
 
   res.json({
     id: updated.id,
@@ -251,6 +302,11 @@ router.patch("/teacher/bookings/:id/complete", requireTeacher, async (req, res):
 
   if (!row) {
     res.status(404).json({ error: "Booking not found" });
+    return;
+  }
+
+  if (row.booking.status !== "upcoming") {
+    res.status(400).json({ error: `Cannot complete a booking with status "${row.booking.status}"` });
     return;
   }
 
@@ -647,6 +703,12 @@ router.post("/teacher/homework/:id/files", requireTeacher, async (req, res): Pro
     return;
   }
 
+  const expectedContext = parsed.data.slot === "assigned" ? "homework-assigned" : "homework-review";
+  if (!isKeyForBookingContext(parsed.data.key, existing.hw.bookingId, expectedContext)) {
+    res.status(400).json({ error: "Invalid file key for this booking" });
+    return;
+  }
+
   const existingFiles = await getHomeworkFiles(id);
   const sortOrder = existingFiles.filter((f) => f.slot === parsed.data.slot).length;
 
@@ -714,6 +776,20 @@ router.patch("/teacher/homework/:id/files/:fileId", requireTeacher, async (req, 
   if (!existing) {
     res.status(404).json({ error: "Homework not found" });
     return;
+  }
+
+  // A file can only be linked to another file within the same homework record
+  // — otherwise a teacher could point a review file at an arbitrary file id
+  // belonging to a different student's homework.
+  if (parsed.data.linkedFileId != null) {
+    const [target] = await db
+      .select({ id: homeworkFilesTable.id })
+      .from(homeworkFilesTable)
+      .where(and(eq(homeworkFilesTable.id, parsed.data.linkedFileId), eq(homeworkFilesTable.homeworkId, id)));
+    if (!target) {
+      res.status(400).json({ error: "Invalid linkedFileId" });
+      return;
+    }
   }
 
   await db
