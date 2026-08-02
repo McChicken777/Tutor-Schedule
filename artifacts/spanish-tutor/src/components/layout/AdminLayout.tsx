@@ -1,35 +1,20 @@
-import { ReactNode, useEffect } from "react";
+import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
+import { useClerk } from "@clerk/react";
 import { LogOut, Users, BookOpen, Settings, LayoutDashboard, Calendar, CalendarOff, FileText, MessageSquare, MessageCircle, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PingDot from "@/components/ui/ping-dot";
-import { useAdminLogout, useGetAdminDashboard, useListAdminHomework, useListAdminMessageThreads } from "@workspace/api-client-react";
+import { useGetAdminDashboard, useListAdminHomework, useListAdminMessageThreads } from "@workspace/api-client-react";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const [location, setLocation] = useLocation();
-  const logout = useAdminLogout();
-  const { data: dashboard, error } = useGetAdminDashboard();
+  const [location] = useLocation();
+  const { signOut } = useClerk();
+  const { data: dashboard } = useGetAdminDashboard();
   const { data: needsReviewList } = useListAdminHomework({ reviewed: false });
   const hasNeedsReview = (needsReviewList?.length ?? 0) > 0;
   const { data: messageThreads } = useListAdminMessageThreads();
   const hasUnreadMessages = (messageThreads ?? []).some((t) => t.unreadCount > 0);
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-  // Without this, an expired/absent admin session leaves every admin page
-  // rendering an empty shell (each one bails on `!data`) with no hint that a
-  // login is needed. Bounce to the login screen instead.
-  const isUnauthorized = (error as { status?: number } | null)?.status === 401;
-  useEffect(() => {
-    if (isUnauthorized) setLocation("/admin/login");
-  }, [isUnauthorized, setLocation]);
-
-  const handleLogout = () => {
-    logout.mutate(undefined, {
-      onSuccess: () => {
-        setLocation("/admin/login");
-      }
-    });
-  };
 
   const navItems = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -84,11 +69,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="p-4 border-t border-border mt-auto">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className="w-full justify-start text-muted-foreground hover:text-destructive"
-            onClick={handleLogout}
-            disabled={logout.isPending}
+            onClick={() => signOut({ redirectUrl: basePath || "/" })}
           >
             <LogOut className="w-4 h-4 mr-2" />
             Log out

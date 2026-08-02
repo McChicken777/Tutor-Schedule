@@ -4,6 +4,7 @@ import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
 import { QueryCache, MutationCache, QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { useGetTeacherMe } from "@workspace/api-client-react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -20,7 +21,6 @@ import BookLesson from "@/pages/student/Book";
 import StudentMessages from "@/pages/student/Messages";
 import StudentHomework from "@/pages/student/Homework";
 
-import AdminLogin from "@/pages/admin/Login";
 import TeacherSignIn from "@/pages/teacher/sign-in";
 import TeacherSignUp from "@/pages/teacher/sign-up";
 import TeacherOnboarding from "@/pages/teacher/onboarding";
@@ -183,6 +183,35 @@ function StudentPortal({ children }: { children: React.ReactNode }) {
   );
 }
 
+function RequireTeacherRow({ children }: { children: React.ReactNode }) {
+  const { data: teacher, isLoading, error } = useGetTeacherMe();
+
+  if (isLoading) {
+    return <div className="min-h-[100dvh] bg-background" />;
+  }
+  if (!teacher) {
+    if ((error as { status?: number } | null)?.status === 404) {
+      return <Redirect to="/teacher/onboarding" />;
+    }
+    return <div className="min-h-[100dvh] bg-background" />;
+  }
+
+  return <AdminLayout>{children}</AdminLayout>;
+}
+
+function TeacherPortal({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <Show when="signed-in">
+        <RequireTeacherRow>{children}</RequireTeacherRow>
+      </Show>
+      <Show when="signed-out">
+        <Redirect to="/teacher/sign-in" />
+      </Show>
+    </>
+  );
+}
+
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
 
@@ -220,42 +249,41 @@ function ClerkProviderWithRoutes() {
             <Route path="/sign-in/*?" component={SignInPage} />
             <Route path="/sign-up/*?" component={SignUpPage} />
 
-            {/* Teacher registration (additive, not yet gating /admin) */}
+            {/* Teacher registration */}
             <Route path="/teacher/sign-in/*?" component={TeacherSignIn} />
             <Route path="/teacher/sign-up/*?" component={TeacherSignUp} />
             <Route path="/teacher/onboarding" component={TeacherOnboardingGate} />
 
-            {/* Admin (No Clerk) */}
-            <Route path="/admin/login" component={AdminLogin} />
+            {/* Teacher Portal (Clerk + teacher-row gated) */}
             <Route path="/admin">
-              <AdminLayout><AdminDashboard /></AdminLayout>
+              <TeacherPortal><AdminDashboard /></TeacherPortal>
             </Route>
             <Route path="/admin/bookings">
-              <AdminLayout><AdminBookings /></AdminLayout>
+              <TeacherPortal><AdminBookings /></TeacherPortal>
             </Route>
             <Route path="/admin/lesson-types">
-              <AdminLayout><AdminLessonTypes /></AdminLayout>
+              <TeacherPortal><AdminLessonTypes /></TeacherPortal>
             </Route>
             <Route path="/admin/homework">
-              <AdminLayout><AdminHomework /></AdminLayout>
+              <TeacherPortal><AdminHomework /></TeacherPortal>
             </Route>
             <Route path="/admin/students">
-              <AdminLayout><AdminStudents /></AdminLayout>
+              <TeacherPortal><AdminStudents /></TeacherPortal>
             </Route>
             <Route path="/admin/testimonials">
-              <AdminLayout><AdminTestimonials /></AdminLayout>
+              <TeacherPortal><AdminTestimonials /></TeacherPortal>
             </Route>
             <Route path="/admin/faqs">
-              <AdminLayout><AdminFaqs /></AdminLayout>
+              <TeacherPortal><AdminFaqs /></TeacherPortal>
             </Route>
             <Route path="/admin/settings">
-              <AdminLayout><AdminSettings /></AdminLayout>
+              <TeacherPortal><AdminSettings /></TeacherPortal>
             </Route>
             <Route path="/admin/messages">
-              <AdminLayout><AdminMessages /></AdminLayout>
+              <TeacherPortal><AdminMessages /></TeacherPortal>
             </Route>
             <Route path="/admin/availability">
-              <AdminLayout><AdminAvailability /></AdminLayout>
+              <TeacherPortal><AdminAvailability /></TeacherPortal>
             </Route>
 
             {/* Student Portal */}

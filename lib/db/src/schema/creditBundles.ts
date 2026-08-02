@@ -5,7 +5,7 @@ import { teachersTable } from "./teachers";
 
 export const creditBundlesTable = pgTable("credit_bundles", {
   id: serial("id").primaryKey(),
-  teacherId: integer("teacher_id").references(() => teachersTable.id),
+  teacherId: integer("teacher_id").references(() => teachersTable.id).notNull(),
   credits: integer("credits").notNull(),
   priceCents: integer("price_cents").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),

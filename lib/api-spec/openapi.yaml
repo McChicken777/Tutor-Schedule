@@ -561,36 +561,6 @@ paths:
           description: No unclaimed teacher row is available to claim, or this Clerk user already has one
 
   # ─── ADMIN ────────────────────────────────────────────────────────────────
-  /admin/login:
-    post:
-      operationId: adminLogin
-      tags: [admin]
-      summary: Admin login with password
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AdminLoginInput"
-      responses:
-        "200":
-          description: Logged in
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdminAuthResult"
-        "401":
-          description: Invalid password
-
-  /admin/logout:
-    post:
-      operationId: adminLogout
-      tags: [admin]
-      summary: Admin logout
-      responses:
-        "200":
-          description: Logged out
-
   /admin/dashboard:
     get:
       operationId: getAdminDashboard
@@ -2317,22 +2287,6 @@ components:
           type: string
       required:
         - password
-
-    AdminLoginInput:
-      type: object
-      properties:
-        password:
-          type: string
-      required:
-        - password
-
-    AdminAuthResult:
-      type: object
-      properties:
-        success:
-          type: boolean
-      required:
-        - success
 
     AdminDashboard:
       type: object

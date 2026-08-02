@@ -3,7 +3,7 @@ import { teachersTable } from "./teachers";
 
 export const calendarTokensTable = pgTable("calendar_tokens", {
   id: serial("id").primaryKey(),
-  teacherId: integer("teacher_id").references(() => teachersTable.id).unique(),
+  teacherId: integer("teacher_id").references(() => teachersTable.id).notNull().unique(),
   accessToken: text("access_token").notNull(),
   refreshToken: text("refresh_token").notNull(),
   tokenExpiry: timestamp("token_expiry", { withTimezone: true }),

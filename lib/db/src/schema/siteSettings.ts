@@ -27,7 +27,7 @@ export const DEFAULT_WEEKLY_HOURS: WeeklyHours = {
 
 export const siteSettingsTable = pgTable("site_settings", {
   id: serial("id").primaryKey(),
-  teacherId: integer("teacher_id").references(() => teachersTable.id).unique(),
+  teacherId: integer("teacher_id").references(() => teachersTable.id).notNull().unique(),
   tutorName: text("tutor_name").notNull().default("Your Tutor"),
   tutorBio: text("tutor_bio").notNull().default(""),
   contactEmail: text("contact_email").notNull().default(""),

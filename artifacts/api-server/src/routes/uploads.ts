@@ -3,7 +3,7 @@ import multer from "multer";
 import { getAuth } from "@clerk/express";
 import { eq, and } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { bookingsTable, usersTable } from "@workspace/db";
+import { bookingsTable, usersTable, teachersTable } from "@workspace/db";
 import {
   ALLOWED_MIME_TYPES,
   MAX_UPLOAD_BYTES,
@@ -69,9 +69,15 @@ router.post("/uploads", pickUpload, async (req, res): Promise<void> => {
   }
 
   if (ctx === "homework-assigned" || ctx === "homework-review") {
-    const sess = req.session as any;
-    if (!sess?.isAdmin) {
-      res.status(401).json({ error: "Admin authentication required" });
+    const auth = getAuth(req);
+    const clerkUserId = (auth?.sessionClaims?.userId as string | undefined) || auth?.userId;
+    if (!clerkUserId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    const [teacher] = await db.select().from(teachersTable).where(eq(teachersTable.clerkUserId, clerkUserId));
+    if (!teacher || booking.teacherId !== teacher.id) {
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
   } else {

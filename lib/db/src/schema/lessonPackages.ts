@@ -7,7 +7,7 @@ import { teachersTable } from "./teachers";
 export const lessonPackagesTable = pgTable("lesson_packages", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull().references(() => usersTable.id),
-  teacherId: integer("teacher_id").references(() => teachersTable.id),
+  teacherId: integer("teacher_id").references(() => teachersTable.id).notNull(),
   totalCredits: integer("total_credits").notNull(),
   usedCredits: integer("used_credits").notNull().default(0),
   purchasedAt: timestamp("purchased_at", { withTimezone: true }).notNull().defaultNow(),

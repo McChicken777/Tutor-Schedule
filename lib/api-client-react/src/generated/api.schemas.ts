@@ -498,14 +498,6 @@ export interface ClaimTeacherInput {
   password: string;
 }
 
-export interface AdminLoginInput {
-  password: string;
-}
-
-export interface AdminAuthResult {
-  success: boolean;
-}
-
 export type AdminBookingStatus = typeof AdminBookingStatus[keyof typeof AdminBookingStatus];
 
 

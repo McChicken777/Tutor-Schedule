@@ -809,24 +809,6 @@ export const ClaimTeacherResponse = zod.object({
 
 
 /**
- * @summary Admin login with password
- */
-export const AdminLoginBody = zod.object({
-  "password": zod.string()
-})
-
-export const AdminLoginResponse = zod.object({
-  "success": zod.boolean()
-})
-
-
-/**
- * @summary Admin logout
- */
-export const AdminLogoutResponse = zod.unknown()
-
-
-/**
  * @summary Get admin dashboard summary
  */
 export const GetAdminDashboardResponse = zod.object({

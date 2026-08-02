@@ -102,8 +102,8 @@ export function createOAuth2Client() {
   );
 }
 
-export async function getAuthenticatedCalendar() {
-  const [token] = await db.select().from(calendarTokensTable).limit(1);
+export async function getAuthenticatedCalendar(teacherId: number) {
+  const [token] = await db.select().from(calendarTokensTable).where(eq(calendarTokensTable.teacherId, teacherId));
   if (!token) return null;
 
   const auth = createOAuth2Client();
@@ -129,20 +129,20 @@ export async function getAuthenticatedCalendar() {
   return google.calendar({ version: "v3", auth });
 }
 
-export async function isCalendarConnected(): Promise<boolean> {
-  const [token] = await db.select().from(calendarTokensTable).limit(1);
+export async function isCalendarConnected(teacherId: number): Promise<boolean> {
+  const [token] = await db.select().from(calendarTokensTable).where(eq(calendarTokensTable.teacherId, teacherId));
   return !!token?.refreshToken;
 }
 
-export async function getCalendarEmail(): Promise<string | null> {
-  const [token] = await db.select().from(calendarTokensTable).limit(1);
+export async function getCalendarEmail(teacherId: number): Promise<string | null> {
+  const [token] = await db.select().from(calendarTokensTable).where(eq(calendarTokensTable.teacherId, teacherId));
   return token?.calendarEmail ?? null;
 }
 
 // The IANA timezone Google has configured for the tutor's account. Used as the
 // authoritative default for her working hours when the calendar is connected.
-export async function getCalendarTimezone(): Promise<string | null> {
-  const calendar = await getAuthenticatedCalendar();
+export async function getCalendarTimezone(teacherId: number): Promise<string | null> {
+  const calendar = await getAuthenticatedCalendar(teacherId);
   if (!calendar) return null;
   try {
     const res = await calendar.settings.get({ setting: "timezone" });
@@ -154,10 +154,11 @@ export async function getCalendarTimezone(): Promise<string | null> {
 }
 
 export async function getFreeBusySlots(
+  teacherId: number,
   startDate: Date,
   endDate: Date,
 ): Promise<Array<{ start: Date; end: Date }>> {
-  const calendar = await getAuthenticatedCalendar();
+  const calendar = await getAuthenticatedCalendar(teacherId);
   if (!calendar) {
     // No token connected yet — nothing to report. (Not an error; just not set up.)
     return [];
@@ -265,16 +266,18 @@ export async function getFreeBusySlots(
 // upcoming bookings. Everything that reads availability should use this so the
 // three sources stay in sync.
 export async function getBusyBlocks(
+  teacherId: number,
   startDate: Date,
   endDate: Date,
 ): Promise<Array<{ start: Date; end: Date }>> {
-  const googleBusy = await getFreeBusySlots(startDate, endDate);
+  const googleBusy = await getFreeBusySlots(teacherId, startDate, endDate);
 
   const overrides = await db
     .select({ start: availabilityOverridesTable.startTime, end: availabilityOverridesTable.endTime })
     .from(availabilityOverridesTable)
     .where(
       and(
+        eq(availabilityOverridesTable.teacherId, teacherId),
         lt(availabilityOverridesTable.startTime, endDate),
         gt(availabilityOverridesTable.endTime, startDate),
       ),
@@ -285,6 +288,7 @@ export async function getBusyBlocks(
     .from(bookingsTable)
     .where(
       and(
+        eq(bookingsTable.teacherId, teacherId),
         eq(bookingsTable.status, "upcoming"),
         lt(bookingsTable.startTime, endDate),
         gt(bookingsTable.endTime, startDate),
@@ -295,13 +299,14 @@ export async function getBusyBlocks(
 }
 
 export async function createCalendarEventWithMeet(
+  teacherId: number,
   title: string,
   startTime: Date,
   endTime: Date,
   attendeeEmail: string,
   description?: string,
 ): Promise<{ eventId: string; meetLink: string } | null> {
-  const calendar = await getAuthenticatedCalendar();
+  const calendar = await getAuthenticatedCalendar(teacherId);
   if (!calendar) return null;
 
   try {
@@ -336,8 +341,8 @@ export async function createCalendarEventWithMeet(
   }
 }
 
-export async function deleteCalendarEvent(eventId: string): Promise<void> {
-  const calendar = await getAuthenticatedCalendar();
+export async function deleteCalendarEvent(teacherId: number, eventId: string): Promise<void> {
+  const calendar = await getAuthenticatedCalendar(teacherId);
   if (!calendar) return;
   try {
     await calendar.events.delete({ calendarId: "primary", eventId });

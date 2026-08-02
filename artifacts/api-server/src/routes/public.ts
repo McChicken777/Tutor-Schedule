@@ -7,6 +7,7 @@ import {
   testimonialsTable,
   faqsTable,
   siteSettingsTable,
+  teachersTable,
 } from "@workspace/db";
 import {
   getBusyBlocks,
@@ -73,9 +74,10 @@ router.get("/available-slots", async (req, res): Promise<void> => {
   const end = new Date(endDate as unknown as string);
   end.setHours(23, 59, 59, 999);
 
-  const [settings] = await db.select().from(siteSettingsTable).limit(1);
+  const teacherId = lessonType.teacherId;
+  const [settings] = await db.select().from(siteSettingsTable).where(eq(siteSettingsTable.teacherId, teacherId));
 
-  const busySlots = await getBusyBlocks(start, end);
+  const busySlots = await getBusyBlocks(teacherId, start, end);
   const slots = generateAvailableSlots(
     busySlots,
     start,
@@ -110,7 +112,12 @@ router.get("/faqs", async (_req, res): Promise<void> => {
 router.get("/site-settings", async (_req, res): Promise<void> => {
   let [settings] = await db.select().from(siteSettingsTable).limit(1);
   if (!settings) {
-    [settings] = await db.insert(siteSettingsTable).values({}).returning();
+    const [teacher] = await db.select().from(teachersTable).limit(1);
+    if (!teacher) {
+      res.status(404).json({ error: "No teacher configured" });
+      return;
+    }
+    [settings] = await db.insert(siteSettingsTable).values({ teacherId: teacher.id }).returning();
   }
   res.json({
     id: settings.id,

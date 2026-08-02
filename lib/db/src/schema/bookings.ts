@@ -9,7 +9,7 @@ export const bookingsTable = pgTable("bookings", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull().references(() => usersTable.id),
   lessonTypeId: integer("lesson_type_id").notNull().references(() => lessonTypesTable.id),
-  teacherId: integer("teacher_id").references(() => teachersTable.id),
+  teacherId: integer("teacher_id").references(() => teachersTable.id).notNull(),
   startTime: timestamp("start_time", { withTimezone: true }).notNull(),
   endTime: timestamp("end_time", { withTimezone: true }).notNull(),
   status: text("status").notNull().default("upcoming"), // upcoming | completed | cancelled

@@ -8,7 +8,7 @@ import { teachersTable } from "./teachers";
 // contiguous blocked range; a whole day off is just a range covering that day.
 export const availabilityOverridesTable = pgTable("availability_overrides", {
   id: serial("id").primaryKey(),
-  teacherId: integer("teacher_id").references(() => teachersTable.id),
+  teacherId: integer("teacher_id").references(() => teachersTable.id).notNull(),
   startTime: timestamp("start_time", { withTimezone: true }).notNull(),
   endTime: timestamp("end_time", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

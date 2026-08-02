@@ -6,14 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export * from './adminAuthResult';
 export * from './adminBooking';
 export * from './adminBookingStatus';
 export * from './adminBookingUpdate';
 export * from './adminBookingUpdateStatus';
 export * from './adminDashboard';
 export * from './adminHomework';
-export * from './adminLoginInput';
 export * from './adminStudent';
 export * from './adminStudentDetail';
 export * from './attachHomeworkFileInput';

@@ -17,7 +17,6 @@ import {
   availabilityOverridesTable,
 } from "@workspace/db";
 import {
-  AdminLoginBody,
   UpdateAdminBookingBody,
   UpdateAdminBookingParams,
   CompleteBookingBody,
@@ -48,7 +47,7 @@ import {
   DeleteAvailabilityOverrideParams,
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
-import { requireAdmin } from "../middlewares/requireAdmin";
+import { requireTeacher } from "../middlewares/requireTeacher";
 import { isCalendarConnected, getCalendarEmail, deleteCalendarEvent, createOAuth2Client, getFreeBusySlots, zonedDayRange } from "../lib/calendar";
 import { google } from "googleapis";
 import { calendarTokensTable } from "@workspace/db";
@@ -56,33 +55,10 @@ import { mapHomeworkRow } from "../lib/homeworkMapper";
 
 const router: IRouter = Router();
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
-
-router.post("/admin/login", async (req, res): Promise<void> => {
-  const parsed = AdminLoginBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid request" });
-    return;
-  }
-
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminPassword || parsed.data.password !== adminPassword) {
-    res.status(401).json({ error: "Invalid password" });
-    return;
-  }
-
-  (req.session as any).isAdmin = true;
-  res.json({ success: true });
-});
-
-router.post("/admin/logout", async (req, res): Promise<void> => {
-  req.session.destroy(() => {});
-  res.json({ success: true });
-});
-
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
-router.get("/admin/dashboard", requireAdmin, async (_req, res): Promise<void> => {
+router.get("/admin/dashboard", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const now = new Date();
   const todayStart = new Date(now);
   todayStart.setHours(0, 0, 0, 0);
@@ -98,6 +74,7 @@ router.get("/admin/dashboard", requireAdmin, async (_req, res): Promise<void> =>
     .innerJoin(lessonTypesTable, eq(bookingsTable.lessonTypeId, lessonTypesTable.id))
     .where(
       and(
+        eq(bookingsTable.teacherId, teacherId),
         eq(bookingsTable.status, "upcoming"),
         gte(bookingsTable.startTime, todayStart),
         lt(bookingsTable.startTime, todayEnd),
@@ -108,17 +85,20 @@ router.get("/admin/dashboard", requireAdmin, async (_req, res): Promise<void> =>
   const [{ count: upcomingCount }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(bookingsTable)
-    .where(eq(bookingsTable.status, "upcoming"));
+    .where(and(eq(bookingsTable.teacherId, teacherId), eq(bookingsTable.status, "upcoming")));
 
   const [{ count: studentCount }] = await db
     .select({ count: sql<number>`count(*)::int` })
-    .from(usersTable);
+    .from(usersTable)
+    .where(eq(usersTable.teacherId, teacherId));
 
   const [{ count: pendingHwCount }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(homeworkTable)
+    .innerJoin(bookingsTable, eq(homeworkTable.bookingId, bookingsTable.id))
     .where(
       and(
+        eq(bookingsTable.teacherId, teacherId),
         sql`${homeworkTable.submittedAt} IS NOT NULL`,
         sql`${homeworkTable.reviewedAt} IS NULL`,
       ),
@@ -129,12 +109,14 @@ router.get("/admin/dashboard", requireAdmin, async (_req, res): Promise<void> =>
     .from(bookingsTable)
     .where(
       and(
+        eq(bookingsTable.teacherId, teacherId),
         eq(bookingsTable.status, "upcoming"),
         gte(bookingsTable.startTime, now),
         lt(bookingsTable.startTime, weekEnd),
       ),
     );
 
+  // Testimonials are left unscoped (reachable by any authenticated teacher for now).
   const [{ count: pendingTestCount }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(testimonialsTable)
@@ -165,9 +147,10 @@ router.get("/admin/dashboard", requireAdmin, async (_req, res): Promise<void> =>
 
 // ─── Bookings ─────────────────────────────────────────────────────────────────
 
-router.get("/admin/bookings", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/bookings", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const { status, date } = req.query;
-  const conditions: any[] = [];
+  const conditions: any[] = [eq(bookingsTable.teacherId, teacherId)];
 
   if (status && typeof status === "string") {
     conditions.push(eq(bookingsTable.status, status));
@@ -186,7 +169,7 @@ router.get("/admin/bookings", requireAdmin, async (req, res): Promise<void> => {
     .from(bookingsTable)
     .innerJoin(usersTable, eq(bookingsTable.studentId, usersTable.id))
     .innerJoin(lessonTypesTable, eq(bookingsTable.lessonTypeId, lessonTypesTable.id))
-    .where(conditions.length ? and(...conditions) : undefined)
+    .where(and(...conditions))
     .orderBy(desc(bookingsTable.startTime));
 
   res.json(
@@ -207,7 +190,8 @@ router.get("/admin/bookings", requireAdmin, async (req, res): Promise<void> => {
   );
 });
 
-router.patch("/admin/bookings/:id", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/bookings/:id", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
 
@@ -222,7 +206,7 @@ router.patch("/admin/bookings/:id", requireAdmin, async (req, res): Promise<void
     .from(bookingsTable)
     .innerJoin(usersTable, eq(bookingsTable.studentId, usersTable.id))
     .innerJoin(lessonTypesTable, eq(bookingsTable.lessonTypeId, lessonTypesTable.id))
-    .where(eq(bookingsTable.id, id));
+    .where(and(eq(bookingsTable.id, id), eq(bookingsTable.teacherId, teacherId)));
 
   if (!row) {
     res.status(404).json({ error: "Booking not found" });
@@ -230,7 +214,7 @@ router.patch("/admin/bookings/:id", requireAdmin, async (req, res): Promise<void
   }
 
   if (parsed.data.status === "cancelled" && row.booking.calendarEventId) {
-    await deleteCalendarEvent(row.booking.calendarEventId);
+    await deleteCalendarEvent(teacherId, row.booking.calendarEventId);
   }
 
   const updateData: any = {};
@@ -262,7 +246,8 @@ router.patch("/admin/bookings/:id", requireAdmin, async (req, res): Promise<void
 // A booking can only ever reach "completed" through here — the generic update
 // above no longer accepts that status — so it always carries a recap, and
 // optionally an assigned-homework note, rather than being a bare status flip.
-router.patch("/admin/bookings/:id/complete", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/bookings/:id/complete", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
 
@@ -277,7 +262,7 @@ router.patch("/admin/bookings/:id/complete", requireAdmin, async (req, res): Pro
     .from(bookingsTable)
     .innerJoin(usersTable, eq(bookingsTable.studentId, usersTable.id))
     .innerJoin(lessonTypesTable, eq(bookingsTable.lessonTypeId, lessonTypesTable.id))
-    .where(eq(bookingsTable.id, id));
+    .where(and(eq(bookingsTable.id, id), eq(bookingsTable.teacherId, teacherId)));
 
   if (!row) {
     res.status(404).json({ error: "Booking not found" });
@@ -336,26 +321,36 @@ router.patch("/admin/bookings/:id/complete", requireAdmin, async (req, res): Pro
 
 // ─── Lesson types ─────────────────────────────────────────────────────────────
 
-router.get("/admin/lesson-types", requireAdmin, async (_req, res): Promise<void> => {
-  const types = await db.select().from(lessonTypesTable).orderBy(asc(lessonTypesTable.id));
+router.get("/admin/lesson-types", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
+  const types = await db
+    .select()
+    .from(lessonTypesTable)
+    .where(eq(lessonTypesTable.teacherId, teacherId))
+    .orderBy(asc(lessonTypesTable.id));
   res.json(types);
 });
 
-router.post("/admin/lesson-types", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/lesson-types", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const parsed = CreateLessonTypeBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
 
-  // Only one lesson type can be "the" free trial at a time
+  // Only one lesson type can be "the" free trial at a time (per teacher)
   if (parsed.data.isTrial) {
-    await db.update(lessonTypesTable).set({ isTrial: false }).where(eq(lessonTypesTable.isTrial, true));
+    await db
+      .update(lessonTypesTable)
+      .set({ isTrial: false })
+      .where(and(eq(lessonTypesTable.isTrial, true), eq(lessonTypesTable.teacherId, teacherId)));
   }
 
   const [type] = await db
     .insert(lessonTypesTable)
     .values({
+      teacherId,
       name: parsed.data.name,
       durationMinutes: parsed.data.durationMinutes,
       creditCost: parsed.data.creditCost,
@@ -368,7 +363,8 @@ router.post("/admin/lesson-types", requireAdmin, async (req, res): Promise<void>
   res.status(201).json(type);
 });
 
-router.patch("/admin/lesson-types/:id", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/lesson-types/:id", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
 
@@ -378,18 +374,27 @@ router.patch("/admin/lesson-types/:id", requireAdmin, async (req, res): Promise<
     return;
   }
 
-  const [existing] = await db.select().from(lessonTypesTable).where(eq(lessonTypesTable.id, id));
+  const [existing] = await db
+    .select()
+    .from(lessonTypesTable)
+    .where(and(eq(lessonTypesTable.id, id), eq(lessonTypesTable.teacherId, teacherId)));
   if (!existing) {
     res.status(404).json({ error: "Lesson type not found" });
     return;
   }
 
-  // Only one lesson type can be "the" free trial at a time
+  // Only one lesson type can be "the" free trial at a time (per teacher)
   if (parsed.data.isTrial) {
     await db
       .update(lessonTypesTable)
       .set({ isTrial: false })
-      .where(and(eq(lessonTypesTable.isTrial, true), ne(lessonTypesTable.id, id)));
+      .where(
+        and(
+          eq(lessonTypesTable.isTrial, true),
+          eq(lessonTypesTable.teacherId, teacherId),
+          ne(lessonTypesTable.id, id),
+        ),
+      );
   }
 
   const updateData: any = {};
@@ -409,11 +414,15 @@ router.patch("/admin/lesson-types/:id", requireAdmin, async (req, res): Promise<
   res.json(updated);
 });
 
-router.delete("/admin/lesson-types/:id", requireAdmin, async (req, res): Promise<void> => {
+router.delete("/admin/lesson-types/:id", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
 
-  const [existing] = await db.select().from(lessonTypesTable).where(eq(lessonTypesTable.id, id));
+  const [existing] = await db
+    .select()
+    .from(lessonTypesTable)
+    .where(and(eq(lessonTypesTable.id, id), eq(lessonTypesTable.teacherId, teacherId)));
   if (!existing) {
     res.status(404).json({ error: "Lesson type not found" });
     return;
@@ -423,15 +432,18 @@ router.delete("/admin/lesson-types/:id", requireAdmin, async (req, res): Promise
   res.sendStatus(204);
 });
 
-router.get("/admin/credit-bundles", requireAdmin, async (_req, res): Promise<void> => {
+router.get("/admin/credit-bundles", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const bundles = await db
     .select()
     .from(creditBundlesTable)
+    .where(eq(creditBundlesTable.teacherId, teacherId))
     .orderBy(asc(creditBundlesTable.sortOrder), asc(creditBundlesTable.credits));
   res.json(bundles);
 });
 
-router.post("/admin/credit-bundles", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/credit-bundles", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const parsed = CreateCreditBundleBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -441,6 +453,7 @@ router.post("/admin/credit-bundles", requireAdmin, async (req, res): Promise<voi
   const [bundle] = await db
     .insert(creditBundlesTable)
     .values({
+      teacherId,
       credits: parsed.data.credits,
       priceCents: parsed.data.priceCents,
       sortOrder: parsed.data.sortOrder ?? 0,
@@ -451,7 +464,8 @@ router.post("/admin/credit-bundles", requireAdmin, async (req, res): Promise<voi
   res.status(201).json(bundle);
 });
 
-router.patch("/admin/credit-bundles/:id", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/credit-bundles/:id", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
 
@@ -461,7 +475,10 @@ router.patch("/admin/credit-bundles/:id", requireAdmin, async (req, res): Promis
     return;
   }
 
-  const [existing] = await db.select().from(creditBundlesTable).where(eq(creditBundlesTable.id, id));
+  const [existing] = await db
+    .select()
+    .from(creditBundlesTable)
+    .where(and(eq(creditBundlesTable.id, id), eq(creditBundlesTable.teacherId, teacherId)));
   if (!existing) {
     res.status(404).json({ error: "Credit bundle not found" });
     return;
@@ -482,11 +499,15 @@ router.patch("/admin/credit-bundles/:id", requireAdmin, async (req, res): Promis
   res.json(updated);
 });
 
-router.delete("/admin/credit-bundles/:id", requireAdmin, async (req, res): Promise<void> => {
+router.delete("/admin/credit-bundles/:id", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
 
-  const [existing] = await db.select().from(creditBundlesTable).where(eq(creditBundlesTable.id, id));
+  const [existing] = await db
+    .select()
+    .from(creditBundlesTable)
+    .where(and(eq(creditBundlesTable.id, id), eq(creditBundlesTable.teacherId, teacherId)));
   if (!existing) {
     res.status(404).json({ error: "Credit bundle not found" });
     return;
@@ -497,6 +518,8 @@ router.delete("/admin/credit-bundles/:id", requireAdmin, async (req, res): Promi
 });
 
 // ─── Homework ─────────────────────────────────────────────────────────────────
+// homework/homeworkFiles carry no teacherId column — ownership is checked via
+// a join through the parent booking's teacherId instead.
 
 async function getHomeworkFiles(homeworkId: number) {
   return db.select().from(homeworkFilesTable).where(eq(homeworkFilesTable.homeworkId, homeworkId));
@@ -530,9 +553,10 @@ async function getHomeworkContext(bookingId: number) {
   };
 }
 
-router.get("/admin/homework", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/homework", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const { reviewed, studentId, submitted } = req.query;
-  const conditions: any[] = [];
+  const conditions: any[] = [eq(bookingsTable.teacherId, teacherId)];
 
   if (submitted === "false") {
     conditions.push(sql`${homeworkTable.submittedAt} IS NULL`);
@@ -557,7 +581,7 @@ router.get("/admin/homework", requireAdmin, async (req, res): Promise<void> => {
     .innerJoin(bookingsTable, eq(homeworkTable.bookingId, bookingsTable.id))
     .innerJoin(usersTable, eq(bookingsTable.studentId, usersTable.id))
     .innerJoin(lessonTypesTable, eq(bookingsTable.lessonTypeId, lessonTypesTable.id))
-    .where(conditions.length ? and(...conditions) : undefined)
+    .where(and(...conditions))
     .orderBy(desc(homeworkTable.submittedAt));
 
   const filesByHwId = await getHomeworkFilesByIds(rows.map((r) => r.hw.id));
@@ -574,7 +598,8 @@ router.get("/admin/homework", requireAdmin, async (req, res): Promise<void> => {
   );
 });
 
-router.patch("/admin/homework/:id", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/homework/:id", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
 
@@ -584,7 +609,11 @@ router.patch("/admin/homework/:id", requireAdmin, async (req, res): Promise<void
     return;
   }
 
-  const [existing] = await db.select().from(homeworkTable).where(eq(homeworkTable.id, id));
+  const [existing] = await db
+    .select({ hw: homeworkTable })
+    .from(homeworkTable)
+    .innerJoin(bookingsTable, eq(homeworkTable.bookingId, bookingsTable.id))
+    .where(and(eq(homeworkTable.id, id), eq(bookingsTable.teacherId, teacherId)));
   if (!existing) {
     res.status(404).json({ error: "Homework not found" });
     return;
@@ -606,7 +635,8 @@ router.patch("/admin/homework/:id", requireAdmin, async (req, res): Promise<void
   res.json(mapHomeworkRow(updated, files, context));
 });
 
-router.post("/admin/homework/:id/files", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/homework/:id/files", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
 
@@ -616,7 +646,11 @@ router.post("/admin/homework/:id/files", requireAdmin, async (req, res): Promise
     return;
   }
 
-  const [existing] = await db.select().from(homeworkTable).where(eq(homeworkTable.id, id));
+  const [existing] = await db
+    .select({ hw: homeworkTable })
+    .from(homeworkTable)
+    .innerJoin(bookingsTable, eq(homeworkTable.bookingId, bookingsTable.id))
+    .where(and(eq(homeworkTable.id, id), eq(bookingsTable.teacherId, teacherId)));
   if (!existing) {
     res.status(404).json({ error: "Homework not found" });
     return;
@@ -637,18 +671,23 @@ router.post("/admin/homework/:id/files", requireAdmin, async (req, res): Promise
     sortOrder,
   });
 
-  const context = await getHomeworkContext(existing.bookingId);
+  const context = await getHomeworkContext(existing.hw.bookingId);
   const files = await getHomeworkFiles(id);
-  res.status(201).json(mapHomeworkRow(existing, files, context));
+  res.status(201).json(mapHomeworkRow(existing.hw, files, context));
 });
 
-router.delete("/admin/homework/:id/files/:fileId", requireAdmin, async (req, res): Promise<void> => {
+router.delete("/admin/homework/:id/files/:fileId", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(rawId, 10);
   const rawFileId = Array.isArray(req.params.fileId) ? req.params.fileId[0] : req.params.fileId;
   const fileId = parseInt(rawFileId, 10);
 
-  const [existing] = await db.select().from(homeworkTable).where(eq(homeworkTable.id, id));
+  const [existing] = await db
+    .select({ hw: homeworkTable })
+    .from(homeworkTable)
+    .innerJoin(bookingsTable, eq(homeworkTable.bookingId, bookingsTable.id))
+    .where(and(eq(homeworkTable.id, id), eq(bookingsTable.teacherId, teacherId)));
   if (!existing) {
     res.status(404).json({ error: "Homework not found" });
     return;
@@ -658,12 +697,13 @@ router.delete("/admin/homework/:id/files/:fileId", requireAdmin, async (req, res
     .delete(homeworkFilesTable)
     .where(and(eq(homeworkFilesTable.id, fileId), eq(homeworkFilesTable.homeworkId, id)));
 
-  const context = await getHomeworkContext(existing.bookingId);
+  const context = await getHomeworkContext(existing.hw.bookingId);
   const files = await getHomeworkFiles(id);
-  res.json(mapHomeworkRow(existing, files, context));
+  res.json(mapHomeworkRow(existing.hw, files, context));
 });
 
-router.patch("/admin/homework/:id/files/:fileId", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/homework/:id/files/:fileId", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(rawId, 10);
   const rawFileId = Array.isArray(req.params.fileId) ? req.params.fileId[0] : req.params.fileId;
@@ -675,7 +715,11 @@ router.patch("/admin/homework/:id/files/:fileId", requireAdmin, async (req, res)
     return;
   }
 
-  const [existing] = await db.select().from(homeworkTable).where(eq(homeworkTable.id, id));
+  const [existing] = await db
+    .select({ hw: homeworkTable })
+    .from(homeworkTable)
+    .innerJoin(bookingsTable, eq(homeworkTable.bookingId, bookingsTable.id))
+    .where(and(eq(homeworkTable.id, id), eq(bookingsTable.teacherId, teacherId)));
   if (!existing) {
     res.status(404).json({ error: "Homework not found" });
     return;
@@ -686,15 +730,20 @@ router.patch("/admin/homework/:id/files/:fileId", requireAdmin, async (req, res)
     .set({ linkedFileId: parsed.data.linkedFileId })
     .where(and(eq(homeworkFilesTable.id, fileId), eq(homeworkFilesTable.homeworkId, id)));
 
-  const context = await getHomeworkContext(existing.bookingId);
+  const context = await getHomeworkContext(existing.hw.bookingId);
   const files = await getHomeworkFiles(id);
-  res.json(mapHomeworkRow(existing, files, context));
+  res.json(mapHomeworkRow(existing.hw, files, context));
 });
 
 // ─── Students ─────────────────────────────────────────────────────────────────
 
-router.get("/admin/students", requireAdmin, async (_req, res): Promise<void> => {
-  const students = await db.select().from(usersTable).orderBy(asc(usersTable.createdAt));
+router.get("/admin/students", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
+  const students = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.teacherId, teacherId))
+    .orderBy(asc(usersTable.createdAt));
 
   const result = await Promise.all(
     students.map(async (s) => {
@@ -725,11 +774,15 @@ router.get("/admin/students", requireAdmin, async (_req, res): Promise<void> => 
   res.json(result);
 });
 
-router.get("/admin/students/:id", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/students/:id", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
 
-  const [student] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  const [student] = await db
+    .select()
+    .from(usersTable)
+    .where(and(eq(usersTable.id, id), eq(usersTable.teacherId, teacherId)));
   if (!student) {
     res.status(404).json({ error: "Student not found" });
     return;
@@ -773,12 +826,16 @@ router.get("/admin/students/:id", requireAdmin, async (req, res): Promise<void> 
 });
 
 // ─── Messages ─────────────────────────────────────────────────────────────────
+// messages carries no teacherId column — ownership is mediated entirely through
+// the parent student row (users.teacherId), which is unambiguous once set.
 
-router.get("/admin/messages", requireAdmin, async (_req, res): Promise<void> => {
+router.get("/admin/messages", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const rows = await db
     .select({ message: messagesTable, user: usersTable })
     .from(messagesTable)
     .innerJoin(usersTable, eq(messagesTable.studentId, usersTable.id))
+    .where(eq(usersTable.teacherId, teacherId))
     .orderBy(asc(messagesTable.createdAt));
 
   const threads = new Map<
@@ -819,11 +876,15 @@ router.get("/admin/messages", requireAdmin, async (_req, res): Promise<void> => 
   res.json(result);
 });
 
-router.get("/admin/students/:id/messages", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/students/:id/messages", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
 
-  const [student] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  const [student] = await db
+    .select()
+    .from(usersTable)
+    .where(and(eq(usersTable.id, id), eq(usersTable.teacherId, teacherId)));
   if (!student) {
     res.status(404).json({ error: "Student not found" });
     return;
@@ -849,11 +910,15 @@ router.get("/admin/students/:id/messages", requireAdmin, async (req, res): Promi
   res.json(rows);
 });
 
-router.post("/admin/students/:id/messages", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/students/:id/messages", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
 
-  const [student] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  const [student] = await db
+    .select()
+    .from(usersTable)
+    .where(and(eq(usersTable.id, id), eq(usersTable.teacherId, teacherId)));
   if (!student) {
     res.status(404).json({ error: "Student not found" });
     return;
@@ -877,7 +942,8 @@ router.post("/admin/students/:id/messages", requireAdmin, async (req, res): Prom
   res.status(201).json(message);
 });
 
-router.post("/admin/packages", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/packages", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const parsed = GrantPackageBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -886,7 +952,10 @@ router.post("/admin/packages", requireAdmin, async (req, res): Promise<void> => 
 
   const { studentId, totalCredits } = parsed.data;
 
-  const [student] = await db.select().from(usersTable).where(eq(usersTable.id, studentId));
+  const [student] = await db
+    .select()
+    .from(usersTable)
+    .where(and(eq(usersTable.id, studentId), eq(usersTable.teacherId, teacherId)));
   if (!student) {
     res.status(400).json({ error: "Student not found" });
     return;
@@ -894,7 +963,7 @@ router.post("/admin/packages", requireAdmin, async (req, res): Promise<void> => 
 
   const [pkg] = await db
     .insert(lessonPackagesTable)
-    .values({ studentId, totalCredits, usedCredits: 0 })
+    .values({ teacherId, studentId, totalCredits, usedCredits: 0 })
     .returning();
 
   res.status(201).json({
@@ -907,13 +976,15 @@ router.post("/admin/packages", requireAdmin, async (req, res): Promise<void> => 
 });
 
 // ─── Testimonials ─────────────────────────────────────────────────────────────
+// Deliberately left unscoped — reachable by any authenticated teacher for now.
+// Full admin/teacher portal ownership split is deferred to a future session.
 
-router.get("/admin/testimonials", requireAdmin, async (_req, res): Promise<void> => {
+router.get("/admin/testimonials", requireTeacher, async (_req, res): Promise<void> => {
   const items = await db.select().from(testimonialsTable).orderBy(desc(testimonialsTable.createdAt));
   res.json(items);
 });
 
-router.post("/admin/testimonials", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/testimonials", requireTeacher, async (req, res): Promise<void> => {
   const parsed = CreateTestimonialBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -933,7 +1004,7 @@ router.post("/admin/testimonials", requireAdmin, async (req, res): Promise<void>
   res.status(201).json(item);
 });
 
-router.patch("/admin/testimonials/:id", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/testimonials/:id", requireTeacher, async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
 
@@ -964,7 +1035,7 @@ router.patch("/admin/testimonials/:id", requireAdmin, async (req, res): Promise<
   res.json(updated);
 });
 
-router.delete("/admin/testimonials/:id", requireAdmin, async (req, res): Promise<void> => {
+router.delete("/admin/testimonials/:id", requireTeacher, async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
   await db.delete(testimonialsTable).where(eq(testimonialsTable.id, id));
@@ -972,13 +1043,14 @@ router.delete("/admin/testimonials/:id", requireAdmin, async (req, res): Promise
 });
 
 // ─── FAQs ─────────────────────────────────────────────────────────────────────
+// Deliberately left unscoped — see Testimonials note above.
 
-router.get("/admin/faqs", requireAdmin, async (_req, res): Promise<void> => {
+router.get("/admin/faqs", requireTeacher, async (_req, res): Promise<void> => {
   const items = await db.select().from(faqsTable).orderBy(asc(faqsTable.displayOrder));
   res.json(items);
 });
 
-router.post("/admin/faqs", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/faqs", requireTeacher, async (req, res): Promise<void> => {
   const parsed = CreateFaqBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -998,7 +1070,7 @@ router.post("/admin/faqs", requireAdmin, async (req, res): Promise<void> => {
   res.status(201).json(item);
 });
 
-router.patch("/admin/faqs/:id", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/faqs/:id", requireTeacher, async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
 
@@ -1029,7 +1101,7 @@ router.patch("/admin/faqs/:id", requireAdmin, async (req, res): Promise<void> =>
   res.json(updated);
 });
 
-router.delete("/admin/faqs/:id", requireAdmin, async (req, res): Promise<void> => {
+router.delete("/admin/faqs/:id", requireTeacher, async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
   await db.delete(faqsTable).where(eq(faqsTable.id, id));
@@ -1038,24 +1110,26 @@ router.delete("/admin/faqs/:id", requireAdmin, async (req, res): Promise<void> =
 
 // ─── Site Settings ────────────────────────────────────────────────────────────
 
-router.get("/admin/site-settings", requireAdmin, async (_req, res): Promise<void> => {
-  let [settings] = await db.select().from(siteSettingsTable).limit(1);
+router.get("/admin/site-settings", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
+  let [settings] = await db.select().from(siteSettingsTable).where(eq(siteSettingsTable.teacherId, teacherId));
   if (!settings) {
-    [settings] = await db.insert(siteSettingsTable).values({}).returning();
+    [settings] = await db.insert(siteSettingsTable).values({ teacherId }).returning();
   }
   res.json(settings);
 });
 
-router.patch("/admin/site-settings", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/site-settings", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const parsed = UpdateSiteSettingsBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
 
-  let [existing] = await db.select().from(siteSettingsTable).limit(1);
+  let [existing] = await db.select().from(siteSettingsTable).where(eq(siteSettingsTable.teacherId, teacherId));
   if (!existing) {
-    [existing] = await db.insert(siteSettingsTable).values({}).returning();
+    [existing] = await db.insert(siteSettingsTable).values({ teacherId }).returning();
   }
 
   const updateData: any = {};
@@ -1078,17 +1152,19 @@ router.patch("/admin/site-settings", requireAdmin, async (req, res): Promise<voi
 
 // ─── Availability Overrides ───────────────────────────────────────────────────
 
-router.get("/admin/availability-overrides", requireAdmin, async (_req, res): Promise<void> => {
+router.get("/admin/availability-overrides", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const now = new Date();
   const items = await db
     .select()
     .from(availabilityOverridesTable)
-    .where(gte(availabilityOverridesTable.endTime, now))
+    .where(and(eq(availabilityOverridesTable.teacherId, teacherId), gte(availabilityOverridesTable.endTime, now)))
     .orderBy(asc(availabilityOverridesTable.startTime));
   res.json(items);
 });
 
-router.put("/admin/availability-overrides/day", requireAdmin, async (req, res): Promise<void> => {
+router.put("/admin/availability-overrides/day", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const parsed = SetDayAvailabilityOverridesBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -1099,7 +1175,7 @@ router.put("/admin/availability-overrides/day", requireAdmin, async (req, res): 
   // instants derived from her local wall-clock, so a UTC-midnight window would
   // put late-evening (or early-morning) blocks in the neighbouring day's bucket
   // and fail to clear them on re-save.
-  const [tzSettings] = await db.select().from(siteSettingsTable).limit(1);
+  const [tzSettings] = await db.select().from(siteSettingsTable).where(eq(siteSettingsTable.teacherId, teacherId));
   const { start: dayStart, end: dayEnd } = zonedDayRange(
     parsed.data.date,
     tzSettings?.timezone || "UTC",
@@ -1109,6 +1185,7 @@ router.put("/admin/availability-overrides/day", requireAdmin, async (req, res): 
     .delete(availabilityOverridesTable)
     .where(
       and(
+        eq(availabilityOverridesTable.teacherId, teacherId),
         gte(availabilityOverridesTable.startTime, dayStart),
         lt(availabilityOverridesTable.startTime, dayEnd),
       ),
@@ -1121,25 +1198,29 @@ router.put("/admin/availability-overrides/day", requireAdmin, async (req, res): 
 
   const rows = await db
     .insert(availabilityOverridesTable)
-    .values(parsed.data.blocks.map((b) => ({ startTime: b.startTime, endTime: b.endTime })))
+    .values(parsed.data.blocks.map((b) => ({ teacherId, startTime: b.startTime, endTime: b.endTime })))
     .returning();
 
   res.json(rows);
 });
 
-router.delete("/admin/availability-overrides/:id", requireAdmin, async (req, res): Promise<void> => {
+router.delete("/admin/availability-overrides/:id", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const parsed = DeleteAvailabilityOverrideParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid id" });
     return;
   }
-  await db.delete(availabilityOverridesTable).where(eq(availabilityOverridesTable.id, parsed.data.id));
+  await db
+    .delete(availabilityOverridesTable)
+    .where(and(eq(availabilityOverridesTable.id, parsed.data.id), eq(availabilityOverridesTable.teacherId, teacherId)));
   res.sendStatus(204);
 });
 
 // ─── Calendar ─────────────────────────────────────────────────────────────────
 
-router.get("/admin/calendar/busy", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/calendar/busy", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const date = typeof req.query.date === "string" ? req.query.date : null;
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     res.status(400).json({ error: "date query param required (YYYY-MM-DD)" });
@@ -1148,24 +1229,29 @@ router.get("/admin/calendar/busy", requireAdmin, async (req, res): Promise<void>
   // Query exactly the selected day as it is lived in the tutor's timezone, so
   // the returned events are only that day's (no neighbouring-day noise) and the
   // day boundaries line up with how she reads her calendar.
-  const [settings] = await db.select().from(siteSettingsTable).limit(1);
+  const [settings] = await db.select().from(siteSettingsTable).where(eq(siteSettingsTable.teacherId, teacherId));
   const tz = settings?.timezone || "UTC";
   const { start: dayStart, end: dayEnd } = zonedDayRange(date, tz);
-  const busy = await getFreeBusySlots(dayStart, dayEnd);
+  const busy = await getFreeBusySlots(teacherId, dayStart, dayEnd);
   res.json(busy.map((b) => ({ start: b.start.toISOString(), end: b.end.toISOString() })));
 });
 
-router.get("/admin/calendar/status", requireAdmin, async (_req, res): Promise<void> => {
-  const connected = await isCalendarConnected();
-  const email = connected ? await getCalendarEmail() : null;
+router.get("/admin/calendar/status", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
+  const connected = await isCalendarConnected(teacherId);
+  const email = connected ? await getCalendarEmail(teacherId) : null;
   res.json({ connected, calendarEmail: email ?? null });
 });
 
 // Initiates Google OAuth — generates a one-time state nonce stored in the
-// admin session to prevent CSRF / account-linking attacks.
-router.get("/calendar/auth", requireAdmin, async (req, res): Promise<void> => {
+// session to prevent CSRF / account-linking attacks. The teacherId is stashed
+// alongside it since the callback route below has no auth context of its own
+// (it's reached via a top-level browser redirect from Google, not an API call).
+router.get("/calendar/auth", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
   const state = randomBytes(32).toString("hex");
   (req.session as any).oauthState = state;
+  (req.session as any).oauthTeacherId = teacherId;
 
   const auth = createOAuth2Client();
   const url = auth.generateAuthUrl({
@@ -1182,19 +1268,24 @@ router.get("/calendar/auth", requireAdmin, async (req, res): Promise<void> => {
   res.redirect(url);
 });
 
-// NOTE: requireAdmin is intentionally NOT on this route.
+// NOTE: requireTeacher is intentionally NOT on this route.
 // Google's redirect lands here as a top-level browser navigation after OAuth.
 // The session cookie is present (SameSite=Lax allows it on GET redirects), but
-// we rely solely on the state nonce for CSRF protection — not the session admin
-// flag — since an OAuth callback can't assume the normal authenticated context.
+// we rely solely on the state nonce (plus the teacherId stashed alongside it
+// in /calendar/auth) for both CSRF protection and knowing which teacher this
+// token belongs to — an OAuth callback can't assume the normal authenticated
+// context.
 router.get("/admin/calendar/callback", async (req, res): Promise<void> => {
   const { code, error, state } = req.query;
 
-  // Validate state nonce to prevent CSRF attacks
+  // Validate state nonce to prevent CSRF attacks, and recover which teacher
+  // initiated this flow.
   const expectedState = (req.session as any).oauthState;
+  const oauthTeacherId = (req.session as any).oauthTeacherId as number | undefined;
   delete (req.session as any).oauthState; // Consume nonce immediately (prevents replay)
+  delete (req.session as any).oauthTeacherId;
 
-  if (!expectedState || typeof state !== "string" || state !== expectedState) {
+  if (!expectedState || typeof state !== "string" || state !== expectedState || !oauthTeacherId) {
     res.redirect("/?admin=1#/settings?calendarError=invalid_state");
     return;
   }
@@ -1219,8 +1310,11 @@ router.get("/admin/calendar/callback", async (req, res): Promise<void> => {
     const userInfo = await oauth2.userinfo.get();
     const calendarEmail = userInfo.data.email ?? null;
 
-    // Upsert token row
-    const existing = await db.select().from(calendarTokensTable).limit(1);
+    // Upsert token row (one per teacher — calendarTokens.teacherId is unique)
+    const existing = await db
+      .select()
+      .from(calendarTokensTable)
+      .where(eq(calendarTokensTable.teacherId, oauthTeacherId));
 
     if (existing.length > 0) {
       await db
@@ -1234,6 +1328,7 @@ router.get("/admin/calendar/callback", async (req, res): Promise<void> => {
         .where(eq(calendarTokensTable.id, existing[0].id));
     } else {
       await db.insert(calendarTokensTable).values({
+        teacherId: oauthTeacherId,
         accessToken: tokens.access_token!,
         refreshToken: tokens.refresh_token,
         tokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
@@ -1247,9 +1342,9 @@ router.get("/admin/calendar/callback", async (req, res): Promise<void> => {
       const cal = google.calendar({ version: "v3", auth });
       const tz = (await cal.settings.get({ setting: "timezone" })).data.value;
       if (tz) {
-        const [s] = await db.select().from(siteSettingsTable).limit(1);
+        const [s] = await db.select().from(siteSettingsTable).where(eq(siteSettingsTable.teacherId, oauthTeacherId));
         if (!s) {
-          await db.insert(siteSettingsTable).values({ timezone: tz });
+          await db.insert(siteSettingsTable).values({ teacherId: oauthTeacherId, timezone: tz });
         } else if (!s.timezone || s.timezone === "UTC") {
           await db.update(siteSettingsTable).set({ timezone: tz }).where(eq(siteSettingsTable.id, s.id));
         }
@@ -1264,8 +1359,9 @@ router.get("/admin/calendar/callback", async (req, res): Promise<void> => {
   }
 });
 
-router.delete("/admin/calendar/disconnect", requireAdmin, async (_req, res): Promise<void> => {
-  await db.delete(calendarTokensTable);
+router.delete("/admin/calendar/disconnect", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
+  await db.delete(calendarTokensTable).where(eq(calendarTokensTable.teacherId, teacherId));
   res.json({ success: true });
 });
 

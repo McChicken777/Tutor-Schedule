@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { getAuth } from "@clerk/express";
 import { eq, and } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { homeworkTable, homeworkFilesTable, bookingsTable, usersTable } from "@workspace/db";
+import { homeworkTable, homeworkFilesTable, bookingsTable, usersTable, teachersTable } from "@workspace/db";
 import { getObject } from "../lib/objectStorage";
 
 const router: IRouter = Router();
@@ -27,14 +27,17 @@ router.get("/files/homework-file/:fileId", async (req, res): Promise<void> => {
     return;
   }
 
-  const sess = req.session as any;
-  if (!sess?.isAdmin) {
-    const auth = getAuth(req);
-    const clerkUserId = (auth?.sessionClaims?.userId as string | undefined) || auth?.userId;
-    if (!clerkUserId) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
+  const auth = getAuth(req);
+  const clerkUserId = (auth?.sessionClaims?.userId as string | undefined) || auth?.userId;
+  if (!clerkUserId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const [teacher] = await db.select().from(teachersTable).where(eq(teachersTable.clerkUserId, clerkUserId));
+  const isOwningTeacher = !!teacher && row.booking.teacherId === teacher.id;
+
+  if (!isOwningTeacher) {
     const [owner] = await db
       .select()
       .from(usersTable)

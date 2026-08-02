@@ -148,14 +148,21 @@ function isTestStudent(email: string): boolean {
   return !!testEmail && email.toLowerCase() === testEmail.toLowerCase();
 }
 
-async function getTrialLessonType() {
-  const [settings] = await db.select().from(siteSettingsTable).limit(1);
+// Before a student's first booking, user.teacherId is still null (adopted on
+// first booking — see POST /student/bookings) and there's no "pick a teacher"
+// UI yet, so we can't scope this to one teacher's settings. Falls back to the
+// legacy unscoped lookup in that case; once adopted, scopes strictly.
+async function getTrialLessonType(teacherId: number | null) {
+  const [settings] =
+    teacherId != null
+      ? await db.select().from(siteSettingsTable).where(eq(siteSettingsTable.teacherId, teacherId))
+      : await db.select().from(siteSettingsTable).limit(1);
   if (!settings?.freeTrialEnabled) return null;
 
-  const [trialLessonType] = await db
-    .select()
-    .from(lessonTypesTable)
-    .where(and(eq(lessonTypesTable.isTrial, true), eq(lessonTypesTable.isActive, true)));
+  const conditions = [eq(lessonTypesTable.isTrial, true), eq(lessonTypesTable.isActive, true)];
+  if (teacherId != null) conditions.push(eq(lessonTypesTable.teacherId, teacherId));
+
+  const [trialLessonType] = await db.select().from(lessonTypesTable).where(and(...conditions));
   return trialLessonType ?? null;
 }
 
@@ -164,12 +171,14 @@ async function getTrialLessonType() {
 // first) or be bypassed entirely, so this is the real guarantee against
 // double-booking, not the availability list.
 async function isTimeSlotTaken(
+  teacherId: number,
   start: Date,
   end: Date,
   options?: { excludeBookingId?: number; excludeCalendarRange?: { start: Date; end: Date } },
 ): Promise<boolean> {
   const conditions = [
     eq(bookingsTable.status, "upcoming"),
+    eq(bookingsTable.teacherId, teacherId),
     lt(bookingsTable.startTime, end),
     gt(bookingsTable.endTime, start),
   ];
@@ -183,7 +192,7 @@ async function isTimeSlotTaken(
     .where(and(...conditions));
   if (conflictingBooking) return true;
 
-  const busySlots = await getFreeBusySlots(start, end);
+  const busySlots = await getFreeBusySlots(teacherId, start, end);
   const exclude = options?.excludeCalendarRange;
   const relevantBusy = exclude
     ? busySlots.filter(
@@ -199,6 +208,7 @@ async function isTimeSlotTaken(
     .from(availabilityOverridesTable)
     .where(
       and(
+        eq(availabilityOverridesTable.teacherId, teacherId),
         lt(availabilityOverridesTable.startTime, end),
         gt(availabilityOverridesTable.endTime, start),
       ),
@@ -308,7 +318,7 @@ router.get("/student/dashboard", requireAuth, async (req, res): Promise<void> =>
   }));
 
   const isTestAccount = isTestStudent(user.email);
-  const trialLessonType = await getTrialLessonType();
+  const trialLessonType = await getTrialLessonType(user.teacherId);
   const trialAvailable = isTestAccount || (trialLessonType ? !(await hasUsedTrial(user.id)) : false);
 
   res.json({
@@ -400,6 +410,18 @@ router.post("/student/bookings", requireAuth, async (req, res): Promise<void> =>
     return;
   }
 
+  // One teacher per student: adopt this teacher on the student's first-ever
+  // booking. No UI offers a teacher choice yet, so a mismatch shouldn't be
+  // reachable today — this is a defensive guard against that invariant breaking.
+  const teacherId = lessonType.teacherId;
+  if (user.teacherId == null) {
+    await db.update(usersTable).set({ teacherId }).where(eq(usersTable.id, user.id));
+    user.teacherId = teacherId;
+  } else if (user.teacherId !== teacherId) {
+    res.status(400).json({ error: "This lesson type belongs to a different teacher" });
+    return;
+  }
+
   // The trial lesson type needs no credits, but only once ever, per student
   let packages: (typeof lessonPackagesTable.$inferSelect)[] = [];
   if (lessonType.isTrial) {
@@ -427,13 +449,14 @@ router.post("/student/bookings", requireAuth, async (req, res): Promise<void> =>
   const start = new Date(startTime as unknown as string);
   const end = new Date(start.getTime() + lessonType.durationMinutes * 60 * 1000);
 
-  if (await isTimeSlotTaken(start, end)) {
+  if (await isTimeSlotTaken(teacherId, start, end)) {
     res.status(409).json({ error: "This time slot is no longer available. Please choose another." });
     return;
   }
 
   // Create Google Meet event
   const calendarResult = await createCalendarEventWithMeet(
+    teacherId,
     `Spanish Lesson with ${user.displayName}`,
     start,
     end,
@@ -446,6 +469,7 @@ router.post("/student/bookings", requireAuth, async (req, res): Promise<void> =>
     .insert(bookingsTable)
     .values({
       studentId: user.id,
+      teacherId,
       lessonTypeId,
       startTime: start,
       endTime: end,
@@ -566,7 +590,7 @@ router.patch("/student/bookings/:id/cancel", requireAuth, async (req, res): Prom
 
   // Delete calendar event
   if (row.booking.calendarEventId) {
-    await deleteCalendarEvent(row.booking.calendarEventId);
+    await deleteCalendarEvent(row.booking.teacherId, row.booking.calendarEventId);
   }
 
   const [updated] = await db
@@ -644,7 +668,7 @@ router.patch("/student/bookings/:id/reschedule", requireAuth, async (req, res): 
   const newStart = new Date(parsed.data.newStartTime as unknown as string);
   const newEnd = new Date(newStart.getTime() + row.lessonType.durationMinutes * 60 * 1000);
 
-  const taken = await isTimeSlotTaken(newStart, newEnd, {
+  const taken = await isTimeSlotTaken(row.booking.teacherId, newStart, newEnd, {
     excludeBookingId: id,
     excludeCalendarRange: { start: row.booking.startTime, end: row.booking.endTime },
   });
@@ -655,10 +679,11 @@ router.patch("/student/bookings/:id/reschedule", requireAuth, async (req, res): 
 
   // Delete old calendar event (only now that we know the new time is free)
   if (row.booking.calendarEventId) {
-    await deleteCalendarEvent(row.booking.calendarEventId);
+    await deleteCalendarEvent(row.booking.teacherId, row.booking.calendarEventId);
   }
 
   const calendarResult = await createCalendarEventWithMeet(
+    row.booking.teacherId,
     `Spanish Lesson with ${user.displayName}`,
     newStart,
     newEnd,
