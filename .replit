@@ -22,4 +22,4 @@ timeoutMs = 20000
 [userenv]
 
 [userenv.shared]
-GOOGLE_REDIRECT_URI = "https://81ea024b-7dcc-4d12-8980-329ab76f41ef-00-3pfnigp3oiasq.janeway.replit.dev/api/admin/calendar/callback"
+GOOGLE_REDIRECT_URI = "https://loquu.replit.app/api/admin/calendar/callback"
