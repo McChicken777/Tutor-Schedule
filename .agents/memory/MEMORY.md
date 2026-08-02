@@ -1,0 +1,2 @@
+- [PWA build size limit](pwa-build-size-limit.md) — Workbox default 2 MiB precache limit must be raised; bundle exceeds it.
+- [OAuth callback routing](oauth-callback-routing.md) — Google OAuth callback must redirect to real Wouter paths, not hash fragments.

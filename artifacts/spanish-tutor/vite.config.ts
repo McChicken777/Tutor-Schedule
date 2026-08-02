@@ -59,6 +59,9 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Default is 2 MiB; our main JS bundle exceeds that after tree-shaking.
+        // 5 MiB covers the current bundle with headroom for growth.
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {

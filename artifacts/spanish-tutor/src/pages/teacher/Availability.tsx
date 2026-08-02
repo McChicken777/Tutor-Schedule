@@ -146,13 +146,16 @@ export default function TeacherAvailability() {
   const { data: calendarStatus, refetch: refetchCalendarStatus } = useGetCalendarStatus();
   const disconnectMutation = useDisconnectCalendar();
 
-  // Handle OAuth callback params in the hash
+  // Handle OAuth callback params in the query string (server redirects here
+  // with ?calendarConnected=1 or ?calendarError=... after the Google OAuth flow)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.hash.split("?")[1] ?? "");
+    const params = new URLSearchParams(window.location.search);
     if (params.get("calendarConnected") === "1") {
       toast({ title: "Google Calendar connected!" });
       refetchCalendarStatus();
-      window.history.replaceState(null, "", window.location.pathname + window.location.search + "#/availability");
+      params.delete("calendarConnected");
+      const newSearch = params.toString();
+      window.history.replaceState(null, "", window.location.pathname + (newSearch ? "?" + newSearch : "") + window.location.hash);
     } else if (params.get("calendarError")) {
       const reason = params.get("calendarError");
       toast({
@@ -160,7 +163,9 @@ export default function TeacherAvailability() {
         description: reason === "missing_refresh_token" ? "No refresh token returned. Try revoking access in Google and reconnecting." : "An error occurred during authorization.",
         variant: "destructive",
       });
-      window.history.replaceState(null, "", window.location.pathname + window.location.search + "#/availability");
+      params.delete("calendarError");
+      const newSearch = params.toString();
+      window.history.replaceState(null, "", window.location.pathname + (newSearch ? "?" + newSearch : "") + window.location.hash);
     }
   }, []);
 
