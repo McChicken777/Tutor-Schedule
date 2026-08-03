@@ -170,6 +170,7 @@ export default function TeacherAvailability() {
         toast({ title: "Google Calendar disconnected" });
         qc.invalidateQueries({ queryKey: getGetCalendarStatusQueryKey() });
       },
+      onError: () => toast({ title: "Couldn't disconnect Google Calendar", variant: "destructive" }),
     });
   };
 
@@ -219,6 +220,7 @@ export default function TeacherAvailability() {
           qc.invalidateQueries({ queryKey: getGetTeacherSiteSettingsQueryKey() });
           qc.invalidateQueries({ queryKey: getGetSiteSettingsQueryKey() });
         },
+        onError: () => toast({ title: "Couldn't save working hours", variant: "destructive" }),
       },
     );
   };
@@ -317,6 +319,7 @@ export default function TeacherAvailability() {
           toast({ title: "Availability saved" });
           qc.invalidateQueries({ queryKey: getListAvailabilityOverridesQueryKey() });
         },
+        onError: () => toast({ title: "Couldn't save availability", variant: "destructive" }),
       },
     );
   };
@@ -328,6 +331,7 @@ export default function TeacherAvailability() {
         onSuccess: () => {
           qc.invalidateQueries({ queryKey: getListAvailabilityOverridesQueryKey() });
         },
+        onError: () => toast({ title: "Couldn't delete block", variant: "destructive" }),
       },
     );
   };

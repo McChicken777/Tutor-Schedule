@@ -91,7 +91,8 @@ function StudentDetail({ id }: { id: number }) {
         toast({ title: "Credits granted" });
         qc.invalidateQueries({ queryKey: getGetTeacherStudentQueryKey(id) });
         qc.invalidateQueries({ queryKey: getListTeacherStudentsQueryKey() });
-      }
+      },
+      onError: () => toast({ title: "Couldn't grant credits", variant: "destructive" }),
     });
   };
 

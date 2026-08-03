@@ -465,6 +465,12 @@ router.post("/student/bookings", requireAuth, async (req, res): Promise<void> =>
     return;
   }
 
+  const [owningTeacher] = await db.select().from(teachersTable).where(eq(teachersTable.id, teacherId));
+  if (owningTeacher?.isBanned) {
+    res.status(404).json({ error: "Lesson type not found" });
+    return;
+  }
+
   const start = new Date(startTime as unknown as string);
   const end = new Date(start.getTime() + lessonType.durationMinutes * 60 * 1000);
 

@@ -29,7 +29,8 @@ export default function AdminFaqs() {
         toast({ title: isVisible ? "Published" : "Hidden" });
         qc.invalidateQueries({ queryKey: getListAdminFaqsQueryKey() });
         qc.invalidateQueries({ queryKey: getListFaqsQueryKey() });
-      }
+      },
+      onError: () => toast({ title: "Couldn't update FAQ", variant: "destructive" }),
     });
   };
 
@@ -40,7 +41,8 @@ export default function AdminFaqs() {
           toast({ title: "Deleted" });
           qc.invalidateQueries({ queryKey: getListAdminFaqsQueryKey() });
           qc.invalidateQueries({ queryKey: getListFaqsQueryKey() });
-        }
+        },
+        onError: () => toast({ title: "Couldn't delete FAQ", variant: "destructive" }),
       });
     }
   }
@@ -53,7 +55,8 @@ export default function AdminFaqs() {
         qc.invalidateQueries({ queryKey: getListFaqsQueryKey() });
         setIsCreateOpen(false);
         setNewFaq({ question: "", answer: "", displayOrder: 0 });
-      }
+      },
+      onError: () => toast({ title: "Couldn't add FAQ", variant: "destructive" }),
     });
   };
 

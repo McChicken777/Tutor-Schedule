@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, and } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   lessonTypesTable,
@@ -17,11 +17,14 @@ import {
 const router: IRouter = Router();
 
 router.get("/lesson-types", async (_req, res): Promise<void> => {
-  const types = await db
-    .select()
+  const rows = await db
+    .select({ lessonType: lessonTypesTable, teacher: teachersTable })
     .from(lessonTypesTable)
-    .where(eq(lessonTypesTable.isActive, true))
+    .innerJoin(teachersTable, eq(lessonTypesTable.teacherId, teachersTable.id))
+    .where(and(eq(lessonTypesTable.isActive, true), eq(teachersTable.isBanned, false)))
     .orderBy(asc(lessonTypesTable.id));
+
+  const types = rows.map((r) => r.lessonType);
 
   res.json(
     types.map((t) => ({
@@ -66,6 +69,12 @@ router.get("/available-slots", async (req, res): Promise<void> => {
     .where(eq(lessonTypesTable.id, lessonTypeId));
 
   if (!lessonType) {
+    res.status(404).json({ error: "Lesson type not found" });
+    return;
+  }
+
+  const [owningTeacher] = await db.select().from(teachersTable).where(eq(teachersTable.id, lessonType.teacherId));
+  if (owningTeacher?.isBanned) {
     res.status(404).json({ error: "Lesson type not found" });
     return;
   }

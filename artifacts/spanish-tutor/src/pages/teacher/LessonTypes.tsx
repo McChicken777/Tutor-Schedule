@@ -36,7 +36,8 @@ export default function TeacherLessonTypes() {
         toast({ title: isActive ? "Lesson activated" : "Lesson deactivated" });
         qc.invalidateQueries({ queryKey: getListTeacherLessonTypesQueryKey() });
         qc.invalidateQueries({ queryKey: getListLessonTypesQueryKey() });
-      }
+      },
+      onError: () => toast({ title: "Couldn't update lesson", variant: "destructive" }),
     });
   };
 
@@ -46,7 +47,8 @@ export default function TeacherLessonTypes() {
         toast({ title: isTrial ? "Set as the free trial lesson" : "No longer the free trial lesson" });
         qc.invalidateQueries({ queryKey: getListTeacherLessonTypesQueryKey() });
         qc.invalidateQueries({ queryKey: getListLessonTypesQueryKey() });
-      }
+      },
+      onError: () => toast({ title: "Couldn't update lesson", variant: "destructive" }),
     });
   };
 
@@ -63,7 +65,8 @@ export default function TeacherLessonTypes() {
         qc.invalidateQueries({ queryKey: getListTeacherLessonTypesQueryKey() });
         qc.invalidateQueries({ queryKey: getListLessonTypesQueryKey() });
         setEditingId(null);
-      }
+      },
+      onError: () => toast({ title: "Couldn't save changes", variant: "destructive" }),
     });
   };
 
@@ -74,7 +77,8 @@ export default function TeacherLessonTypes() {
         qc.invalidateQueries({ queryKey: getListTeacherLessonTypesQueryKey() });
         setIsCreateOpen(false);
         setNewLesson({ name: "", durationMinutes: 30, creditCost: 1, description: "", isTrial: false });
-      }
+      },
+      onError: () => toast({ title: "Couldn't create lesson", variant: "destructive" }),
     });
   };
 

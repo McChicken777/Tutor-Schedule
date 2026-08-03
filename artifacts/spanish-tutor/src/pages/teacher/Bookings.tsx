@@ -35,7 +35,8 @@ export default function TeacherBookings() {
       onSuccess: () => {
         toast({ title: "Status updated" });
         qc.invalidateQueries({ queryKey: getListTeacherBookingsQueryKey() });
-      }
+      },
+      onError: () => toast({ title: "Couldn't update status", variant: "destructive" }),
     });
   };
 

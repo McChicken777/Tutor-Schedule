@@ -42,7 +42,8 @@ export default function AdminSettings() {
         toast({ title: "Settings saved" });
         qc.invalidateQueries({ queryKey: getGetTeacherSiteSettingsQueryKey() });
         qc.invalidateQueries({ queryKey: getGetSiteSettingsQueryKey() });
-      }
+      },
+      onError: () => toast({ title: "Couldn't save settings", variant: "destructive" }),
     });
   };
 
