@@ -29,7 +29,8 @@ export default function AdminTestimonials() {
         toast({ title: isVisible ? "Published" : "Hidden" });
         qc.invalidateQueries({ queryKey: getListAdminTestimonialsQueryKey() });
         qc.invalidateQueries({ queryKey: getListTestimonialsQueryKey() });
-      }
+      },
+      onError: () => toast({ title: "Couldn't update testimonial", variant: "destructive" }),
     });
   };
 
@@ -40,7 +41,8 @@ export default function AdminTestimonials() {
           toast({ title: "Deleted" });
           qc.invalidateQueries({ queryKey: getListAdminTestimonialsQueryKey() });
           qc.invalidateQueries({ queryKey: getListTestimonialsQueryKey() });
-        }
+        },
+        onError: () => toast({ title: "Couldn't delete testimonial", variant: "destructive" }),
       });
     }
   }
@@ -53,7 +55,8 @@ export default function AdminTestimonials() {
         qc.invalidateQueries({ queryKey: getListTestimonialsQueryKey() });
         setIsCreateOpen(false);
         setNewTestimonial({ studentName: "", text: "", rating: 5 });
-      }
+      },
+      onError: () => toast({ title: "Couldn't add testimonial", variant: "destructive" }),
     });
   };
 

@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import ErrorState from "@/components/ErrorState";
 import ReportButton from "@/components/reports/ReportButton";
+import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Send, MessageSquare } from "lucide-react";
 
@@ -95,6 +96,7 @@ export default function TeacherMessages() {
 function ConversationPane({ studentId, studentName }: { studentId: number; studentName: string }) {
   const [draft, setDraft] = useState("");
   const qc = useQueryClient();
+  const { toast } = useToast();
   const { data: messages, isLoading } = useListTeacherStudentMessages(studentId, {
     query: { refetchInterval: 10000, queryKey: getListTeacherStudentMessagesQueryKey(studentId) },
   });
@@ -111,6 +113,7 @@ function ConversationPane({ studentId, studentName }: { studentId: number; stude
           qc.invalidateQueries({ queryKey: getListTeacherStudentMessagesQueryKey(studentId) });
           qc.invalidateQueries({ queryKey: getListTeacherMessageThreadsQueryKey() });
         },
+        onError: () => toast({ title: "Couldn't send message", variant: "destructive" }),
       },
     );
   };

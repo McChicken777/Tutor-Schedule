@@ -36,7 +36,8 @@ export default function TeacherLessonTypes() {
         toast({ title: isActive ? "Lesson activated" : "Lesson deactivated" });
         qc.invalidateQueries({ queryKey: getListTeacherLessonTypesQueryKey() });
         qc.invalidateQueries({ queryKey: getListLessonTypesQueryKey() });
-      }
+      },
+      onError: () => toast({ title: "Couldn't update lesson", variant: "destructive" }),
     });
   };
 
@@ -46,7 +47,8 @@ export default function TeacherLessonTypes() {
         toast({ title: isTrial ? "Set as the free trial lesson" : "No longer the free trial lesson" });
         qc.invalidateQueries({ queryKey: getListTeacherLessonTypesQueryKey() });
         qc.invalidateQueries({ queryKey: getListLessonTypesQueryKey() });
-      }
+      },
+      onError: () => toast({ title: "Couldn't update lesson", variant: "destructive" }),
     });
   };
 
@@ -63,7 +65,8 @@ export default function TeacherLessonTypes() {
         qc.invalidateQueries({ queryKey: getListTeacherLessonTypesQueryKey() });
         qc.invalidateQueries({ queryKey: getListLessonTypesQueryKey() });
         setEditingId(null);
-      }
+      },
+      onError: () => toast({ title: "Couldn't save changes", variant: "destructive" }),
     });
   };
 
@@ -74,7 +77,8 @@ export default function TeacherLessonTypes() {
         qc.invalidateQueries({ queryKey: getListTeacherLessonTypesQueryKey() });
         setIsCreateOpen(false);
         setNewLesson({ name: "", durationMinutes: 30, creditCost: 1, description: "", isTrial: false });
-      }
+      },
+      onError: () => toast({ title: "Couldn't create lesson", variant: "destructive" }),
     });
   };
 
@@ -178,12 +182,10 @@ export default function TeacherLessonTypes() {
                 </span>
               </div>
               <p className="text-muted-foreground text-sm mb-4">{lt.description}</p>
-              {lt.isTrial && (
-                <div className="flex items-center justify-between pt-4 border-t border-border">
-                  <span className="text-sm text-muted-foreground">Free trial lesson</span>
-                  <Switch checked={lt.isTrial} onCheckedChange={(v) => handleToggleTrial(lt.id, v)} />
-                </div>
-              )}
+              <div className="flex items-center justify-between pt-4 border-t border-border">
+                <span className="text-sm text-muted-foreground">Free trial lesson</span>
+                <Switch checked={lt.isTrial} onCheckedChange={(v) => handleToggleTrial(lt.id, v)} />
+              </div>
               <Button variant="outline" size="sm" className="w-full mt-4" onClick={() => openEdit(lt)}>
                 Edit
               </Button>

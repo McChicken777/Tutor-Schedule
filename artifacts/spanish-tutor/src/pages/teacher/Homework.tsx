@@ -124,13 +124,15 @@ export function HomeworkCard({ hw }: { hw: any }) {
       onSuccess: () => {
         toast({ title: "Feedback saved" });
         invalidate();
-      }
+      },
+      onError: () => toast({ title: "Couldn't save feedback", variant: "destructive" }),
     });
   };
 
   const handleDeleteFile = (fileId: number) => {
     deleteFileMutation.mutate({ id: hw.id, fileId }, {
       onSuccess: () => invalidate(),
+      onError: () => toast({ title: "Couldn't remove file", variant: "destructive" }),
     });
   };
 

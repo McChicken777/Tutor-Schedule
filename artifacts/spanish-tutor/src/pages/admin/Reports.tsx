@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import ErrorState from "@/components/ErrorState";
 import { useToast } from "@/hooks/use-toast";
+import { describeError } from "@/lib/errors";
 import { useQueryClient } from "@tanstack/react-query";
 import { Flag, Ban } from "lucide-react";
 
@@ -75,6 +76,7 @@ export default function AdminReports() {
           toast({ title: nextStatus === "resolved" ? "Marked resolved" : "Reopened" });
           invalidate();
         },
+        onError: () => toast({ title: "Couldn't update report", variant: "destructive" }),
       },
     );
   };
@@ -87,8 +89,8 @@ export default function AdminReports() {
           toast({ title: "Account banned" });
           invalidate();
         },
-        onError: () => {
-          toast({ title: "Couldn't ban account", variant: "destructive" });
+        onError: (err) => {
+          toast({ title: describeError(err).message || "Couldn't ban account", variant: "destructive" });
         },
       },
     );

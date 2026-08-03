@@ -78,6 +78,7 @@ export default function AnnotationWorkspace({ hw, onClose }: AnnotationWorkspace
         onSuccess: () => {
           invalidate();
         },
+        onError: () => toast({ title: "Couldn't relink file", variant: "destructive" }),
       },
     );
   };

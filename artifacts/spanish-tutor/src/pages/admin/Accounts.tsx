@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import ErrorState from "@/components/ErrorState";
 import { useToast } from "@/hooks/use-toast";
+import { describeError } from "@/lib/errors";
 import { useQueryClient } from "@tanstack/react-query";
 import { Users, Ban } from "lucide-react";
 
@@ -67,6 +68,9 @@ function TeacherAccountsTable() {
           toast({ title: "Teacher banned" });
           invalidate();
         },
+        onError: (err) => {
+          toast({ title: describeError(err).message || "Couldn't ban account", variant: "destructive" });
+        },
       },
     );
   };
@@ -79,6 +83,7 @@ function TeacherAccountsTable() {
           toast({ title: "Teacher unbanned" });
           invalidate();
         },
+        onError: () => toast({ title: "Couldn't unban account", variant: "destructive" }),
       },
     );
   };
@@ -113,6 +118,7 @@ function StudentAccountsTable() {
           toast({ title: "Student banned" });
           invalidate();
         },
+        onError: () => toast({ title: "Couldn't ban account", variant: "destructive" }),
       },
     );
   };
@@ -125,6 +131,7 @@ function StudentAccountsTable() {
           toast({ title: "Student unbanned" });
           invalidate();
         },
+        onError: () => toast({ title: "Couldn't unban account", variant: "destructive" }),
       },
     );
   };

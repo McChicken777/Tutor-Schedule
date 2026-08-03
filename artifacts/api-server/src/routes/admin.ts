@@ -25,6 +25,26 @@ import { mapReportRow } from "../lib/reportMapper";
 
 const router: IRouter = Router();
 
+// A banned admin can never unban anyone (requireTeacher rejects banned users
+// before requireAdmin even runs), so banning yourself or emptying the pool of
+// unbanned admins would permanently lock the whole platform out of moderation.
+async function assertTeacherBannable(targetId: number, actingTeacherId: number): Promise<string | null> {
+  if (targetId === actingTeacherId) {
+    return "You cannot ban your own account";
+  }
+  const [target] = await db.select().from(teachersTable).where(eq(teachersTable.id, targetId));
+  if (target?.isAdmin && !target.isBanned) {
+    const [{ count: otherActiveAdmins }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(teachersTable)
+      .where(and(eq(teachersTable.isAdmin, true), eq(teachersTable.isBanned, false), sql`${teachersTable.id} != ${targetId}`));
+    if (otherActiveAdmins === 0) {
+      return "Cannot ban the last remaining active admin";
+    }
+  }
+  return null;
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 // Platform-wide, unscoped by teacherId — the admin sees the whole business,
 // not just their own teaching load (that view lives at /teacher/dashboard).
@@ -174,6 +194,11 @@ router.post("/admin/reports/:id/ban", requireAdmin, async (req, res): Promise<vo
   }
 
   if (existing.reportedUserRole === "teacher" && existing.reportedTeacherId != null) {
+    const denyReason = await assertTeacherBannable(existing.reportedTeacherId, (req as any).teacherId as number);
+    if (denyReason) {
+      res.status(400).json({ error: denyReason });
+      return;
+    }
     await db
       .update(teachersTable)
       .set({ isBanned: true, bannedAt: new Date() })
@@ -216,6 +241,13 @@ router.get("/admin/teachers", requireAdmin, async (_req, res): Promise<void> => 
 router.post("/admin/teachers/:id/ban", requireAdmin, async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
+
+  const denyReason = await assertTeacherBannable(id, (req as any).teacherId as number);
+  if (denyReason) {
+    res.status(400).json({ error: denyReason });
+    return;
+  }
+
   const [updated] = await db
     .update(teachersTable)
     .set({ isBanned: true, bannedAt: new Date() })

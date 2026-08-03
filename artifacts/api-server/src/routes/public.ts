@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, and } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   lessonTypesTable,
@@ -17,11 +17,14 @@ import {
 const router: IRouter = Router();
 
 router.get("/lesson-types", async (_req, res): Promise<void> => {
-  const types = await db
-    .select()
+  const rows = await db
+    .select({ lessonType: lessonTypesTable, teacher: teachersTable })
     .from(lessonTypesTable)
-    .where(eq(lessonTypesTable.isActive, true))
+    .innerJoin(teachersTable, eq(lessonTypesTable.teacherId, teachersTable.id))
+    .where(and(eq(lessonTypesTable.isActive, true), eq(teachersTable.isBanned, false)))
     .orderBy(asc(lessonTypesTable.id));
+
+  const types = rows.map((r) => r.lessonType);
 
   res.json(
     types.map((t) => ({
@@ -70,9 +73,19 @@ router.get("/available-slots", async (req, res): Promise<void> => {
     return;
   }
 
-  const start = new Date(startDate as unknown as string);
-  const end = new Date(endDate as unknown as string);
-  end.setHours(23, 59, 59, 999);
+  const [owningTeacher] = await db.select().from(teachersTable).where(eq(teachersTable.id, lessonType.teacherId));
+  if (owningTeacher?.isBanned) {
+    res.status(404).json({ error: "Lesson type not found" });
+    return;
+  }
+
+  // startDate/endDate already arrive as full day-boundary instants (the client
+  // computes them via startOfDay/endOfDay in its own timezone) — use them as-is.
+  // Re-deriving the end boundary with setHours(23,59,59,999) would apply the
+  // *server's* local wall-clock to an already-correct instant, shifting it by
+  // the server/client timezone offset.
+  const start = new Date(startDate);
+  const end = new Date(endDate);
 
   const teacherId = lessonType.teacherId;
   const [settings] = await db.select().from(siteSettingsTable).where(eq(siteSettingsTable.teacherId, teacherId));

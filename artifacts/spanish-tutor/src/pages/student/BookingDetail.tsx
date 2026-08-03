@@ -13,7 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { getGetStudentBookingQueryKey } from "@workspace/api-client-react";
+import {
+  getGetStudentBookingQueryKey,
+  getGetStudentDashboardQueryKey,
+  getListStudentBookingsQueryKey,
+} from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import MultiFilePicker from "@/components/homework/MultiFilePicker";
@@ -23,8 +27,9 @@ import { Link } from "wouter";
 
 export default function BookingDetail() {
   const [, params] = useRoute("/bookings/:id");
-  const id = parseInt(params?.id || "0", 10);
-  const { data: booking, isLoading, error, refetch } = useGetStudentBooking(id, { query: { enabled: !!id, queryKey: getGetStudentBookingQueryKey(id) } });
+  const rawId = parseInt(params?.id || "", 10);
+  const id = Number.isFinite(rawId) && rawId > 0 ? rawId : null;
+  const { data: booking, isLoading, error, refetch } = useGetStudentBooking(id ?? 0, { query: { enabled: !!id, queryKey: getGetStudentBookingQueryKey(id ?? 0) } });
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -39,6 +44,8 @@ export default function BookingDetail() {
 
   const [rating, setRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
+
+  if (!id) return <ErrorState error={{ status: 404 }} fullPage />;
 
   if (error) return <ErrorState error={error} onRetry={refetch} fullPage />;
 
@@ -68,6 +75,8 @@ export default function BookingDetail() {
       onSuccess: () => {
         toast({ title: "Booking cancelled" });
         qc.invalidateQueries({ queryKey: getGetStudentBookingQueryKey(id) });
+        qc.invalidateQueries({ queryKey: getGetStudentDashboardQueryKey() });
+        qc.invalidateQueries({ queryKey: getListStudentBookingsQueryKey() });
       }
     });
   };

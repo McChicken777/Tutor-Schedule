@@ -7,7 +7,10 @@ import {
   useCreateBooking,
   useGetStudentDashboard,
   getGetAvailableSlotsQueryKey,
+  getGetStudentDashboardQueryKey,
+  getListStudentBookingsQueryKey,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +21,7 @@ import PurchaseCreditsDialog from "@/components/PurchaseCreditsDialog";
 export default function BookLesson() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const qc = useQueryClient();
 
   const [step, setStep] = useState(1);
   const [selectedLessonType, setSelectedLessonType] = useState<number | null>(null);
@@ -69,6 +73,8 @@ export default function BookLesson() {
     createMutation.mutate({ data: { lessonTypeId: selectedLessonType, startTime: selectedSlot } }, {
       onSuccess: (data) => {
         toast({ title: "Lesson booked successfully!" });
+        qc.invalidateQueries({ queryKey: getGetStudentDashboardQueryKey() });
+        qc.invalidateQueries({ queryKey: getListStudentBookingsQueryKey() });
         setLocation(`/bookings/${data.id}`);
       },
     });
@@ -109,7 +115,7 @@ export default function BookLesson() {
                     key={lt.id}
                     role="button"
                     tabIndex={bookable ? 0 : -1}
-                    onClick={() => bookable && setSelectedLessonType(lt.id)}
+                    onClick={() => bookable && (setSelectedLessonType(lt.id), setSelectedSlot(null))}
                     className={`text-left p-6 rounded-3xl border-2 transition-all ${
                       !bookable
                         ? "border-border bg-accent/30 opacity-90"

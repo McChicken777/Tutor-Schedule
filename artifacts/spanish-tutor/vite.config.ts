@@ -38,9 +38,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: false,
       manifest: {
-        name: 'Loquu',
-        short_name: 'Loquu',
-        description: 'Loquu — online Spanish tutoring.',
+        name: 'LaCastia',
+        short_name: 'LaCastia',
+        description: 'LaCastia — online Spanish tutoring.',
         start_url: basePath,
         scope: basePath,
         display: 'standalone',

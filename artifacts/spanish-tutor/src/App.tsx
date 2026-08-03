@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { toast } from "@/hooks/use-toast";
 import { describeError } from "@/lib/errors";
 
@@ -98,7 +99,7 @@ const clerkAppearance = {
   options: {
     logoPlacement: "inside" as const,
     logoLinkUrl: basePath || "/",
-    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+    logoImageUrl: `${window.location.origin}${basePath}/logo.png`,
   },
   variables: {
     colorPrimary: "hsl(14, 60%, 54%)",
@@ -236,8 +237,15 @@ function StudentPortal({ children }: { children: React.ReactNode }) {
 }
 
 function RequireStudentNotBanned({ children }: { children: React.ReactNode }) {
+  const { data: teacher, isLoading: isTeacherLoading } = useGetTeacherMe();
   const { error } = useGetStudentDashboard();
 
+  if (isTeacherLoading) {
+    return <LoadingScreen />;
+  }
+  if (teacher) {
+    return <Redirect to={teacher.isAdmin ? "/admin" : "/teacher"} />;
+  }
   if (isBannedError(error)) {
     return <BannedScreen />;
   }
@@ -249,7 +257,7 @@ function RequireTeacherRow({ children }: { children: React.ReactNode }) {
   const { data: teacher, isLoading, error } = useGetTeacherMe();
 
   if (isLoading) {
-    return <div className="min-h-[100dvh] bg-background" />;
+    return <LoadingScreen />;
   }
   if (isBannedError(error)) {
     return <BannedScreen />;
@@ -258,7 +266,7 @@ function RequireTeacherRow({ children }: { children: React.ReactNode }) {
     if ((error as { status?: number } | null)?.status === 404) {
       return <Redirect to="/teacher/onboarding" />;
     }
-    return <div className="min-h-[100dvh] bg-background" />;
+    return <LoadingScreen />;
   }
 
   return <TeacherLayout>{children}</TeacherLayout>;
@@ -281,7 +289,7 @@ function RequireAdminRow({ children }: { children: React.ReactNode }) {
   const { data: teacher, isLoading, error } = useGetTeacherMe();
 
   if (isLoading) {
-    return <div className="min-h-[100dvh] bg-background" />;
+    return <LoadingScreen />;
   }
   if (isBannedError(error)) {
     return <BannedScreen />;
@@ -290,7 +298,7 @@ function RequireAdminRow({ children }: { children: React.ReactNode }) {
     if ((error as { status?: number } | null)?.status === 404) {
       return <Redirect to="/teacher/onboarding" />;
     }
-    return <div className="min-h-[100dvh] bg-background" />;
+    return <LoadingScreen />;
   }
   if (!teacher.isAdmin) {
     return <Redirect to="/teacher" />;

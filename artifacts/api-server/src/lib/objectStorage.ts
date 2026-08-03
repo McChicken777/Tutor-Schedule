@@ -25,6 +25,15 @@ export function buildKey(bookingId: number, context: UploadContext, fileName: st
   return `${context}/${bookingId}/${Date.now()}-${suffix}-${safeName}`;
 }
 
+// A homework-file "attach" call supplies a `key` produced by an earlier /uploads
+// call, but nothing stops a client from instead sending someone else's key
+// (e.g. from another booking) to have it linked into their own homework record.
+// buildKey encodes the booking and context it was issued for, so this checks
+// the supplied key actually belongs to the booking/context being attached to.
+export function isKeyForBookingContext(key: string, bookingId: number, context: UploadContext): boolean {
+  return key.startsWith(`${context}/${bookingId}/`);
+}
+
 export async function putObject(key: string, buffer: Buffer): Promise<void> {
   const { ok, error } = await client.uploadFromBytes(key, buffer);
   if (!ok) {

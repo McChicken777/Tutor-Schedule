@@ -40,8 +40,46 @@ import {
 } from "../lib/calendar";
 import { mapHomeworkFields, mapHomeworkRow } from "../lib/homeworkMapper";
 import { mapReportRow } from "../lib/reportMapper";
+import { isKeyForBookingContext } from "../lib/objectStorage";
 
 const router: IRouter = Router();
+
+// Booking creation/reschedule races (two requests both passing a slot-taken or
+// credit-sufficiency check before either write lands) are real without some
+// form of serialization — there's no unique constraint that could catch a
+// double-booked slot or a FIFO credit deduction after the fact. Postgres
+// advisory locks (scoped per-teacher / per-student via a namespace int so the
+// two id spaces can't collide) serialize just the requests that could
+// actually conflict, held for the transaction's lifetime and auto-released on
+// commit/rollback. Lock order is always teacher-then-student to avoid a
+// deadlock against another request locking the same pair.
+const ADVISORY_LOCK_NAMESPACE = { teacher: 1, student: 2 } as const;
+
+async function withTeacherLock<T>(teacherId: number, fn: (tx: Parameters<Parameters<typeof db.transaction>[0]>[0]) => Promise<T>): Promise<T> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${ADVISORY_LOCK_NAMESPACE.teacher}, ${teacherId})`);
+    return fn(tx);
+  });
+}
+
+async function withStudentLock<T>(studentId: number, fn: (tx: Parameters<Parameters<typeof db.transaction>[0]>[0]) => Promise<T>): Promise<T> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${ADVISORY_LOCK_NAMESPACE.student}, ${studentId})`);
+    return fn(tx);
+  });
+}
+
+async function withTeacherAndStudentLock<T>(
+  teacherId: number,
+  studentId: number,
+  fn: (tx: Parameters<Parameters<typeof db.transaction>[0]>[0]) => Promise<T>,
+): Promise<T> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${ADVISORY_LOCK_NAMESPACE.teacher}, ${teacherId})`);
+    await tx.execute(sql`select pg_advisory_xact_lock(${ADVISORY_LOCK_NAMESPACE.student}, ${studentId})`);
+    return fn(tx);
+  });
+}
 
 async function getHomeworkFiles(homeworkId: number) {
   return db
@@ -181,6 +219,7 @@ async function getTrialLessonType(teacherId: number | null) {
 // first) or be bypassed entirely, so this is the real guarantee against
 // double-booking, not the availability list.
 async function isTimeSlotTaken(
+  dbClient: Pick<typeof db, "select">,
   teacherId: number,
   start: Date,
   end: Date,
@@ -196,7 +235,7 @@ async function isTimeSlotTaken(
     conditions.push(ne(bookingsTable.id, options.excludeBookingId));
   }
 
-  const [conflictingBooking] = await db
+  const [conflictingBooking] = await dbClient
     .select({ id: bookingsTable.id })
     .from(bookingsTable)
     .where(and(...conditions));
@@ -213,7 +252,7 @@ async function isTimeSlotTaken(
   if (relevantBusy.some((busy) => start < busy.end && end > busy.start)) return true;
 
   // In-app date-specific blocks (teacher time off) also make a slot unbookable.
-  const [override] = await db
+  const [override] = await dbClient
     .select({ id: availabilityOverridesTable.id })
     .from(availabilityOverridesTable)
     .where(
@@ -420,97 +459,118 @@ router.post("/student/bookings", requireAuth, async (req, res): Promise<void> =>
     return;
   }
 
-  // One teacher per student: adopt this teacher on the student's first-ever
-  // booking. No UI offers a teacher choice yet, so a mismatch shouldn't be
-  // reachable today — this is a defensive guard against that invariant breaking.
   const teacherId = lessonType.teacherId;
-  if (user.teacherId == null) {
-    await db.update(usersTable).set({ teacherId }).where(eq(usersTable.id, user.id));
-    user.teacherId = teacherId;
-  } else if (user.teacherId !== teacherId) {
+  if (user.teacherId != null && user.teacherId !== teacherId) {
     res.status(400).json({ error: "This lesson type belongs to a different teacher" });
     return;
   }
 
-  // The trial lesson type needs no credits, but only once ever, per student
-  let packages: (typeof lessonPackagesTable.$inferSelect)[] = [];
-  if (lessonType.isTrial) {
-    if (!isTestStudent(user.email) && (await hasUsedTrial(user.id))) {
-      res.status(400).json({ error: "You've already used your free trial lesson" });
-      return;
-    }
-  } else {
-    packages = await db
-      .select()
-      .from(lessonPackagesTable)
-      .where(eq(lessonPackagesTable.studentId, user.id));
-
-    const totalRemaining = packages.reduce(
-      (sum, p) => sum + (p.totalCredits - p.usedCredits),
-      0,
-    );
-
-    if (totalRemaining < lessonType.creditCost) {
-      res.status(400).json({ error: "Not enough credits for this lesson type" });
-      return;
-    }
+  const [owningTeacher] = await db.select().from(teachersTable).where(eq(teachersTable.id, teacherId));
+  if (owningTeacher?.isBanned) {
+    res.status(404).json({ error: "Lesson type not found" });
+    return;
   }
 
   const start = new Date(startTime as unknown as string);
   const end = new Date(start.getTime() + lessonType.durationMinutes * 60 * 1000);
 
-  if (await isTimeSlotTaken(teacherId, start, end)) {
-    res.status(409).json({ error: "This time slot is no longer available. Please choose another." });
+  // Everything that reads-then-writes a shared invariant (slot availability,
+  // credit balance) happens inside one locked transaction — see
+  // withTeacherAndStudentLock — so two concurrent requests for the same
+  // teacher/student can't both pass a check that only one of them should.
+  const result = await withTeacherAndStudentLock(teacherId, user.id, async (
+    tx,
+  ): Promise<{ error: { status: number; message: string } } | { booking: typeof bookingsTable.$inferSelect }> => {
+    // One teacher per student: adopt this teacher on the student's first-ever
+    // booking. No UI offers a teacher choice yet, so a mismatch shouldn't be
+    // reachable today — this is a defensive guard against that invariant breaking.
+    if (user.teacherId == null) {
+      await tx.update(usersTable).set({ teacherId }).where(eq(usersTable.id, user.id));
+      user.teacherId = teacherId;
+    }
+
+    // The trial lesson type needs no credits, but only once ever, per student
+    let packages: (typeof lessonPackagesTable.$inferSelect)[] = [];
+    if (lessonType.isTrial) {
+      if (!isTestStudent(user.email) && (await hasUsedTrial(user.id))) {
+        return { error: { status: 400, message: "You've already used your free trial lesson" } } as const;
+      }
+    } else {
+      packages = await tx
+        .select()
+        .from(lessonPackagesTable)
+        .where(eq(lessonPackagesTable.studentId, user.id));
+
+      const totalRemaining = packages.reduce(
+        (sum, p) => sum + (p.totalCredits - p.usedCredits),
+        0,
+      );
+
+      if (totalRemaining < lessonType.creditCost) {
+        return { error: { status: 400, message: "Not enough credits for this lesson type" } } as const;
+      }
+    }
+
+    if (await isTimeSlotTaken(tx, teacherId, start, end)) {
+      return { error: { status: 409, message: "This time slot is no longer available. Please choose another." } } as const;
+    }
+
+    // Create Google Meet event
+    const calendarResult = await createCalendarEventWithMeet(
+      teacherId,
+      `Spanish Lesson with ${user.displayName}`,
+      start,
+      end,
+      user.email,
+      `Spanish lesson - ${lessonType.name} (${lessonType.durationMinutes} min)`,
+    );
+
+    // Create booking
+    const [booking] = await tx
+      .insert(bookingsTable)
+      .values({
+        studentId: user.id,
+        teacherId,
+        lessonTypeId,
+        startTime: start,
+        endTime: end,
+        status: "upcoming",
+        meetLink: calendarResult?.meetLink ?? null,
+        calendarEventId: calendarResult?.eventId ?? null,
+      })
+      .returning();
+
+    if (!lessonType.isTrial) {
+      // Deduct creditCost credits FIFO across package rows, oldest first
+      let remainingToDeduct = lessonType.creditCost;
+      const sortedPackages = [...packages].sort(
+        (a, b) => a.purchasedAt.getTime() - b.purchasedAt.getTime(),
+      );
+      for (const pkg of sortedPackages) {
+        if (remainingToDeduct <= 0) break;
+        const available = pkg.totalCredits - pkg.usedCredits;
+        if (available <= 0) continue;
+        const deduction = Math.min(available, remainingToDeduct);
+        await tx
+          .update(lessonPackagesTable)
+          .set({ usedCredits: pkg.usedCredits + deduction })
+          .where(eq(lessonPackagesTable.id, pkg.id));
+        remainingToDeduct -= deduction;
+      }
+    }
+
+    // Create empty homework record
+    await tx.insert(homeworkTable).values({ bookingId: booking.id });
+
+    return { booking } as const;
+  });
+
+  if ("error" in result) {
+    res.status(result.error.status).json({ error: result.error.message });
     return;
   }
 
-  // Create Google Meet event
-  const calendarResult = await createCalendarEventWithMeet(
-    teacherId,
-    `Spanish Lesson with ${user.displayName}`,
-    start,
-    end,
-    user.email,
-    `Spanish lesson - ${lessonType.name} (${lessonType.durationMinutes} min)`,
-  );
-
-  // Create booking
-  const [booking] = await db
-    .insert(bookingsTable)
-    .values({
-      studentId: user.id,
-      teacherId,
-      lessonTypeId,
-      startTime: start,
-      endTime: end,
-      status: "upcoming",
-      meetLink: calendarResult?.meetLink ?? null,
-      calendarEventId: calendarResult?.eventId ?? null,
-    })
-    .returning();
-
-  if (!lessonType.isTrial) {
-    // Deduct creditCost credits FIFO across package rows, oldest first
-    let remainingToDeduct = lessonType.creditCost;
-    const sortedPackages = [...packages].sort(
-      (a, b) => a.purchasedAt.getTime() - b.purchasedAt.getTime(),
-    );
-    for (const pkg of sortedPackages) {
-      if (remainingToDeduct <= 0) break;
-      const available = pkg.totalCredits - pkg.usedCredits;
-      if (available <= 0) continue;
-      const deduction = Math.min(available, remainingToDeduct);
-      await db
-        .update(lessonPackagesTable)
-        .set({ usedCredits: pkg.usedCredits + deduction })
-        .where(eq(lessonPackagesTable.id, pkg.id));
-      remainingToDeduct -= deduction;
-    }
-  }
-
-  // Create empty homework record
-  await db.insert(homeworkTable).values({ bookingId: booking.id });
-
+  const { booking } = result;
   res.status(201).json({
     id: booking.id,
     lessonTypeId: booking.lessonTypeId,
@@ -582,63 +642,76 @@ router.patch("/student/bookings/:id/cancel", requireAuth, async (req, res): Prom
 
   const parsed = CancelBookingBody.safeParse(req.body);
 
-  const [row] = await db
-    .select({ booking: bookingsTable, lessonType: lessonTypesTable })
-    .from(bookingsTable)
-    .innerJoin(lessonTypesTable, eq(bookingsTable.lessonTypeId, lessonTypesTable.id))
-    .where(and(eq(bookingsTable.id, id), eq(bookingsTable.studentId, user.id)));
+  const result = await withStudentLock(user.id, async (
+    tx,
+  ): Promise<
+    | { error: { status: number; message: string } }
+    | { updated: typeof bookingsTable.$inferSelect; lessonTypeName: string }
+  > => {
+    const [row] = await tx
+      .select({ booking: bookingsTable, lessonType: lessonTypesTable })
+      .from(bookingsTable)
+      .innerJoin(lessonTypesTable, eq(bookingsTable.lessonTypeId, lessonTypesTable.id))
+      .where(and(eq(bookingsTable.id, id), eq(bookingsTable.studentId, user.id)));
 
-  if (!row) {
-    res.status(404).json({ error: "Booking not found" });
-    return;
-  }
-
-  if (row.booking.status !== "upcoming") {
-    res.status(400).json({ error: "Can only cancel upcoming bookings" });
-    return;
-  }
-
-  // Delete calendar event
-  if (row.booking.calendarEventId) {
-    await deleteCalendarEvent(row.booking.teacherId, row.booking.calendarEventId);
-  }
-
-  const [updated] = await db
-    .update(bookingsTable)
-    .set({
-      status: "cancelled",
-      cancellationReason: parsed.success ? (parsed.data.reason ?? null) : null,
-    })
-    .where(eq(bookingsTable.id, id))
-    .returning();
-
-  // Refund credit — but not if cancelling less than 24 hours before the lesson,
-  // and never for a trial booking, which never consumed a credit to begin with.
-  const hoursUntilLesson = (row.booking.startTime.getTime() - Date.now()) / (1000 * 60 * 60);
-  if (!row.lessonType.isTrial && hoursUntilLesson >= 24) {
-    const packages = await db
-      .select()
-      .from(lessonPackagesTable)
-      .where(eq(lessonPackagesTable.studentId, user.id))
-      .orderBy(desc(lessonPackagesTable.purchasedAt));
-
-    let remainingToRefund = row.lessonType.creditCost;
-    for (const pkg of packages) {
-      if (remainingToRefund <= 0) break;
-      if (pkg.usedCredits <= 0) continue;
-      const refund = Math.min(pkg.usedCredits, remainingToRefund);
-      await db
-        .update(lessonPackagesTable)
-        .set({ usedCredits: pkg.usedCredits - refund })
-        .where(eq(lessonPackagesTable.id, pkg.id));
-      remainingToRefund -= refund;
+    if (!row) {
+      return { error: { status: 404, message: "Booking not found" } } as const;
     }
+
+    if (row.booking.status !== "upcoming") {
+      return { error: { status: 400, message: "Can only cancel upcoming bookings" } } as const;
+    }
+
+    // Delete calendar event
+    if (row.booking.calendarEventId) {
+      await deleteCalendarEvent(row.booking.teacherId, row.booking.calendarEventId);
+    }
+
+    const [updated] = await tx
+      .update(bookingsTable)
+      .set({
+        status: "cancelled",
+        cancellationReason: parsed.success ? (parsed.data.reason ?? null) : null,
+      })
+      .where(eq(bookingsTable.id, id))
+      .returning();
+
+    // Refund credit — but not if cancelling less than 24 hours before the lesson,
+    // and never for a trial booking, which never consumed a credit to begin with.
+    const hoursUntilLesson = (row.booking.startTime.getTime() - Date.now()) / (1000 * 60 * 60);
+    if (!row.lessonType.isTrial && hoursUntilLesson >= 24) {
+      const packages = await tx
+        .select()
+        .from(lessonPackagesTable)
+        .where(eq(lessonPackagesTable.studentId, user.id))
+        .orderBy(desc(lessonPackagesTable.purchasedAt));
+
+      let remainingToRefund = row.lessonType.creditCost;
+      for (const pkg of packages) {
+        if (remainingToRefund <= 0) break;
+        if (pkg.usedCredits <= 0) continue;
+        const refund = Math.min(pkg.usedCredits, remainingToRefund);
+        await tx
+          .update(lessonPackagesTable)
+          .set({ usedCredits: pkg.usedCredits - refund })
+          .where(eq(lessonPackagesTable.id, pkg.id));
+        remainingToRefund -= refund;
+      }
+    }
+
+    return { updated, lessonTypeName: row.lessonType.name } as const;
+  });
+
+  if ("error" in result) {
+    res.status(result.error.status).json({ error: result.error.message });
+    return;
   }
 
+  const { updated, lessonTypeName } = result;
   res.json({
     id: updated.id,
     lessonTypeId: updated.lessonTypeId,
-    lessonTypeName: row.lessonType.name,
+    lessonTypeName,
     startTime: updated.startTime,
     endTime: updated.endTime,
     status: updated.status,
@@ -678,39 +751,50 @@ router.patch("/student/bookings/:id/reschedule", requireAuth, async (req, res): 
   const newStart = new Date(parsed.data.newStartTime as unknown as string);
   const newEnd = new Date(newStart.getTime() + row.lessonType.durationMinutes * 60 * 1000);
 
-  const taken = await isTimeSlotTaken(row.booking.teacherId, newStart, newEnd, {
-    excludeBookingId: id,
-    excludeCalendarRange: { start: row.booking.startTime, end: row.booking.endTime },
+  const result = await withTeacherLock(row.booking.teacherId, async (
+    tx,
+  ): Promise<{ error: { status: number; message: string } } | { updated: typeof bookingsTable.$inferSelect }> => {
+    const taken = await isTimeSlotTaken(tx, row.booking.teacherId, newStart, newEnd, {
+      excludeBookingId: id,
+      excludeCalendarRange: { start: row.booking.startTime, end: row.booking.endTime },
+    });
+    if (taken) {
+      return { error: { status: 409, message: "This time slot is no longer available. Please choose another." } } as const;
+    }
+
+    // Delete old calendar event (only now that we know the new time is free)
+    if (row.booking.calendarEventId) {
+      await deleteCalendarEvent(row.booking.teacherId, row.booking.calendarEventId);
+    }
+
+    const calendarResult = await createCalendarEventWithMeet(
+      row.booking.teacherId,
+      `Spanish Lesson with ${user.displayName}`,
+      newStart,
+      newEnd,
+      user.email,
+    );
+
+    const [updated] = await tx
+      .update(bookingsTable)
+      .set({
+        startTime: newStart,
+        endTime: newEnd,
+        meetLink: calendarResult?.meetLink ?? row.booking.meetLink,
+        calendarEventId: calendarResult?.eventId ?? null,
+      })
+      .where(eq(bookingsTable.id, id))
+      .returning();
+
+    return { updated } as const;
   });
-  if (taken) {
-    res.status(409).json({ error: "This time slot is no longer available. Please choose another." });
+
+  if ("error" in result) {
+    res.status(result.error.status).json({ error: result.error.message });
     return;
   }
 
-  // Delete old calendar event (only now that we know the new time is free)
-  if (row.booking.calendarEventId) {
-    await deleteCalendarEvent(row.booking.teacherId, row.booking.calendarEventId);
-  }
-
-  const calendarResult = await createCalendarEventWithMeet(
-    row.booking.teacherId,
-    `Spanish Lesson with ${user.displayName}`,
-    newStart,
-    newEnd,
-    user.email,
-  );
-
-  const [updated] = await db
-    .update(bookingsTable)
-    .set({
-      startTime: newStart,
-      endTime: newEnd,
-      meetLink: calendarResult?.meetLink ?? row.booking.meetLink,
-      calendarEventId: calendarResult?.eventId ?? null,
-    })
-    .where(eq(bookingsTable.id, id))
-    .returning();
-
+  const { updated } = result;
   res.json({
     id: updated.id,
     lessonTypeId: updated.lessonTypeId,
@@ -771,6 +855,14 @@ router.post("/student/bookings/:id/homework", requireAuth, async (req, res): Pro
     return;
   }
 
+  const files = parsed.data.files ?? [];
+  for (const file of files) {
+    if (!isKeyForBookingContext(file.key, id, "homework-submission")) {
+      res.status(400).json({ error: "Invalid file key for this booking" });
+      return;
+    }
+  }
+
   const [existing] = await db.select().from(homeworkTable).where(eq(homeworkTable.bookingId, id));
 
   let hw;
@@ -798,7 +890,6 @@ router.post("/student/bookings/:id/homework", requireAuth, async (req, res): Pro
       .returning();
   }
 
-  const files = parsed.data.files ?? [];
   if (files.length > 0) {
     const existingSubmissionCount = (await getHomeworkFiles(hw.id)).filter((f) => f.slot === "submission").length;
 

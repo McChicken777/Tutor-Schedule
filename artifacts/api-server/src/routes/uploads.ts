@@ -80,6 +80,10 @@ router.post("/uploads", pickUpload, async (req, res): Promise<void> => {
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
+    if (teacher.isBanned) {
+      res.status(403).json({ error: "Account suspended", code: "BANNED" });
+      return;
+    }
   } else {
     const auth = getAuth(req);
     const clerkUserId = (auth?.sessionClaims?.userId as string | undefined) || auth?.userId;
@@ -93,6 +97,10 @@ router.post("/uploads", pickUpload, async (req, res): Promise<void> => {
       .where(and(eq(usersTable.clerkUserId, clerkUserId), eq(usersTable.id, booking.studentId)));
     if (!owner) {
       res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    if (owner.isBanned) {
+      res.status(403).json({ error: "Account suspended", code: "BANNED" });
       return;
     }
   }

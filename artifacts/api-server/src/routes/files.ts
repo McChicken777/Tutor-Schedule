@@ -42,13 +42,22 @@ router.get("/files/homework-file/:fileId", async (req, res): Promise<void> => {
   const [teacher] = await db.select().from(teachersTable).where(eq(teachersTable.clerkUserId, clerkUserId));
   const isOwningTeacher = !!teacher && (row.booking.teacherId === teacher.id || teacher.isAdmin);
 
-  if (!isOwningTeacher) {
+  if (isOwningTeacher) {
+    if (teacher.isBanned) {
+      res.status(403).json({ error: "Account suspended", code: "BANNED" });
+      return;
+    }
+  } else {
     const [owner] = await db
       .select()
       .from(usersTable)
       .where(and(eq(usersTable.clerkUserId, clerkUserId), eq(usersTable.id, row.booking.studentId)));
     if (!owner) {
       res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    if (owner.isBanned) {
+      res.status(403).json({ error: "Account suspended", code: "BANNED" });
       return;
     }
   }

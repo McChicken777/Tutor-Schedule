@@ -3,19 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Loquu</title>
-    <meta name="description" content="Loquu — online Spanish tutoring." />
+    <title>LaCastia</title>
+    <meta name="description" content="LaCastia — online Spanish tutoring." />
     <meta name="robots" content="index, follow" />
-    <meta property="og:title" content="Loquu" />
-    <meta property="og:description" content="Loquu — online Spanish tutoring." />
+    <meta property="og:title" content="LaCastia" />
+    <meta property="og:description" content="LaCastia — online Spanish tutoring." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Loquu" />
-    <meta name="twitter:description" content="Loquu — online Spanish tutoring." />
+    <meta name="twitter:title" content="LaCastia" />
+    <meta name="twitter:description" content="LaCastia — online Spanish tutoring." />
     <meta name="theme-color" content="#D05D43" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Loquu" />
+    <meta name="apple-mobile-web-app-title" content="LaCastia" />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
@@ -28,28 +28,48 @@
         inset: 0;
         z-index: 9999;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
+        gap: 20px;
         background: #FDFBF7;
       }
       #app-splash img {
-        width: 72px;
-        height: 72px;
-        border-radius: 16px;
-        animation: app-splash-pulse 1.4s ease-in-out infinite;
+        width: 220px;
+        max-width: 55vw;
+        height: auto;
       }
-      @keyframes app-splash-pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.55; }
+      #app-splash .app-splash-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #234A36;
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
+        font-weight: 500;
       }
-      @media (prefers-color-scheme: dark) {
-        #app-splash { background: #241C18; }
+      #app-splash .app-splash-spinner {
+        width: 18px;
+        height: 18px;
+        border: 2.5px solid rgba(35, 74, 54, 0.2);
+        border-top-color: #234A36;
+        border-radius: 50%;
+        animation: app-splash-spin 0.7s linear infinite;
+      }
+      @keyframes app-splash-spin {
+        to { transform: rotate(360deg); }
       }
     </style>
   </head>
   <body>
     <div id="root"></div>
-    <div id="app-splash"><img src="/logo.svg" alt="" /></div>
+    <div id="app-splash">
+      <img src="/logo-wordmark.png" alt="LaCastia" />
+      <div class="app-splash-status">
+        <span class="app-splash-spinner" role="status" aria-label="Loading"></span>
+        <span>Loading</span>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
