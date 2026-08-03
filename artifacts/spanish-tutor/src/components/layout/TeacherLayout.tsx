@@ -33,8 +33,8 @@ export default function TeacherLayout({ children }: { children: ReactNode }) {
       <aside className="w-full md:w-64 border-r border-border bg-card flex-shrink-0 flex flex-col md:sticky md:top-0 md:h-[100dvh] md:self-start">
         <div className="p-6">
           <Link href="/teacher" className="flex items-center gap-3">
-            <img src={`${basePath}/logo.svg`} alt="Logo" className="w-8 h-8 rounded" />
-            <span className="font-serif text-xl font-bold text-foreground">Loquu</span>
+            <img src={`${basePath}/logo.png`} alt="Logo" className="w-8 h-8" />
+            <span className="font-serif text-xl font-bold text-foreground">LaCastia</span>
           </Link>
         </div>
 

@@ -74,8 +74,8 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
       {/* Mobile top bar */}
       <header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 h-14 border-b border-border bg-card">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <img src={`${basePath}/logo.svg`} alt="Logo" className="w-7 h-7 rounded" />
-          <span className="font-serif text-lg font-bold text-foreground">Loquu</span>
+          <img src={`${basePath}/logo.png`} alt="Logo" className="w-7 h-7" />
+          <span className="font-serif text-lg font-bold text-foreground">LaCastia</span>
         </Link>
         <DropdownMenu>
           <DropdownMenuTrigger className="rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-card">
@@ -117,8 +117,8 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
       <aside className="hidden md:flex w-full md:w-64 border-r border-border bg-card flex-shrink-0 flex-col md:sticky md:top-0 md:h-[100dvh] md:self-start">
         <div className="p-6">
           <Link href="/dashboard" className="flex items-center gap-3">
-            <img src={`${basePath}/logo.svg`} alt="Logo" className="w-8 h-8 rounded" />
-            <span className="font-serif text-xl font-bold text-foreground">Loquu</span>
+            <img src={`${basePath}/logo.png`} alt="Logo" className="w-8 h-8" />
+            <span className="font-serif text-xl font-bold text-foreground">LaCastia</span>
           </Link>
         </div>
 

@@ -1,8 +1,8 @@
 import { defineConfig, minimal2023Preset } from '@vite-pwa/assets-generator/config';
 
-// Glyph strokes in logo.svg span ~85% of the canvas — too tight for a safe
-// circular mask, so the maskable variant gets extra padding + a solid brand
-// background instead of transparency.
+// logo.png has transparent corners around the badge (not edge-to-edge), so
+// the maskable variant needs extra padding + a solid brand background
+// instead of transparency to survive the OS's circular safe-zone crop.
 export default defineConfig({
   headLinkOptions: {
     preset: '2023',
@@ -11,9 +11,9 @@ export default defineConfig({
     ...minimal2023Preset,
     maskable: {
       sizes: [512],
-      padding: 0.3,
-      resizeOptions: { fit: 'contain', background: '#D05D43' },
+      padding: 0.34,
+      resizeOptions: { fit: 'contain', background: '#173F30' },
     },
   },
-  images: ['public/logo.svg'],
+  images: ['public/logo.png'],
 });

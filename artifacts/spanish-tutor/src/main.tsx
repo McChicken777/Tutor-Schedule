@@ -19,7 +19,7 @@ const updateSW = registerSW({
   onNeedRefresh() {
     toast({
       title: 'Update available',
-      description: 'A new version of Loquu is ready.',
+      description: 'A new version of LaCastia is ready.',
       action: (
         <ToastAction altText="Reload" onClick={() => updateSW(true)}>
           Reload

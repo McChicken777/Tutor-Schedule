@@ -4,6 +4,7 @@ import { useGetTeacherMe, useRegisterTeacher, getGetTeacherMeQueryKey } from "@w
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { describeError } from "@/lib/errors";
+import { LoadingScreen } from "@/components/LoadingScreen";
 
 export default function TeacherOnboardingPage() {
   const [, setLocation] = useLocation();
@@ -27,7 +28,7 @@ export default function TeacherOnboardingPage() {
   }
 
   if (isLoading || teacher) {
-    return <div className="min-h-[100dvh] flex items-center justify-center bg-background" />;
+    return <LoadingScreen />;
   }
 
   if (error && error.status !== 404) {
@@ -42,7 +43,7 @@ export default function TeacherOnboardingPage() {
     <div className="min-h-[100dvh] flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md bg-card p-8 rounded-2xl shadow-lg border border-border">
         <div className="flex flex-col items-center mb-8">
-          <img src={`${basePath}/logo.svg`} alt="Logo" className="w-12 h-12 rounded mb-4" />
+          <img src={`${basePath}/logo.png`} alt="Logo" className="w-12 h-12 mb-4" />
           <h1 className="text-2xl font-serif font-bold text-foreground">Set up your teacher account</h1>
           <p className="text-sm text-muted-foreground text-center mt-2">
             This Clerk account isn't linked to a teacher profile yet.
