@@ -18,3 +18,8 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.production]
+GOOGLE_REDIRECT_URI = "https://lacastia.com/api/admin/calendar/callback"
