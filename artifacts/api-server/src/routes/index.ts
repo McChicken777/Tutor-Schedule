@@ -8,6 +8,7 @@ import adminRouter from "./admin";
 import uploadsRouter from "./uploads";
 import filesRouter from "./files";
 import internalRouter from "./internal";
+import pushRouter from "./push";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(teacherRouter);
 router.use(adminRouter);
 router.use(uploadsRouter);
 router.use(filesRouter);
+router.use(pushRouter);
 
 export default router;

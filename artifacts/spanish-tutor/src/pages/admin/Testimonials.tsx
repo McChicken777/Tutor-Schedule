@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListAdminTestimonialsQueryKey, getListTestimonialsQueryKey } from "@workspace/api-client-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Star, Trash2 } from "lucide-react";
+import { Star, Trash2, Pencil } from "lucide-react";
 
 export default function AdminTestimonials() {
   const { data: testimonials, isLoading, error, refetch } = useListAdminTestimonials();
@@ -22,6 +22,8 @@ export default function AdminTestimonials() {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newTestimonial, setNewTestimonial] = useState({ studentName: "", text: "", rating: 5 });
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ studentName: "", text: "", rating: 5 });
 
   const handleToggleVisible = (id: number, isVisible: boolean) => {
     updateMutation.mutate({ id, data: { isVisible } }, {
@@ -60,6 +62,24 @@ export default function AdminTestimonials() {
     });
   };
 
+  const openEdit = (t: { id: number; studentName: string; text: string; rating: number }) => {
+    setEditForm({ studentName: t.studentName, text: t.text, rating: t.rating });
+    setEditingId(t.id);
+  };
+
+  const handleEditSave = () => {
+    if (editingId == null) return;
+    updateMutation.mutate({ id: editingId, data: editForm }, {
+      onSuccess: () => {
+        toast({ title: "Testimonial updated" });
+        qc.invalidateQueries({ queryKey: getListAdminTestimonialsQueryKey() });
+        qc.invalidateQueries({ queryKey: getListTestimonialsQueryKey() });
+        setEditingId(null);
+      },
+      onError: () => toast({ title: "Couldn't save changes", variant: "destructive" }),
+    });
+  };
+
   return (
     <div className="p-6 md:p-10 bg-background min-h-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
@@ -91,6 +111,29 @@ export default function AdminTestimonials() {
         </Dialog>
       </div>
 
+      <Dialog open={editingId != null} onOpenChange={(open) => { if (!open) setEditingId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Testimonial</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Student Name</label>
+              <Input value={editForm.studentName} onChange={e => setEditForm({...editForm, studentName: e.target.value})} />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Rating (1-5)</label>
+              <Input type="number" min={1} max={5} value={editForm.rating} onChange={e => setEditForm({...editForm, rating: Number(e.target.value)})} />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Review Text</label>
+              <Textarea value={editForm.text} onChange={e => setEditForm({...editForm, text: e.target.value})} className="h-32" />
+            </div>
+            <Button onClick={handleEditSave} disabled={updateMutation.isPending || !editForm.studentName || !editForm.text} className="w-full">Save Changes</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {isLoading ? (
         <div className="grid md:grid-cols-2 gap-6">
           <Skeleton className="h-48 rounded-2xl" />
@@ -104,6 +147,9 @@ export default function AdminTestimonials() {
             <div key={t.id} className={`bg-card border border-border p-6 rounded-3xl transition relative group ${!t.isVisible ? "opacity-60" : ""}`}>
               <div className="absolute top-4 right-4 flex items-center gap-3">
                 <Switch checked={t.isVisible} onCheckedChange={(v) => handleToggleVisible(t.id, v)} />
+                <button onClick={() => openEdit(t)} className="text-muted-foreground hover:text-foreground transition opacity-0 group-hover:opacity-100">
+                  <Pencil className="w-4 h-4" />
+                </button>
                 <button onClick={() => handleDelete(t.id)} className="text-muted-foreground hover:text-destructive transition opacity-0 group-hover:opacity-100">
                   <Trash2 className="w-4 h-4" />
                 </button>

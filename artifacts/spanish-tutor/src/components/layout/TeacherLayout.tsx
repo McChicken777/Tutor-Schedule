@@ -4,6 +4,7 @@ import { useClerk } from "@clerk/react";
 import { LogOut, Users, BookOpen, LayoutDashboard, Calendar, CalendarOff, FileText, MessageCircle, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PingDot from "@/components/ui/ping-dot";
+import PushNotificationPrompt from "@/components/PushNotificationPrompt";
 import { useGetTeacherMe, useGetTeacherDashboard, useListTeacherHomework, useListTeacherMessageThreads } from "@workspace/api-client-react";
 
 export default function TeacherLayout({ children }: { children: ReactNode }) {
@@ -18,10 +19,10 @@ export default function TeacherLayout({ children }: { children: ReactNode }) {
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   const navItems = [
+    { label: "Dashboard", href: "/teacher", icon: LayoutDashboard },
     { label: "Bookings", href: "/teacher/bookings", icon: Calendar },
     { label: "Messages", href: "/teacher/messages", icon: MessageCircle },
     { label: "Homework", href: "/teacher/homework", icon: FileText },
-    { label: "Dashboard", href: "/teacher", icon: LayoutDashboard },
     { label: "Students", href: "/teacher/students", icon: Users },
     { label: "Availability", href: "/teacher/availability", icon: CalendarOff },
     { label: "Lesson Types", href: "/teacher/lesson-types", icon: BookOpen },
@@ -92,6 +93,7 @@ export default function TeacherLayout({ children }: { children: ReactNode }) {
       <main className="flex-1 flex flex-col max-w-full overflow-hidden">
         {children}
       </main>
+      <PushNotificationPrompt />
     </div>
   );
 }

@@ -16,6 +16,8 @@ _Replace the heading above with the project's name, and this line with one sente
   - `CLERK_PUBLISHABLE_KEY` / `VITE_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` — student auth (Clerk)
   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` — Google Calendar OAuth (tutor's calendar sync + Meet links). Client ID/secret come from a Google Cloud OAuth client with the Calendar API enabled; redirect URI must be `<host>/api/admin/calendar/callback` and match what's registered in Google Cloud Console exactly.
   - `TEST_STUDENT_EMAIL` (optional) — a student account matching this email always sees `trialAvailable: true` and `hasSeenTour: false`, regardless of real booking/tour history. For repeatedly testing the trial flow and onboarding tour without touching real data.
+  - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` — web push notifications (chat messages, homework reminders, upcoming-class reminders). Keypair is generated once via `web-push.generateVAPIDKeys()`, not tied to any external account. `VAPID_SUBJECT` is a `mailto:` contact address. `VAPID_PUBLIC_KEY` must also be set frontend-side as `VITE_VAPID_PUBLIC_KEY` (same value). If unset, push sends are silently skipped.
+  - `INTERNAL_CRON_SECRET` — shared secret for the `/internal/*` cron-sweep endpoints (homework reminders/cleanup, class reminders), checked via the `X-Internal-Secret` header.
 
 ## Stack
 

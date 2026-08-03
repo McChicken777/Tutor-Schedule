@@ -81,7 +81,7 @@ export default function StudentDashboard() {
               <Gift className="w-5 h-5" />
             </div>
             <div>
-              <p className="font-bold text-foreground">You have a free trial lesson waiting</p>
+              <p className="font-bold text-foreground">You have a free first lesson waiting</p>
               <p className="text-sm text-muted-foreground">
                 {trialLessonType!.durationMinutes} minutes, on us — no credits needed.
               </p>

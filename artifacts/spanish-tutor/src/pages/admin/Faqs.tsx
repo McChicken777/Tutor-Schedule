@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListAdminFaqsQueryKey, getListFaqsQueryKey } from "@workspace/api-client-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 
 export default function AdminFaqs() {
   const { data: faqs, isLoading, error, refetch } = useListAdminFaqs();
@@ -22,6 +22,8 @@ export default function AdminFaqs() {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newFaq, setNewFaq] = useState({ question: "", answer: "", displayOrder: 0 });
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ question: "", answer: "", displayOrder: 0 });
 
   const handleToggleVisible = (id: number, isVisible: boolean) => {
     updateMutation.mutate({ id, data: { isVisible } }, {
@@ -60,6 +62,24 @@ export default function AdminFaqs() {
     });
   };
 
+  const openEdit = (faq: { id: number; question: string; answer: string; displayOrder: number }) => {
+    setEditForm({ question: faq.question, answer: faq.answer, displayOrder: faq.displayOrder });
+    setEditingId(faq.id);
+  };
+
+  const handleEditSave = () => {
+    if (editingId == null) return;
+    updateMutation.mutate({ id: editingId, data: editForm }, {
+      onSuccess: () => {
+        toast({ title: "FAQ updated" });
+        qc.invalidateQueries({ queryKey: getListAdminFaqsQueryKey() });
+        qc.invalidateQueries({ queryKey: getListFaqsQueryKey() });
+        setEditingId(null);
+      },
+      onError: () => toast({ title: "Couldn't save changes", variant: "destructive" }),
+    });
+  };
+
   return (
     <div className="p-6 md:p-10 bg-background min-h-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
@@ -91,6 +111,29 @@ export default function AdminFaqs() {
         </Dialog>
       </div>
 
+      <Dialog open={editingId != null} onOpenChange={(open) => { if (!open) setEditingId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit FAQ</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Question</label>
+              <Input value={editForm.question} onChange={e => setEditForm({...editForm, question: e.target.value})} />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Answer</label>
+              <Textarea value={editForm.answer} onChange={e => setEditForm({...editForm, answer: e.target.value})} className="h-32" />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Display Order</label>
+              <Input type="number" value={editForm.displayOrder} onChange={e => setEditForm({...editForm, displayOrder: Number(e.target.value)})} />
+            </div>
+            <Button onClick={handleEditSave} disabled={updateMutation.isPending || !editForm.question || !editForm.answer} className="w-full">Save Changes</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {isLoading ? (
         <div className="space-y-4">
           <Skeleton className="h-32 w-full rounded-2xl" />
@@ -104,6 +147,9 @@ export default function AdminFaqs() {
             <div key={faq.id} className={`bg-card border border-border p-6 rounded-2xl transition relative group ${!faq.isVisible ? "opacity-60" : ""}`}>
               <div className="absolute top-4 right-4 flex items-center gap-3">
                 <Switch checked={faq.isVisible} onCheckedChange={(v) => handleToggleVisible(faq.id, v)} />
+                <button onClick={() => openEdit(faq)} className="text-muted-foreground hover:text-foreground transition opacity-0 group-hover:opacity-100">
+                  <Pencil className="w-4 h-4" />
+                </button>
                 <button onClick={() => handleDelete(faq.id)} className="text-muted-foreground hover:text-destructive transition opacity-0 group-hover:opacity-100">
                   <Trash2 className="w-4 h-4" />
                 </button>

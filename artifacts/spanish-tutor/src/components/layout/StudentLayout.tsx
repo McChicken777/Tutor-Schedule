@@ -6,6 +6,7 @@ import { LogOut, LayoutDashboard, Calendar, BookOpen, MessageCircle, FileText, U
 import { Button } from "@/components/ui/button";
 import PingDot from "@/components/ui/ping-dot";
 import PurchaseCreditsDialog from "@/components/PurchaseCreditsDialog";
+import PushNotificationPrompt from "@/components/PushNotificationPrompt";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +25,7 @@ import {
 const TOUR_STEPS = [
   { title: "Your dashboard", description: "See your next class and remaining credits at a glance." },
   { title: "Bookings", description: "All your upcoming and past lessons live here." },
-  { title: "Book a lesson", description: "Book your free trial or a new lesson in a few clicks." },
+  { title: "Book a lesson", description: "Book your free first lesson or a new lesson in a few clicks." },
   { title: "Messages", description: "Message your teacher directly, anytime." },
 ];
 
@@ -301,6 +302,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
       </nav>
 
       <PurchaseCreditsDialog open={purchaseOpen} onOpenChange={setPurchaseOpen} />
+      <PushNotificationPrompt />
     </div>
   );
 }

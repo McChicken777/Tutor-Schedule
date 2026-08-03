@@ -83,7 +83,7 @@ export default function AdminSettings() {
           <div className="flex items-center justify-between p-4 bg-accent/50 rounded-xl border border-border">
             <div>
               <h3 className="font-bold text-foreground">Free Trial Lesson</h3>
-              <p className="text-sm text-muted-foreground">Allow new students to book a free 30-min trial.</p>
+              <p className="text-sm text-muted-foreground">Allow new students to book a free 25-min trial.</p>
             </div>
             <Switch checked={formData.freeTrialEnabled} onCheckedChange={(v) => setFormData({...formData, freeTrialEnabled: v})} />
           </div>

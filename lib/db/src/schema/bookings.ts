@@ -17,6 +17,9 @@ export const bookingsTable = pgTable("bookings", {
   calendarEventId: text("calendar_event_id"),
   cancellationReason: text("cancellation_reason"),
   notes: text("notes"),
+  // Idempotency flag for the upcoming-class-reminder push sweep, mirroring homework's
+  // reminderSentAt pattern — set once the reminder push has fired so the sweep never double-sends.
+  classReminderSentAt: timestamp("class_reminder_sent_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

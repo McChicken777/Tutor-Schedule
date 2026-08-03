@@ -160,7 +160,7 @@ export async function seed() {
       },
       {
         question: "Is there a free trial?",
-        answer: "Yes! A free 30-minute trial lesson is available so you can experience the teaching style before committing. Just book the 'Trial Lesson' type.",
+        answer: "Yes! A free 25-minute trial lesson is available so you can experience the teaching style before committing. Just book the 'Trial Lesson' type.",
         displayOrder: 5,
         isVisible: true,
       },
