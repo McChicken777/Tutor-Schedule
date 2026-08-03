@@ -53,7 +53,7 @@ export default function Landing() {
       <header className="fixed top-0 inset-x-0 bg-background/85 backdrop-blur-md z-50 border-b border-border">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src={`${basePath}/logo.png`} alt="Logo" className="w-8 h-8" />
+            <img src={`${basePath}/logo.png`} alt="Logo" className="w-11 h-11" />
             <span className="font-serif text-xl font-bold tracking-tight">LaCastia</span>
           </div>
           <nav className="flex items-center gap-6">
@@ -283,7 +283,7 @@ export default function Landing() {
       <footer className="bg-accent/40 py-12 px-6 border-t border-border">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2.5">
-            <img src={`${basePath}/logo.png`} alt="Logo" className="w-6 h-6 opacity-70" />
+            <img src={`${basePath}/logo.png`} alt="Logo" className="w-8 h-8 opacity-70" />
             <span className="font-serif font-bold text-foreground">LaCastia</span>
           </div>
           <p className="text-sm text-muted-foreground">

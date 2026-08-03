@@ -74,7 +74,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
       {/* Mobile top bar */}
       <header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 h-14 border-b border-border bg-card">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <img src={`${basePath}/logo.png`} alt="Logo" className="w-7 h-7" />
+          <img src={`${basePath}/logo.png`} alt="Logo" className="w-9 h-9" />
           <span className="font-serif text-lg font-bold text-foreground">LaCastia</span>
         </Link>
         <DropdownMenu>
@@ -117,7 +117,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
       <aside className="hidden md:flex w-full md:w-64 border-r border-border bg-card flex-shrink-0 flex-col md:sticky md:top-0 md:h-[100dvh] md:self-start">
         <div className="p-6">
           <Link href="/dashboard" className="flex items-center gap-3">
-            <img src={`${basePath}/logo.png`} alt="Logo" className="w-8 h-8" />
+            <img src={`${basePath}/logo.png`} alt="Logo" className="w-11 h-11" />
             <span className="font-serif text-xl font-bold text-foreground">LaCastia</span>
           </Link>
         </div>

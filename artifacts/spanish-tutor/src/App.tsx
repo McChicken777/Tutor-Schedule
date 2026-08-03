@@ -114,6 +114,8 @@ const clerkAppearance = {
     borderRadius: "0.75rem",
   },
   elements: {
+    logoBox: "h-14 mb-1",
+    logoImage: "h-14 w-auto max-w-none",
     rootBox: "w-full flex justify-center",
     cardBox: "bg-background rounded-2xl w-[440px] max-w-full overflow-hidden border border-border shadow-md",
     card: "!shadow-none !border-0 !bg-transparent !rounded-none",
