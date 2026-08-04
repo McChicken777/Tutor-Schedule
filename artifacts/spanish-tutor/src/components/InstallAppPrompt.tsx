@@ -1,20 +1,20 @@
 import { useEffect, useState } from "react";
-import { Bell, X } from "lucide-react";
+import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { usePushNotifications } from "@/hooks/use-push-notifications";
+import { isStandalone, promptInstall, useCanInstall } from "@/lib/pwa";
 
-const DISMISSED_KEY = "push-prompt-dismissed";
+const DISMISSED_KEY = "install-prompt-dismissed";
 
-export default function PushNotificationPrompt() {
-  const { isSupported, permission, subscribe } = usePushNotifications();
+export default function InstallAppPrompt() {
+  const canInstall = useCanInstall();
   const [dismissed, setDismissed] = useState(true);
-  const [subscribing, setSubscribing] = useState(false);
+  const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
     setDismissed(localStorage.getItem(DISMISSED_KEY) === "1");
   }, []);
 
-  if (!isSupported || permission !== "default" || dismissed) {
+  if (!canInstall || dismissed || isStandalone()) {
     return null;
   }
 
@@ -23,11 +23,11 @@ export default function PushNotificationPrompt() {
     setDismissed(true);
   };
 
-  const handleEnable = async () => {
-    setSubscribing(true);
-    const ok = await subscribe();
-    setSubscribing(false);
-    if (ok) {
+  const handleInstall = async () => {
+    setInstalling(true);
+    const accepted = await promptInstall();
+    setInstalling(false);
+    if (accepted) {
       localStorage.setItem(DISMISSED_KEY, "1");
       setDismissed(true);
     }
@@ -36,16 +36,16 @@ export default function PushNotificationPrompt() {
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-xl flex gap-3">
       <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-        <Bell className="w-4 h-4" />
+        <Download className="w-4 h-4" />
       </div>
       <div className="flex-1">
-        <p className="text-sm font-medium text-foreground">Stay in the loop</p>
+        <p className="text-sm font-medium text-foreground">Install LaCastia</p>
         <p className="text-xs text-muted-foreground mb-3">
-          Get notified about messages, homework, and upcoming lessons.
+          Add it to your home screen to open straight into your lessons.
         </p>
         <div className="flex items-center gap-2">
-          <Button size="sm" onClick={handleEnable} disabled={subscribing}>
-            {subscribing ? "Enabling..." : "Enable notifications"}
+          <Button size="sm" onClick={handleInstall} disabled={installing}>
+            {installing ? "Installing..." : "Install app"}
           </Button>
           <Button size="sm" variant="ghost" onClick={dismiss}>
             Not now

@@ -12,6 +12,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { toast } from "@/hooks/use-toast";
 import { describeError } from "@/lib/errors";
+import { isStandalone } from "@/lib/pwa";
 
 import Landing from "@/pages/public/Landing";
 import SignInPage from "@/pages/public/SignIn";
@@ -152,6 +153,10 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
+// Signed-in users land on /dashboard, which forwards teachers and admins on to
+// their own portals. Launched from the home screen the marketing page would be
+// the wrong first screen — it should feel like an app, not a website — so a
+// standalone launch goes straight to sign-in instead.
 function HomeRedirect() {
   return (
     <>
@@ -159,7 +164,7 @@ function HomeRedirect() {
         <Redirect to="/dashboard" />
       </Show>
       <Show when="signed-out">
-        <Landing />
+        {isStandalone() ? <Redirect to="/sign-in" /> : <Landing />}
       </Show>
     </>
   );

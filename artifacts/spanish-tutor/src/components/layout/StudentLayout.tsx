@@ -6,7 +6,7 @@ import { LogOut, LayoutDashboard, Calendar, BookOpen, MessageCircle, FileText, U
 import { Button } from "@/components/ui/button";
 import PingDot from "@/components/ui/ping-dot";
 import PurchaseCreditsDialog from "@/components/PurchaseCreditsDialog";
-import PushNotificationPrompt from "@/components/PushNotificationPrompt";
+import AppPrompts from "@/components/AppPrompts";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -302,7 +302,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
       </nav>
 
       <PurchaseCreditsDialog open={purchaseOpen} onOpenChange={setPurchaseOpen} />
-      <PushNotificationPrompt />
+      <AppPrompts />
     </div>
   );
 }
