@@ -61,7 +61,7 @@ export default function Landing() {
               Log in
             </Link>
             <Button asChild size="sm">
-              <Link href="/sign-up">{trialAvailable ? "Start free trial" : "Book a lesson"}</Link>
+              <Link href="/sign-up">{trialAvailable ? "Book a free lesson" : "Book a lesson"}</Link>
             </Button>
           </nav>
         </div>
@@ -88,7 +88,7 @@ export default function Landing() {
               <div className="flex items-center gap-6">
                 <Button asChild size="lg">
                   <Link href="/sign-up">
-                    {trialAvailable ? "Book a free trial lesson" : "Book your first lesson"}
+                    {trialAvailable ? "Book your free lesson" : "Book your first lesson"}
                     <ArrowRight className="ml-1" />
                   </Link>
                 </Button>

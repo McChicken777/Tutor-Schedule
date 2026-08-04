@@ -35,8 +35,15 @@ export default defineConfig({
     tailwindcss({ optimize: false }),
     runtimeErrorOverlay(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       injectRegister: false,
+      devOptions: {
+        enabled: true,
+        type: 'module',
+      },
       manifest: {
         name: 'LaCastia',
         short_name: 'LaCastia',
@@ -58,39 +65,11 @@ export default defineConfig({
           },
         ],
       },
-      workbox: {
-        // Default is 2 MiB; our main JS bundle exceeds that after tree-shaking.
-        // 5 MiB covers the current bundle with headroom for growth.
+      injectManifest: {
+        // /api/ is served by the same origin and must never be precached/matched
+        // by the navigation fallback; the actual runtime-caching rules now live
+        // in src/sw.ts since injectManifest mode doesn't read `workbox.*`.
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        navigateFallbackDenylist: [/^\/api\//],
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
-            handler: 'NetworkOnly',
-          },
-          {
-            urlPattern: ({ request }) => request.mode === 'navigate',
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'navigations',
-              networkTimeoutSeconds: 3,
-            },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'google-fonts-stylesheets' },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-webfonts',
-              cacheableResponse: { statuses: [0, 200] },
-              expiration: { maxAgeSeconds: 60 * 60 * 24 * 365 },
-            },
-          },
-        ],
       },
     }),
     ...(process.env.NODE_ENV !== 'production' &&

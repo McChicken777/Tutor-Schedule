@@ -27,7 +27,8 @@
     "multer": "^2.2.0",
     "node-cron": "^4.6.0",
     "pino": "^9.14.0",
-    "pino-http": "^10.5.0"
+    "pino-http": "^10.5.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
@@ -35,7 +36,11 @@
     "@types/express": "^5.0.6",
     "@types/multer": "^2.2.0",
     "@types/node": "catalog:",
+<<<<<<< HEAD
     "@types/node-cron": "^3.0.11",
+=======
+    "@types/web-push": "^3.6.4",
+>>>>>>> ba3e303e916b6ba0e4026e7b0eb1c693bb2505b9
     "esbuild": "0.27.3",
     "esbuild-plugin-pino": "^2.3.3",
     "pino-pretty": "^13.1.3",

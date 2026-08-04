@@ -1,8 +1,9 @@
 import { defineConfig, minimal2023Preset } from '@vite-pwa/assets-generator/config';
 
-// logo.png has transparent corners around the badge (not edge-to-edge), so
-// the maskable variant needs extra padding + a solid brand background
-// instead of transparency to survive the OS's circular safe-zone crop.
+// app-icon.png is the dedicated home-screen/install icon (edge-to-edge dark
+// green square, distinct from the in-app logo.png). The maskable variant
+// still needs safe-zone padding so OS circular crops don't clip the "LC"
+// monogram, using the same brand green as the background fill.
 export default defineConfig({
   headLinkOptions: {
     preset: '2023',
@@ -15,5 +16,5 @@ export default defineConfig({
       resizeOptions: { fit: 'contain', background: '#173F30' },
     },
   },
-  images: ['public/logo.png'],
+  images: ['public/app-icon.png'],
 });

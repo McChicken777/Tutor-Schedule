@@ -57,8 +57,8 @@ export default function BookLesson() {
   }
 
   function lockReason(lt: (typeof activeLessonTypes)[number]): string {
-    if (lt.isTrial) return "Trial already used";
-    if (trialLessonTypeExists && dashboard?.trialAvailable) return "Complete your free trial first";
+    if (lt.isTrial) return "Free lesson already used";
+    if (trialLessonTypeExists && dashboard?.trialAvailable) return "Complete your free lesson first";
     return "Out of credits";
   }
 

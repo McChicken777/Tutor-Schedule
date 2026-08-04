@@ -33,6 +33,7 @@ import {
   CreateStudentReportBody,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/requireAuth";
+import { sendPushToUser } from "../lib/push";
 import {
   createCalendarEventWithMeet,
   deleteCalendarEvent,
@@ -493,7 +494,7 @@ router.post("/student/bookings", requireAuth, async (req, res): Promise<void> =>
     let packages: (typeof lessonPackagesTable.$inferSelect)[] = [];
     if (lessonType.isTrial) {
       if (!isTestStudent(user.email) && (await hasUsedTrial(user.id))) {
-        return { error: { status: 400, message: "You've already used your free trial lesson" } } as const;
+        return { error: { status: 400, message: "You've already used your free first lesson" } } as const;
       }
     } else {
       packages = await tx
@@ -907,6 +908,15 @@ router.post("/student/bookings/:id/homework", requireAuth, async (req, res): Pro
     );
   }
 
+  const [homeworkTeacher] = await db.select().from(teachersTable).where(eq(teachersTable.id, booking.teacherId));
+  if (homeworkTeacher?.clerkUserId) {
+    sendPushToUser(homeworkTeacher.clerkUserId, {
+      title: `${user.displayName} submitted homework`,
+      body: "Tap to review their submission.",
+      url: "/teacher/homework",
+    }).catch((err) => console.error("Failed to send homework-submitted push:", err));
+  }
+
   const allFiles = await getHomeworkFiles(hw.id);
   res.status(201).json(mapHomeworkFields(hw, allFiles));
 });
@@ -1087,6 +1097,17 @@ router.post("/student/messages", requireAuth, async (req, res): Promise<void> =>
       body: parsed.data.body,
     })
     .returning();
+
+  if (user.teacherId != null) {
+    const [teacher] = await db.select().from(teachersTable).where(eq(teachersTable.id, user.teacherId));
+    if (teacher?.clerkUserId) {
+      sendPushToUser(teacher.clerkUserId, {
+        title: `New message from ${user.displayName}`,
+        body: parsed.data.body,
+        url: "/teacher/messages",
+      }).catch((err) => console.error("Failed to send message push:", err));
+    }
+  }
 
   res.status(201).json(message);
 });

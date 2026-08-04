@@ -39,6 +39,7 @@ import {
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
 import { requireTeacher } from "../middlewares/requireTeacher";
+import { sendPushToUser } from "../lib/push";
 import { isCalendarConnected, getCalendarEmail, deleteCalendarEvent, createOAuth2Client, getFreeBusySlots, zonedDayRange } from "../lib/calendar";
 import { google } from "googleapis";
 import { calendarTokensTable } from "@workspace/db";
@@ -1005,6 +1006,12 @@ router.post("/teacher/students/:id/messages", requireTeacher, async (req, res): 
       body: parsed.data.body,
     })
     .returning();
+
+  sendPushToUser(student.clerkUserId, {
+    title: "New message from your tutor",
+    body: parsed.data.body,
+    url: "/student/messages",
+  }).catch((err) => console.error("Failed to send message push:", err));
 
   res.status(201).json(message);
 });
