@@ -1,0 +1,42 @@
+Do a full audit of this app and fix every real bug you find — not just the
+current 502. Work in this order, and don't skip ahead:
+
+PHASE 1 — Get it running
+1. `git pull`, `pnpm install`, then run the app's actual start command
+   (check .replit and package.json — likely `pnpm run dev` from
+   artifacts/api-server, which builds artifacts/spanish-tutor then starts
+   the server). Capture full output.
+2. If it fails to boot, fix the root cause of that failure first — a build
+   error, missing dependency, bad import, etc. Don't move to Phase 2 until
+   the app boots cleanly and stays up (no crash-on-first-request).
+
+PHASE 2 — Static checks
+3. Run `pnpm run typecheck` at the repo root and fix every TypeScript error
+   it reports.
+4. Check server startup logs for warnings (unhandled rejections, deprecated
+   API usage, missing env vars) even if they didn't crash anything.
+
+PHASE 3 — Runtime checks
+5. Open the app in the browser preview. Check the browser console and
+   network tab for errors on: the public landing page, student sign-in →
+   dashboard → book a lesson → messages → homework → bookings, teacher
+   sign-in → dashboard → bookings/availability/students/messages/homework/
+   lesson types/feedback, and admin dashboard → testimonials/faqs/settings/
+   complaints (admin is only reachable by whichever teacher account has
+   isAdmin=true in the DB).
+6. Test on a narrow/mobile viewport specifically: the bottom nav should
+   show all 5 destinations, nothing should be hidden behind it, and the
+   avatar dropdown in the mobile top bar should show credits/profile/logout.
+7. Check that a hard refresh registers a service worker (DevTools →
+   Application tab) without breaking anything, and that the app still works
+   identically when the service worker is NOT active (e.g. incognito).
+
+PHASE 4 — Fix, don't rewrite
+8. For every bug found, fix the actual root cause. Don't refactor, rename,
+   or "clean up" code that isn't broken — small targeted fixes only.
+9. After each fix, re-verify by re-running the relevant check above (don't
+   assume a fix worked without re-testing it).
+
+Report back a list of every bug you found, the root cause of each, and what
+you changed to fix it — including anything you found but decided NOT to fix
+and why.

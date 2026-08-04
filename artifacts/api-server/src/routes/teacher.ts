@@ -1233,12 +1233,12 @@ router.get("/admin/calendar/callback", async (req, res): Promise<void> => {
   delete (req.session as any).oauthTeacherId;
 
   if (!expectedState || typeof state !== "string" || state !== expectedState || !oauthTeacherId) {
-    res.redirect("/?admin=1#/availability?calendarError=invalid_state");
+    res.redirect("/teacher/availability?calendarError=invalid_state");
     return;
   }
 
   if (error || !code || typeof code !== "string") {
-    res.redirect("/?admin=1#/availability?calendarError=1");
+    res.redirect("/teacher/availability?calendarError=1");
     return;
   }
 
@@ -1300,9 +1300,9 @@ router.get("/admin/calendar/callback", async (req, res): Promise<void> => {
       // Non-fatal: tutor can still set her timezone manually in Settings.
     }
 
-    res.redirect("/?admin=1#/availability?calendarConnected=1");
+    res.redirect("/teacher/availability?calendarConnected=1");
   } catch (err) {
-    res.redirect("/?admin=1#/availability?calendarError=1");
+    res.redirect("/teacher/availability?calendarError=1");
   }
 });
 
