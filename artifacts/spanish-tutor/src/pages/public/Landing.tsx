@@ -48,16 +48,16 @@ export default function Landing() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Navigation */}
       <header className="fixed top-0 inset-x-0 bg-background/85 backdrop-blur-md z-50 border-b border-border">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <img src={`${basePath}/logo.png`} alt="Logo" className="w-11 h-11" />
-            <span className="font-serif text-xl font-bold tracking-tight">LaCastia</span>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <img src={`${basePath}/logo.png`} alt="Logo" className="w-11 h-11 shrink-0" />
+            <span className="font-serif text-xl font-bold tracking-tight truncate">LaCastia</span>
           </div>
-          <nav className="flex items-center gap-6">
-            <Link href="/sign-in" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          <nav className="flex items-center gap-3 sm:gap-6 shrink-0">
+            <Link href="/sign-in" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
               Log in
             </Link>
             <Button asChild size="sm">
@@ -85,7 +85,7 @@ export default function Landing() {
                 Live, 1-on-1 lessons with {tutorName} — shaped around your goals, your pace,
                 and the mistakes you need to make out loud to actually learn from them.
               </p>
-              <div className="flex items-center gap-6">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
                 <Button asChild size="lg">
                   <Link href="/sign-up">
                     {trialAvailable ? "Book your free lesson" : "Book your first lesson"}
@@ -104,7 +104,7 @@ export default function Landing() {
             </div>
 
             <div className="relative">
-              <div className="absolute -bottom-5 -right-5 w-full h-full bg-primary rounded-2xl -z-10" />
+              <div className="absolute -bottom-3 -right-3 md:-bottom-5 md:-right-5 w-full h-full bg-primary rounded-2xl -z-10" />
               {settings?.tutorPhotoUrl ? (
                 <>
                   <div className="aspect-[4/5] rounded-2xl overflow-hidden border-4 border-background shadow-xl -rotate-1">
@@ -244,10 +244,10 @@ export default function Landing() {
               {faqs.map((faq, i) => (
                 <AccordionItem key={faq.id} value={`item-${faq.id}`}>
                   <AccordionTrigger className="text-left text-lg font-medium gap-4">
-                    <span className="font-serif text-muted-foreground/50 mr-1">
+                    <span className="font-serif text-muted-foreground/50 shrink-0">
                       {String(i + 1).padStart(2, "0")}
                     </span>
-                    {faq.question}
+                    <span className="flex-1 text-left">{faq.question}</span>
                   </AccordionTrigger>
                   <AccordionContent className="text-muted-foreground text-base leading-relaxed pl-9">
                     {faq.answer}

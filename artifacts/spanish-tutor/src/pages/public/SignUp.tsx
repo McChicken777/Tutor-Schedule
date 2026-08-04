@@ -4,11 +4,11 @@ export default function SignUpPage() {
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
   return (
     <div 
-      className="flex min-h-[100dvh] items-center justify-center bg-background px-4 bg-cover bg-center"
+      className="relative flex min-h-[100dvh] items-center justify-center bg-background px-4 py-8 bg-cover bg-center"
       style={{ backgroundImage: `url(${basePath}/auth-bg.jpg)` }}
     >
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm"></div>
-      <div className="relative z-10">
+      <div className="relative z-10 w-full max-w-[440px]">
         <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
       </div>
     </div>
