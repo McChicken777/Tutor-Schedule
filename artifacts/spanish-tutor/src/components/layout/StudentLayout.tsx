@@ -1,7 +1,9 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
-import { useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
+import { useStudentTour } from "@/hooks/use-student-tour";
+import TourCard from "@/components/tour/TourCard";
 import { LogOut, LayoutDashboard, Calendar, BookOpen, MessageCircle, FileText, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PingDot from "@/components/ui/ping-dot";
@@ -17,18 +19,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   useGetStudentDashboard,
-  useCompleteTour,
-  getGetStudentDashboardQueryKey,
   useListStudentHomework,
 } from "@workspace/api-client-react";
 
-const TOUR_STEPS = [
-  { title: "Your dashboard", description: "See your next class and remaining credits at a glance." },
-  { title: "Bookings", description: "All your upcoming and past lessons live here." },
-  { title: "Book a lesson", description: "Book your free first lesson or a new lesson in a few clicks." },
-  { title: "Messages", description: "Message your teacher directly, anytime." },
-];
-
+// Layering, deliberately all below Radix's z-50 so a dialog, dropdown or sheet
+// opened during the tour always renders above it:
+//   z-30    app chrome (mobile top bar, bottom nav at rest)
+//   z-40    tour backdrop — or AppPrompts, which is suppressed during the tour
+//   z-[45]  tour surfaces (mobile card + nav container, desktop popover)
+//   z-50    Radix portals
+// Note the mobile bottom nav must not carry its own z-index while the tour is
+// running: a positioned element with a z-index creates a stacking context, and
+// anything inside it — including the highlighted tab — gets trapped beneath the
+// backdrop. Hence the shared container below rather than a z-index on the nav.
 export default function StudentLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { signOut } = useClerk();
@@ -46,19 +49,10 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
     return needsSubmission || needsReviewSeen;
   });
   const hasUnreadMessages = !!dashboard?.hasUnreadMessages;
-  const completeTourMutation = useCompleteTour();
-  const qc = useQueryClient();
-  const [tourStep, setTourStep] = useState(0);
-  const tourActive = !!dashboard && !dashboard.hasSeenTour;
+  const tour = useStudentTour();
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const totalRemainingCredits = dashboard?.totalRemainingCredits ?? 0;
   const isLowOnCredits = !!dashboard && totalRemainingCredits <= 1;
-
-  const handleTourComplete = () => {
-    completeTourMutation.mutate(undefined, {
-      onSuccess: () => qc.invalidateQueries({ queryKey: getGetStudentDashboardQueryKey() }),
-    });
-  };
 
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -70,7 +64,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col md:flex-row">
-      {tourActive && <div className="fixed inset-0 z-40 bg-black/50" />}
+      {tour.active && <div aria-hidden className="fixed inset-0 z-40 bg-black/50" />}
 
       {/* Mobile top bar */}
       <header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 h-14 border-b border-border bg-card">
@@ -139,20 +133,20 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
         </button>
 
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
-          {navItems.map((item, index) => {
+          {navItems.map((item) => {
             const active = location === item.href || location.startsWith(`${item.href}/`);
-            const isTourStep = tourActive && index === tourStep;
+            const isTourStep = tour.isHighlighted(item.href);
             return (
               <div key={item.href} className="relative">
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                    isTourStep ? "relative z-50 ring-2 ring-primary ring-offset-2 ring-offset-card" : ""
-                  } ${
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                    isTourStep && "relative z-[45] ring-2 ring-primary ring-offset-2 ring-offset-card",
                     active
                       ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                  }`}
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                  )}
                 >
                   <item.icon className="w-5 h-5" />
                   <span className="flex-1">{item.label}</span>
@@ -160,42 +154,17 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
                   {item.href === "/messages" && hasUnreadMessages && <PingDot />}
                 </Link>
                 {isTourStep && (
-                  <div className="absolute z-50 top-full left-0 mt-2 md:top-0 md:left-full md:ml-3 md:mt-0 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-card p-5 shadow-xl text-left">
-                    <div className="flex items-center gap-1.5 mb-3">
-                      {TOUR_STEPS.map((_, i) => (
-                        <span
-                          key={i}
-                          className={`h-1.5 rounded-full transition-all ${i === tourStep ? "w-5 bg-primary" : "w-1.5 bg-border"}`}
-                        />
-                      ))}
-                    </div>
-                    <h3 className="font-bold text-foreground mb-1">{TOUR_STEPS[tourStep].title}</h3>
-                    <p className="text-sm text-muted-foreground mb-4">{TOUR_STEPS[tourStep].description}</p>
-                    <div className="flex items-center justify-between">
-                      <button
-                        onClick={handleTourComplete}
-                        className="text-sm text-muted-foreground hover:text-foreground font-medium"
-                      >
-                        Skip
-                      </button>
-                      <div className="flex items-center gap-2">
-                        {tourStep > 0 && (
-                          <Button variant="outline" size="sm" onClick={() => setTourStep((s) => s - 1)}>
-                            Back
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            if (tourStep === TOUR_STEPS.length - 1) handleTourComplete();
-                            else setTourStep((s) => s + 1);
-                          }}
-                        >
-                          {tourStep === TOUR_STEPS.length - 1 ? "Got it" : "Next"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
+                  <TourCard
+                    className="absolute z-[45] top-0 left-full ml-3 w-72 max-w-[calc(100vw-2rem)]"
+                    index={tour.index}
+                    total={tour.total}
+                    title={tour.step.title}
+                    description={tour.step.description}
+                    isLast={tour.isLast}
+                    onNext={tour.next}
+                    onBack={tour.back}
+                    onSkip={tour.finish}
+                  />
                 )}
               </div>
             );
@@ -230,18 +199,51 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      {/* Mobile bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 flex items-stretch border-t border-border bg-card pb-[env(safe-area-inset-bottom)]">
-        {navItems.map((item, index) => {
-          const active = location === item.href || location.startsWith(`${item.href}/`);
-          const isTourStep = tourActive && index === tourStep;
-          return (
-            <div key={item.href} className="relative flex-1">
+      {/* Mobile bottom bar, plus the tour card when the tour is running. Both
+          live in one fixed container so the card sits above the bar by document
+          flow — no measuring, and it survives label wrapping, rotation and
+          safe-area changes. The container (not the nav) carries the z-index,
+          because a z-index on the nav would trap the highlighted tab beneath
+          the tour backdrop. */}
+      <div
+        className={cn(
+          "md:hidden fixed inset-x-0 bottom-0 flex flex-col",
+          tour.active ? "z-[45]" : "z-30",
+        )}
+      >
+        {tour.active && (
+          <TourCard
+            className="relative z-10 mx-3 mb-2"
+            showCounter
+            showClose
+            index={tour.index}
+            total={tour.total}
+            title={tour.step.title}
+            description={tour.step.description}
+            isLast={tour.isLast}
+            onNext={tour.next}
+            onBack={tour.back}
+            onSkip={tour.finish}
+          />
+        )}
+        <nav className="relative flex items-stretch border-t border-border bg-card pb-[env(safe-area-inset-bottom)]">
+          {/* Re-creates the backdrop inside the raised bar, so the tour still
+              reads as one continuous dim with a hole at the highlighted tab. */}
+          {tour.active && (
+            <span aria-hidden className="absolute inset-0 bg-black/50 pointer-events-none" />
+          )}
+          {navItems.map((item) => {
+            const active = location === item.href || location.startsWith(`${item.href}/`);
+            const highlighted = tour.isHighlighted(item.href);
+            return (
               <Link
+                key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center justify-center gap-0.5 py-2 min-h-[3rem] text-[11px] font-medium transition-colors ${
-                  isTourStep ? "relative z-50" : ""
-                } ${active ? "text-primary" : "text-muted-foreground"}`}
+                className={cn(
+                  "flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[3rem] text-[11px] font-medium transition-colors",
+                  active ? "text-primary" : "text-muted-foreground",
+                  highlighted && "relative z-10 rounded-xl bg-card text-primary ring-2 ring-primary",
+                )}
               >
                 <span className="relative">
                   <item.icon className="w-5 h-5" />
@@ -258,51 +260,16 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
                 </span>
                 {item.label === "Book a Lesson" ? "Book" : item.label}
               </Link>
-              {isTourStep && (
-                <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-card p-5 shadow-xl text-left">
-                  <div className="flex items-center gap-1.5 mb-3">
-                    {TOUR_STEPS.map((_, i) => (
-                      <span
-                        key={i}
-                        className={`h-1.5 rounded-full transition-all ${i === tourStep ? "w-5 bg-primary" : "w-1.5 bg-border"}`}
-                      />
-                    ))}
-                  </div>
-                  <h3 className="font-bold text-foreground mb-1">{TOUR_STEPS[tourStep].title}</h3>
-                  <p className="text-sm text-muted-foreground mb-4">{TOUR_STEPS[tourStep].description}</p>
-                  <div className="flex items-center justify-between">
-                    <button
-                      onClick={handleTourComplete}
-                      className="text-sm text-muted-foreground hover:text-foreground font-medium"
-                    >
-                      Skip
-                    </button>
-                    <div className="flex items-center gap-2">
-                      {tourStep > 0 && (
-                        <Button variant="outline" size="sm" onClick={() => setTourStep((s) => s - 1)}>
-                          Back
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          if (tourStep === TOUR_STEPS.length - 1) handleTourComplete();
-                          else setTourStep((s) => s + 1);
-                        }}
-                      >
-                        {tourStep === TOUR_STEPS.length - 1 ? "Got it" : "Next"}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </nav>
+            );
+          })}
+        </nav>
+      </div>
 
       <PurchaseCreditsDialog open={purchaseOpen} onOpenChange={setPurchaseOpen} />
-      <AppPrompts />
+      {/* Suppressed during the tour: AppPrompts is z-40, the same layer as the
+          backdrop, and sits exactly where the tour card goes. The install and
+          notification nudges can wait until onboarding is done. */}
+      {!tour.active && <AppPrompts />}
     </div>
   );
 }
