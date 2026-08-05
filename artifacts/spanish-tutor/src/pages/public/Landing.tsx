@@ -52,16 +52,28 @@ export default function Landing() {
       {/* Navigation */}
       <header className="fixed top-0 inset-x-0 bg-background/85 backdrop-blur-md z-50 border-b border-border">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <img src={`${basePath}/logo.png`} alt="Logo" className="w-11 h-11 shrink-0" />
-            <span className="font-serif text-xl font-bold tracking-tight truncate">LaCastia</span>
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <img src={`${basePath}/logo.png`} alt="Logo" className="w-9 h-9 sm:w-11 sm:h-11 shrink-0" />
+            <span className="font-serif text-lg sm:text-xl font-bold tracking-tight whitespace-nowrap">
+              LaCastia
+            </span>
           </div>
           <nav className="flex items-center gap-3 sm:gap-6 shrink-0">
             <Link href="/sign-in" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
               Log in
             </Link>
+            {/* The full CTA does not fit beside the wordmark and "Log in" on a
+                narrow phone — it previously squeezed the brand name into an
+                ellipsis. Shorten the label rather than clipping the brand. */}
             <Button asChild size="sm">
-              <Link href="/sign-up">{trialAvailable ? "Book a free lesson" : "Book a lesson"}</Link>
+              <Link href="/sign-up">
+                <span className="sm:hidden whitespace-nowrap">
+                  {trialAvailable ? "Free lesson" : "Book"}
+                </span>
+                <span className="hidden sm:inline whitespace-nowrap">
+                  {trialAvailable ? "Book a free lesson" : "Book a lesson"}
+                </span>
+              </Link>
             </Button>
           </nav>
         </div>
