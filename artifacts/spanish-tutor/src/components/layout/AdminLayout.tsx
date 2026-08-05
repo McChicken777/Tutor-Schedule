@@ -1,9 +1,27 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useClerk } from "@clerk/react";
-import { LogOut, LayoutDashboard, MessageSquare, HelpCircle, Settings, Flag, Users, ArrowLeftCircle } from "lucide-react";
+import {
+  LogOut,
+  LayoutDashboard,
+  MessageSquare,
+  HelpCircle,
+  Settings,
+  Flag,
+  Users,
+  ArrowLeftCircle,
+  Menu,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PingDot from "@/components/ui/ping-dot";
+import { cn } from "@/lib/utils";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useGetAdminDashboard } from "@workspace/api-client-react";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
@@ -12,6 +30,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const { data: dashboard } = useGetAdminDashboard();
   const hasOpenReports = (dashboard?.openReportsCount ?? 0) > 0;
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const navItems = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -22,10 +41,93 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     { label: "Accounts", href: "/admin/accounts", icon: Users },
   ];
 
+  const signOutToHome = () => signOut({ redirectUrl: basePath || "/" });
+
+  // Shared by the desktop sidebar and the mobile drawer; onNavigate closes the
+  // drawer on mobile and is a no-op on desktop.
+  const navLinks = (onNavigate?: () => void) => (
+    <>
+      <Link
+        href="/teacher"
+        onClick={onNavigate}
+        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-foreground mb-2 pb-4 border-b border-border"
+      >
+        <ArrowLeftCircle className="w-5 h-5" />
+        <span className="flex-1">Back to Teacher Portal</span>
+      </Link>
+      {navItems.map((item) => {
+        const active = location === item.href;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+              active
+                ? "bg-secondary text-secondary-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground",
+            )}
+          >
+            <item.icon className="w-5 h-5" />
+            <span className="flex-1">{item.label}</span>
+            {item.href === "/admin/reports" && hasOpenReports && <PingDot />}
+          </Link>
+        );
+      })}
+    </>
+  );
+
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col md:flex-row">
-      {/* Sidebar */}
-      <aside className="w-full md:w-64 border-r border-border bg-card flex-shrink-0 flex flex-col md:sticky md:top-0 md:h-[100dvh] md:self-start">
+      {/* Mobile top bar — admin is an occasional surface, so navigation lives in
+          a drawer rather than a tab bar. */}
+      <header className="md:hidden sticky top-0 z-30 flex items-center gap-3 px-4 h-14 border-b border-border bg-card">
+        <button
+          type="button"
+          onClick={() => setMenuOpen(true)}
+          aria-label="Open navigation"
+          aria-haspopup="dialog"
+          aria-expanded={menuOpen}
+          className="-ml-2 p-2 text-muted-foreground hover:text-foreground"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        <Link href="/admin" className="flex items-center gap-2 min-w-0">
+          <img src={`${basePath}/logo.png`} alt="Logo" className="w-8 h-8 flex-shrink-0" />
+          <span className="font-serif text-lg font-bold text-foreground truncate">
+            LaCastia Admin
+          </span>
+        </Link>
+      </header>
+
+      <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+        <SheetContent side="left" className="md:hidden w-72 p-0 flex flex-col">
+          <SheetHeader className="p-6 pb-2">
+            <SheetTitle className="text-left font-serif">LaCastia Admin</SheetTitle>
+            <SheetDescription className="sr-only">Admin navigation</SheetDescription>
+          </SheetHeader>
+          <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+            {navLinks(() => setMenuOpen(false))}
+          </nav>
+          <div className="p-4 border-t border-border mt-auto">
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-muted-foreground hover:text-destructive"
+              onClick={() => {
+                setMenuOpen(false);
+                signOutToHome();
+              }}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Log out
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex w-full md:w-64 border-r border-border bg-card flex-shrink-0 flex-col md:sticky md:top-0 md:h-[100dvh] md:self-start">
         <div className="p-6">
           <Link href="/admin" className="flex items-center gap-3">
             <img src={`${basePath}/logo.png`} alt="Logo" className="w-11 h-11" />
@@ -33,39 +135,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </Link>
         </div>
 
-        <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
-          <Link
-            href="/teacher"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-foreground mb-2 pb-4 border-b border-border"
-          >
-            <ArrowLeftCircle className="w-5 h-5" />
-            <span className="flex-1">Back to Teacher Portal</span>
-          </Link>
-          {navItems.map((item) => {
-            const active = location === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  active
-                    ? "bg-secondary text-secondary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                }`}
-              >
-                <item.icon className="w-5 h-5" />
-                <span className="flex-1">{item.label}</span>
-                {item.href === "/admin/reports" && hasOpenReports && <PingDot />}
-              </Link>
-            );
-          })}
-        </nav>
+        <nav className="flex-1 px-4 space-y-1 overflow-y-auto">{navLinks()}</nav>
 
         <div className="p-4 border-t border-border mt-auto">
           <Button
             variant="ghost"
             className="w-full justify-start text-muted-foreground hover:text-destructive"
-            onClick={() => signOut({ redirectUrl: basePath || "/" })}
+            onClick={signOutToHome}
           >
             <LogOut className="w-4 h-4 mr-2" />
             Log out

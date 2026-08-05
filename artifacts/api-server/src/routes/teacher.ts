@@ -1010,7 +1010,7 @@ router.post("/teacher/students/:id/messages", requireTeacher, async (req, res): 
   sendPushToUser(student.clerkUserId, {
     title: "New message from your tutor",
     body: parsed.data.body,
-    url: "/student/messages",
+    url: "/messages",
   }).catch((err) => console.error("Failed to send message push:", err));
 
   res.status(201).json(message);

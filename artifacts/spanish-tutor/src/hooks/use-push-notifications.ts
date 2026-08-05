@@ -15,6 +15,66 @@ const isSupported =
   "PushManager" in window &&
   "Notification" in window;
 
+/**
+ * Keeps the device's push subscription pointing at whoever is signed in now.
+ *
+ * A browser push subscription outlives a session: the endpoint stays valid
+ * across sign-out. Without this, if one person enables notifications and a
+ * second person later signs in on the same device, the second person is never
+ * re-prompted (the prompt only shows while permission is still "default"), so
+ * the subscription keeps resolving to the first person — and message pushes
+ * carry the full message body. So: re-register on sign-in to transfer
+ * ownership, and drop the browser subscription entirely on sign-out, which
+ * makes the endpoint expire and the server prune the row on its next send.
+ */
+export function useSyncPushSubscription(userId: string | null | undefined) {
+  useEffect(() => {
+    if (!isSupported || userId === undefined) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        const existing = await registration.pushManager.getSubscription();
+        if (cancelled) return;
+
+        if (!userId) {
+          await existing?.unsubscribe();
+          return;
+        }
+
+        if (Notification.permission !== "granted") return;
+
+        const subscription =
+          existing ??
+          (await (async () => {
+            const publicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+            if (!publicKey) return null;
+            return registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
+            });
+          })());
+        if (!subscription || cancelled) return;
+
+        const json = subscription.toJSON();
+        await fetch("/api/push/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+        });
+      } catch (err) {
+        console.error("Push subscription sync failed:", err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+}
+
 export function usePushNotifications() {
   const [permission, setPermission] = useState<NotificationPermission>(
     isSupported ? Notification.permission : "denied",

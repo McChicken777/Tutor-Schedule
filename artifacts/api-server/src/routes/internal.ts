@@ -5,6 +5,7 @@ import { homeworkTable, bookingsTable, homeworkFilesTable, reportsTable, usersTa
 import { requireCronSecret } from "../middlewares/requireCronSecret";
 import { deleteObject } from "../lib/objectStorage";
 import { sendPushToUser } from "../lib/push";
+import { formatStartsIn } from "../lib/formatStartsIn";
 
 const router: IRouter = Router();
 
@@ -79,7 +80,7 @@ router.post("/internal/homework-reminders/run", requireCronSecret, async (_req, 
         sendPushToUser(student.clerkUserId, {
           title: "Homework reminder",
           body: "You have homework waiting to be submitted.",
-          url: "/student/homework",
+          url: "/homework",
         }).catch((err) => console.error("Failed to send homework-reminder push:", err)),
       ),
     );
@@ -127,15 +128,15 @@ router.post("/internal/class-reminders/run", requireCronSecret, async (_req, res
     dueBookings.map(async ({ booking, lessonType }) => {
       const student = studentById.get(booking.studentId);
       const teacher = teacherById.get(booking.teacherId);
-      const startLabel = booking.startTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      const startLabel = formatStartsIn(booking.startTime, now);
 
       const pushes: Promise<void>[] = [];
       if (student) {
         pushes.push(
           sendPushToUser(student.clerkUserId, {
             title: "Upcoming lesson",
-            body: `Your ${lessonType.name} lesson starts at ${startLabel}.`,
-            url: "/student",
+            body: `Your ${lessonType.name} lesson starts ${startLabel}.`,
+            url: "/dashboard",
           }).catch((err) => console.error("Failed to send class-reminder push (student):", err)),
         );
       }
@@ -143,7 +144,7 @@ router.post("/internal/class-reminders/run", requireCronSecret, async (_req, res
         pushes.push(
           sendPushToUser(teacher.clerkUserId, {
             title: "Upcoming lesson",
-            body: `Your lesson with ${student?.displayName ?? "a student"} starts at ${startLabel}.`,
+            body: `Your lesson with ${student?.displayName ?? "a student"} starts ${startLabel}.`,
             url: "/teacher",
           }).catch((err) => console.error("Failed to send class-reminder push (teacher):", err)),
         );

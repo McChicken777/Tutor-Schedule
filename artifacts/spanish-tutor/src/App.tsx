@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ClerkProvider, SignIn, SignUp, Show, useClerk } from "@clerk/react";
+import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
@@ -13,6 +13,7 @@ import { LoadingScreen } from "@/components/LoadingScreen";
 import { toast } from "@/hooks/use-toast";
 import { describeError } from "@/lib/errors";
 import { isStandalone } from "@/lib/pwa";
+import { useSyncPushSubscription } from "@/hooks/use-push-notifications";
 
 import Landing from "@/pages/public/Landing";
 import SignInPage from "@/pages/public/SignIn";
@@ -130,6 +131,15 @@ const clerkAppearance = {
     dividerText: "text-muted-foreground bg-background px-2",
   },
 };
+
+// Transfers the device's push subscription to whoever is signed in now, so a
+// second person signing in on a shared device stops receiving the first
+// person's notifications.
+function PushSubscriptionSync() {
+  const { user, isLoaded } = useUser();
+  useSyncPushSubscription(isLoaded ? user?.id ?? null : undefined);
+  return null;
+}
 
 function ClerkQueryClientCacheInvalidator() {
   const { addListener } = useClerk();
@@ -356,6 +366,7 @@ function ClerkProviderWithRoutes() {
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
+        <PushSubscriptionSync />
         <TooltipProvider>
           <ErrorBoundary>
           <Switch>

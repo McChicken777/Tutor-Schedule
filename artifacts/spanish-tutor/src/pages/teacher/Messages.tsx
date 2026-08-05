@@ -14,7 +14,7 @@ import ErrorState from "@/components/ErrorState";
 import ReportButton from "@/components/reports/ReportButton";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Send, MessageSquare } from "lucide-react";
+import { Send, MessageSquare, ArrowLeft } from "lucide-react";
 
 function formatThreadTime(date: Date): string {
   return isToday(date) ? format(date, "h:mm a") : format(date, "MMM d");
@@ -30,7 +30,14 @@ export default function TeacherMessages() {
 
   return (
     <div className="flex h-full min-h-0">
-      <aside className="w-full sm:w-80 border-r border-border flex-shrink-0 flex flex-col min-h-0">
+      {/* Below sm there is only room for one pane, so this behaves as
+          master/detail: the thread list gives way to the conversation once one
+          is picked, and the pane's back button returns here. */}
+      <aside
+        className={`w-full sm:w-80 border-r border-border flex-shrink-0 flex-col min-h-0 ${
+          selected ? "hidden sm:flex" : "flex"
+        }`}
+      >
         <div className="p-6 pb-4">
           <h1 className="text-2xl font-serif font-bold text-foreground">Messages</h1>
         </div>
@@ -75,12 +82,13 @@ export default function TeacherMessages() {
         </div>
       </aside>
 
-      <div className="flex-1 min-h-0 hidden sm:flex flex-col">
+      <div className={`flex-1 min-h-0 flex-col ${selected ? "flex" : "hidden sm:flex"}`}>
         {selected ? (
           <ConversationPane
             key={selected.studentId}
             studentId={selected.studentId}
             studentName={selected.studentName}
+            onBack={() => setSelectedId(null)}
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
@@ -93,7 +101,15 @@ export default function TeacherMessages() {
   );
 }
 
-function ConversationPane({ studentId, studentName }: { studentId: number; studentName: string }) {
+function ConversationPane({
+  studentId,
+  studentName,
+  onBack,
+}: {
+  studentId: number;
+  studentName: string;
+  onBack: () => void;
+}) {
   const [draft, setDraft] = useState("");
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -121,7 +137,17 @@ function ConversationPane({ studentId, studentName }: { studentId: number; stude
   return (
     <>
       <div className="p-6 border-b border-border flex items-center justify-between gap-4">
-        <h2 className="font-bold text-foreground">{studentName}</h2>
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Back to conversations"
+            className="sm:hidden -ml-2 p-2 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h2 className="font-bold text-foreground truncate">{studentName}</h2>
+        </div>
         <ReportButton role="teacher" target={{ type: "general" }} variant="header" />
       </div>
 
