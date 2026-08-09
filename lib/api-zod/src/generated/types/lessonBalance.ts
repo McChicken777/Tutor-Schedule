@@ -6,9 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface PackageGrantInput {
-  studentId: number;
+export interface LessonBalance {
   lessonTypeId: number;
-  /** @minimum 1 */
-  totalLessons: number;
+  lessonTypeName: string;
+  durationMinutes: number;
+  remaining: number;
 }

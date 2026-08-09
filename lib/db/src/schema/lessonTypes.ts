@@ -8,7 +8,9 @@ export const lessonTypesTable = pgTable("lesson_types", {
   teacherId: integer("teacher_id").references(() => teachersTable.id).notNull(),
   name: text("name").notNull(),
   durationMinutes: integer("duration_minutes").notNull(),
-  creditCost: integer("credit_cost").notNull().default(1),
+  // Price for one lesson of this type. Packages (lessonTypePackages) sell the
+  // same lesson in bulk at a lower per-lesson rate.
+  priceCents: integer("price_cents").notNull().default(0),
   description: text("description").notNull(),
   isActive: boolean("is_active").notNull().default(true),
   isTrial: boolean("is_trial").notNull().default(false),

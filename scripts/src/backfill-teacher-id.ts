@@ -7,7 +7,6 @@ import {
   lessonTypesTable,
   availabilityOverridesTable,
   lessonPackagesTable,
-  creditBundlesTable,
   siteSettingsTable,
   calendarTokensTable,
   usersTable,
@@ -50,13 +49,6 @@ async function main() {
     .where(isNull(lessonPackagesTable.teacherId))
     .returning({ id: lessonPackagesTable.id });
   console.log(`lesson_packages: backfilled ${packages.length} row(s)`);
-
-  const bundles = await db
-    .update(creditBundlesTable)
-    .set({ teacherId })
-    .where(isNull(creditBundlesTable.teacherId))
-    .returning({ id: creditBundlesTable.id });
-  console.log(`credit_bundles: backfilled ${bundles.length} row(s)`);
 
   const settings = await db
     .update(siteSettingsTable)

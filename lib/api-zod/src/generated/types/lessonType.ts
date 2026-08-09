@@ -10,7 +10,7 @@ export interface LessonType {
   id: number;
   name: string;
   durationMinutes: number;
-  creditCost: number;
+  priceCents: number;
   description: string;
   isActive: boolean;
   isTrial: boolean;

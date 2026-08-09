@@ -17,6 +17,18 @@ export const bookingsTable = pgTable("bookings", {
   calendarEventId: text("calendar_event_id"),
   cancellationReason: text("cancellation_reason"),
   notes: text("notes"),
+  // How this lesson was paid for.
+  //   balance — drawn from a package the student already paid for
+  //   unpaid  — booked as a one-off; the student owes for it
+  //   paid    — one-off the teacher has confirmed payment for
+  //   free    — trial lesson, nothing owed
+  // Only "unpaid" needs the teacher's attention, so it drives the amount-owed
+  // view rather than a separate invoice concept.
+  paymentStatus: text("payment_status").notNull().default("balance"),
+  // Charged amount for one-off bookings, copied from the lesson type at booking
+  // time so a later price change can't rewrite what the student owes.
+  priceCents: integer("price_cents").notNull().default(0),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
   // Idempotency flag for the upcoming-class-reminder push sweep, mirroring homework's
   // reminderSentAt pattern — set once the reminder push has fired so the sweep never double-sends.
   classReminderSentAt: timestamp("class_reminder_sent_at", { withTimezone: true }),

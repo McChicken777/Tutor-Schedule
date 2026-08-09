@@ -13,7 +13,7 @@ export interface LessonType {
   id: number;
   name: string;
   durationMinutes: number;
-  creditCost: number;
+  priceCents: number;
   description: string;
   isActive: boolean;
   isTrial: boolean;
@@ -25,8 +25,8 @@ export interface LessonTypeInput {
   name: string;
   /** @minimum 15 */
   durationMinutes: number;
-  /** @minimum 1 */
-  creditCost: number;
+  /** @minimum 0 */
+  priceCents: number;
   description: string;
   isActive?: boolean;
   isTrial?: boolean;
@@ -37,38 +37,88 @@ export interface LessonTypeUpdate {
   name?: string;
   /** @minimum 15 */
   durationMinutes?: number;
-  /** @minimum 1 */
-  creditCost?: number;
+  /** @minimum 0 */
+  priceCents?: number;
   description?: string;
   isActive?: boolean;
   isTrial?: boolean;
 }
 
-export interface CreditBundle {
+export interface LessonTypePackage {
   id: number;
-  credits: number;
-  priceCents: number;
+  lessonTypeId: number;
+  quantity: number;
+  totalCents: number;
   sortOrder: number;
   isActive: boolean;
   createdAt: string;
 }
 
-export interface CreditBundleInput {
-  /** @minimum 1 */
-  credits: number;
+export interface LessonTypePackageInput {
+  lessonTypeId: number;
+  /** @minimum 2 */
+  quantity: number;
   /** @minimum 0 */
-  priceCents: number;
+  totalCents: number;
   sortOrder?: number;
   isActive?: boolean;
 }
 
-export interface CreditBundleUpdate {
-  /** @minimum 1 */
-  credits?: number;
+export interface LessonTypePackageUpdate {
+  /** @minimum 2 */
+  quantity?: number;
   /** @minimum 0 */
-  priceCents?: number;
+  totalCents?: number;
   sortOrder?: number;
   isActive?: boolean;
+}
+
+export interface LessonBalance {
+  lessonTypeId: number;
+  lessonTypeName: string;
+  durationMinutes: number;
+  remaining: number;
+}
+
+export type PackageRequestStatus = typeof PackageRequestStatus[keyof typeof PackageRequestStatus];
+
+
+export const PackageRequestStatus = {
+  pending: 'pending',
+  paid: 'paid',
+  declined: 'declined',
+} as const;
+
+export interface PackageRequest {
+  id: number;
+  studentId: number;
+  studentName?: string;
+  lessonTypeId: number;
+  lessonTypeName: string;
+  durationMinutes?: number;
+  quantity: number;
+  totalCents: number;
+  status: PackageRequestStatus;
+  note?: string | null;
+  requestedAt: string;
+  resolvedAt?: string | null;
+}
+
+export interface PackageRequestInput {
+  lessonTypePackageId: number;
+  note?: string;
+}
+
+export type PackageRequestResolveStatus = typeof PackageRequestResolveStatus[keyof typeof PackageRequestResolveStatus];
+
+
+export const PackageRequestResolveStatus = {
+  paid: 'paid',
+  declined: 'declined',
+} as const;
+
+export interface PackageRequestResolve {
+  status: PackageRequestResolveStatus;
 }
 
 export interface TimeSlot {
@@ -323,9 +373,10 @@ export interface ReviewInput {
 
 export interface LessonPackage {
   id: number;
-  totalCredits: number;
-  usedCredits: number;
-  remainingCredits: number;
+  lessonTypeId: number;
+  totalLessons: number;
+  usedLessons: number;
+  remainingLessons: number;
   purchasedAt: string;
 }
 
@@ -334,7 +385,7 @@ export interface StudentProfile {
   clerkUserId: string;
   email: string;
   displayName: string;
-  totalRemainingCredits: number;
+  lessonBalances: LessonBalance[];
   upcomingLessonsCount: number;
   createdAt: string;
 }
@@ -374,7 +425,7 @@ export interface TeacherHomework {
 export interface StudentDashboard {
   nextBooking?: Booking;
   upcomingBookings: Booking[];
-  totalRemainingCredits: number;
+  lessonBalances: LessonBalance[];
   /** Whether this student can still book the free trial lesson (never booked it before, and one is configured/enabled). */
   trialAvailable: boolean;
   /** Whether this student has already seen (or skipped) the first-login onboarding tour. */
@@ -582,8 +633,9 @@ export interface TeacherStudent {
   id: number;
   email: string;
   displayName: string;
-  totalCredits: number;
-  usedCredits: number;
+  totalLessons: number;
+  usedLessons: number;
+  remainingLessons: number;
   totalBookings: number;
   createdAt: string;
 }
@@ -631,8 +683,9 @@ export interface TeacherStudentDetail {
 
 export interface PackageGrantInput {
   studentId: number;
+  lessonTypeId: number;
   /** @minimum 1 */
-  totalCredits: number;
+  totalLessons: number;
 }
 
 export interface CalendarStatus {
@@ -778,6 +831,13 @@ export type CompleteTour200 = {
 export type ListTeacherBookingsParams = {
 status?: string;
 date?: string;
+};
+
+export type MarkBookingPaid200 = {
+  id: number;
+  paymentStatus: string;
+  priceCents: number;
+  paidAt?: string | null;
 };
 
 export type ListTeacherHomeworkParams = {

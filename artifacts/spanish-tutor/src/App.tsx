@@ -31,6 +31,7 @@ import TeacherOnboarding from "@/pages/teacher/onboarding";
 import TeacherDashboard from "@/pages/teacher/Dashboard";
 import TeacherBookings from "@/pages/teacher/Bookings";
 import TeacherLessonTypes from "@/pages/teacher/LessonTypes";
+import TeacherPackages from "@/pages/teacher/Packages";
 import TeacherHomework from "@/pages/teacher/Homework";
 import TeacherStudents from "@/pages/teacher/Students";
 import TeacherMessages from "@/pages/teacher/Messages";
@@ -386,6 +387,9 @@ function ClerkProviderWithRoutes() {
             </Route>
             <Route path="/teacher/bookings">
               <TeacherPortal><TeacherBookings /></TeacherPortal>
+            </Route>
+            <Route path="/teacher/packages">
+              <TeacherPortal><TeacherPackages /></TeacherPortal>
             </Route>
             <Route path="/teacher/lesson-types">
               <TeacherPortal><TeacherLessonTypes /></TeacherPortal>

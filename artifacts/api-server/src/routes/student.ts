@@ -7,6 +7,8 @@ import {
   bookingsTable,
   lessonTypesTable,
   lessonPackagesTable,
+  lessonTypePackagesTable,
+  packageRequestsTable,
   homeworkTable,
   homeworkFilesTable,
   reviewsTable,
@@ -31,6 +33,7 @@ import {
   ListStudentBookingsQueryParams,
   SendStudentMessageBody,
   CreateStudentReportBody,
+  CreatePackageRequestBody,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/requireAuth";
 import { sendPushToUser } from "../lib/push";
@@ -42,6 +45,8 @@ import {
 import { mapHomeworkFields, mapHomeworkRow } from "../lib/homeworkMapper";
 import { mapReportRow } from "../lib/reportMapper";
 import { isKeyForBookingContext } from "../lib/objectStorage";
+import { getLessonBalances } from "../lib/lessonBalances";
+import { mapPackageRequest } from "../lib/packageRequestMapper";
 
 const router: IRouter = Router();
 
@@ -270,15 +275,7 @@ router.get("/student/me", requireAuth, async (req, res): Promise<void> => {
   const clerkUserId = (req as any).clerkUserId;
   const user = await getOrCreateUser(clerkUserId);
 
-  const packages = await db
-    .select()
-    .from(lessonPackagesTable)
-    .where(eq(lessonPackagesTable.studentId, user.id));
-
-  const totalRemaining = packages.reduce(
-    (sum, p) => sum + (p.totalCredits - p.usedCredits),
-    0,
-  );
+  const balances = await getLessonBalances(user.id);
 
   const upcoming = await db
     .select()
@@ -295,7 +292,7 @@ router.get("/student/me", requireAuth, async (req, res): Promise<void> => {
     clerkUserId: user.clerkUserId,
     email: user.email,
     displayName: user.displayName,
-    totalRemainingCredits: totalRemaining,
+    lessonBalances: balances,
     upcomingLessonsCount: upcoming.length,
     createdAt: user.createdAt,
   });
@@ -351,11 +348,6 @@ router.get("/student/dashboard", requireAuth, async (req, res): Promise<void> =>
     .from(messagesTable)
     .where(and(eq(messagesTable.studentId, user.id), eq(messagesTable.senderRole, "admin"), sql`${messagesTable.readAt} IS NULL`));
 
-  const totalRemaining = packages.reduce(
-    (sum, p) => sum + (p.totalCredits - p.usedCredits),
-    0,
-  );
-
   const mappedUpcoming = upcomingBookings.map((r) => ({
     id: r.booking.id,
     lessonTypeId: r.booking.lessonTypeId,
@@ -374,16 +366,17 @@ router.get("/student/dashboard", requireAuth, async (req, res): Promise<void> =>
   res.json({
     nextBooking: mappedUpcoming[0] ?? null,
     upcomingBookings: mappedUpcoming,
-    totalRemainingCredits: totalRemaining,
+    lessonBalances: await getLessonBalances(user.id),
     trialAvailable,
     hasSeenTour: isTestAccount ? false : user.hasSeenTour,
     pendingHomeworkCount,
     hasUnreadMessages: unreadMessageCount > 0,
     packages: packages.map((p) => ({
       id: p.id,
-      totalCredits: p.totalCredits,
-      usedCredits: p.usedCredits,
-      remainingCredits: p.totalCredits - p.usedCredits,
+      lessonTypeId: p.lessonTypeId,
+      totalLessons: p.totalLessons,
+      usedLessons: p.usedLessons,
+      remainingLessons: p.totalLessons - p.usedLessons,
       purchasedAt: p.purchasedAt,
     })),
     recentHomework: recentHomework.map((r) =>
@@ -490,27 +483,35 @@ router.post("/student/bookings", requireAuth, async (req, res): Promise<void> =>
       user.teacherId = teacherId;
     }
 
-    // The trial lesson type needs no credits, but only once ever, per student
+    // The trial lesson is free, but only once ever, per student
     let packages: (typeof lessonPackagesTable.$inferSelect)[] = [];
     if (lessonType.isTrial) {
       if (!isTestStudent(user.email) && (await hasUsedTrial(user.id))) {
         return { error: { status: 400, message: "You've already used your free first lesson" } } as const;
       }
     } else {
+      // Balances are held per lesson type — a 55-minute package cannot pay for
+      // an 85-minute lesson.
       packages = await tx
         .select()
         .from(lessonPackagesTable)
-        .where(eq(lessonPackagesTable.studentId, user.id));
-
-      const totalRemaining = packages.reduce(
-        (sum, p) => sum + (p.totalCredits - p.usedCredits),
-        0,
-      );
-
-      if (totalRemaining < lessonType.creditCost) {
-        return { error: { status: 400, message: "Not enough credits for this lesson type" } } as const;
-      }
+        .where(
+          and(
+            eq(lessonPackagesTable.studentId, user.id),
+            eq(lessonPackagesTable.lessonTypeId, lessonTypeId),
+          ),
+        );
     }
+
+    // A student with no balance can still book — the lesson is recorded as
+    // unpaid and settled with the teacher off the platform. Blocking here would
+    // force a request-and-approve round trip before every one-off lesson.
+    const remainingOfType = packages.reduce(
+      (sum, p) => sum + (p.totalLessons - p.usedLessons),
+      0,
+    );
+    const paysFromBalance = !lessonType.isTrial && remainingOfType > 0;
+    const paymentStatus = lessonType.isTrial ? "free" : paysFromBalance ? "balance" : "unpaid";
 
     if (await isTimeSlotTaken(tx, teacherId, start, end)) {
       return { error: { status: 409, message: "This time slot is no longer available. Please choose another." } } as const;
@@ -536,27 +537,25 @@ router.post("/student/bookings", requireAuth, async (req, res): Promise<void> =>
         startTime: start,
         endTime: end,
         status: "upcoming",
+        paymentStatus,
+        // Snapshot the price so a later change to the lesson type can't rewrite
+        // what an already-booked student owes.
+        priceCents: paymentStatus === "unpaid" ? lessonType.priceCents : 0,
         meetLink: calendarResult?.meetLink ?? null,
         calendarEventId: calendarResult?.eventId ?? null,
       })
       .returning();
 
-    if (!lessonType.isTrial) {
-      // Deduct creditCost credits FIFO across package rows, oldest first
-      let remainingToDeduct = lessonType.creditCost;
-      const sortedPackages = [...packages].sort(
-        (a, b) => a.purchasedAt.getTime() - b.purchasedAt.getTime(),
-      );
-      for (const pkg of sortedPackages) {
-        if (remainingToDeduct <= 0) break;
-        const available = pkg.totalCredits - pkg.usedCredits;
-        if (available <= 0) continue;
-        const deduction = Math.min(available, remainingToDeduct);
+    if (paysFromBalance) {
+      // Spend one lesson from the oldest grant that still has any left.
+      const oldestWithBalance = [...packages]
+        .sort((a, b) => a.purchasedAt.getTime() - b.purchasedAt.getTime())
+        .find((p) => p.totalLessons - p.usedLessons > 0);
+      if (oldestWithBalance) {
         await tx
           .update(lessonPackagesTable)
-          .set({ usedCredits: pkg.usedCredits + deduction })
-          .where(eq(lessonPackagesTable.id, pkg.id));
-        remainingToDeduct -= deduction;
+          .set({ usedLessons: oldestWithBalance.usedLessons + 1 })
+          .where(eq(lessonPackagesTable.id, oldestWithBalance.id));
       }
     }
 
@@ -677,26 +676,28 @@ router.patch("/student/bookings/:id/cancel", requireAuth, async (req, res): Prom
       .where(eq(bookingsTable.id, id))
       .returning();
 
-    // Refund credit — but not if cancelling less than 24 hours before the lesson,
-    // and never for a trial booking, which never consumed a credit to begin with.
+    // Return the lesson to the student's balance — but not if cancelling less
+    // than 24 hours before, and only if the booking was actually paid for from
+    // a balance. A trial or an unpaid one-off has nothing to give back.
     const hoursUntilLesson = (row.booking.startTime.getTime() - Date.now()) / (1000 * 60 * 60);
-    if (!row.lessonType.isTrial && hoursUntilLesson >= 24) {
+    if (row.booking.paymentStatus === "balance" && hoursUntilLesson >= 24) {
       const packages = await tx
         .select()
         .from(lessonPackagesTable)
-        .where(eq(lessonPackagesTable.studentId, user.id))
+        .where(
+          and(
+            eq(lessonPackagesTable.studentId, user.id),
+            eq(lessonPackagesTable.lessonTypeId, row.booking.lessonTypeId),
+          ),
+        )
         .orderBy(desc(lessonPackagesTable.purchasedAt));
 
-      let remainingToRefund = row.lessonType.creditCost;
-      for (const pkg of packages) {
-        if (remainingToRefund <= 0) break;
-        if (pkg.usedCredits <= 0) continue;
-        const refund = Math.min(pkg.usedCredits, remainingToRefund);
+      const mostRecentlyUsed = packages.find((p) => p.usedLessons > 0);
+      if (mostRecentlyUsed) {
         await tx
           .update(lessonPackagesTable)
-          .set({ usedCredits: pkg.usedCredits - refund })
-          .where(eq(lessonPackagesTable.id, pkg.id));
-        remainingToRefund -= refund;
+          .set({ usedLessons: mostRecentlyUsed.usedLessons - 1 })
+          .where(eq(lessonPackagesTable.id, mostRecentlyUsed.id));
       }
     }
 
@@ -1035,12 +1036,103 @@ router.get("/student/packages", requireAuth, async (req, res): Promise<void> => 
   res.json(
     rows.map((r) => ({
       id: r.id,
-      totalCredits: r.totalCredits,
-      usedCredits: r.usedCredits,
-      remainingCredits: r.totalCredits - r.usedCredits,
+      lessonTypeId: r.lessonTypeId,
+      totalLessons: r.totalLessons,
+      usedLessons: r.usedLessons,
+      remainingLessons: r.totalLessons - r.usedLessons,
       purchasedAt: r.purchasedAt,
     })),
   );
+});
+
+// ─── Package requests ─────────────────────────────────────────────────────────
+// Payment happens off the platform, so a request is just a record of intent
+// until the teacher confirms the money arrived and grants the lessons.
+
+router.get("/student/package-requests", requireAuth, async (req, res): Promise<void> => {
+  const clerkUserId = (req as any).clerkUserId;
+  const user = await getOrCreateUser(clerkUserId);
+
+  const rows = await db
+    .select({ request: packageRequestsTable, lessonType: lessonTypesTable })
+    .from(packageRequestsTable)
+    .innerJoin(lessonTypesTable, eq(packageRequestsTable.lessonTypeId, lessonTypesTable.id))
+    .where(eq(packageRequestsTable.studentId, user.id))
+    .orderBy(desc(packageRequestsTable.requestedAt));
+
+  res.json(rows.map((r) => mapPackageRequest(r.request, r.lessonType.name)));
+});
+
+router.post("/student/package-requests", requireAuth, async (req, res): Promise<void> => {
+  const clerkUserId = (req as any).clerkUserId;
+  const user = await getOrCreateUser(clerkUserId);
+
+  const parsed = CreatePackageRequestBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request" });
+    return;
+  }
+
+  const [pkg] = await db
+    .select({ pkg: lessonTypePackagesTable, lessonType: lessonTypesTable })
+    .from(lessonTypePackagesTable)
+    .innerJoin(lessonTypesTable, eq(lessonTypePackagesTable.lessonTypeId, lessonTypesTable.id))
+    .where(
+      and(
+        eq(lessonTypePackagesTable.id, parsed.data.lessonTypePackageId),
+        eq(lessonTypePackagesTable.isActive, true),
+      ),
+    );
+
+  if (!pkg) {
+    res.status(404).json({ error: "Package not found" });
+    return;
+  }
+
+  // One open request per package at a time, so a student tapping twice doesn't
+  // leave the teacher with duplicates to reconcile.
+  const [existing] = await db
+    .select()
+    .from(packageRequestsTable)
+    .where(
+      and(
+        eq(packageRequestsTable.studentId, user.id),
+        eq(packageRequestsTable.lessonTypePackageId, pkg.pkg.id),
+        eq(packageRequestsTable.status, "pending"),
+      ),
+    );
+  if (existing) {
+    res.status(200).json(mapPackageRequest(existing, pkg.lessonType.name));
+    return;
+  }
+
+  const [created] = await db
+    .insert(packageRequestsTable)
+    .values({
+      studentId: user.id,
+      teacherId: pkg.lessonType.teacherId,
+      lessonTypeId: pkg.lessonType.id,
+      lessonTypePackageId: pkg.pkg.id,
+      quantity: pkg.pkg.quantity,
+      totalCents: pkg.pkg.totalCents,
+      status: "pending",
+      note: parsed.data.note ?? null,
+    })
+    .returning();
+
+  const [teacher] = await db
+    .select()
+    .from(teachersTable)
+    .where(eq(teachersTable.id, pkg.lessonType.teacherId));
+  if (teacher?.clerkUserId) {
+    sendPushToUser(teacher.clerkUserId, {
+      title: "New package request",
+      body: `${user.displayName} requested ${pkg.pkg.quantity} × ${pkg.lessonType.name}.`,
+      url: "/teacher/packages",
+    }).catch((err) => console.error("Failed to send package-request push:", err));
+  }
+
+  res.status(201).json(mapPackageRequest(created!, pkg.lessonType.name));
 });
 
 router.patch("/student/tour-complete", requireAuth, async (req, res): Promise<void> => {

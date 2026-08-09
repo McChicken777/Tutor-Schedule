@@ -5,13 +5,14 @@
  * Spanish Tutor Booking Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { LessonBalance } from './lessonBalance';
 
 export interface StudentProfile {
   id: number;
   clerkUserId: string;
   email: string;
   displayName: string;
-  totalRemainingCredits: number;
+  lessonBalances: LessonBalance[];
   upcomingLessonsCount: number;
   createdAt: Date;
 }

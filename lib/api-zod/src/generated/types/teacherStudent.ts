@@ -10,8 +10,9 @@ export interface TeacherStudent {
   id: number;
   email: string;
   displayName: string;
-  totalCredits: number;
-  usedCredits: number;
+  totalLessons: number;
+  usedLessons: number;
+  remainingLessons: number;
   totalBookings: number;
   createdAt: Date;
 }

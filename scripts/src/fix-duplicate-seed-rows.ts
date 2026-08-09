@@ -1,5 +1,5 @@
 import { eq, and, inArray } from "drizzle-orm";
-import { db, siteSettingsTable, creditBundlesTable, pool } from "@workspace/db";
+import { db, siteSettingsTable, pool } from "@workspace/db";
 
 // One-off cleanup for a seed.ts bug (fixed in this same commit): a teacher-scoped
 // existence check ran before the teacherId backfill completed, so seed() inserted
@@ -29,24 +29,6 @@ async function main() {
   }
   await db.update(siteSettingsTable).set({ teacherId: 1 }).where(eq(siteSettingsTable.id, target[0].id));
   console.log(`Set site_settings id=${target[0].id} teacherId=1`);
-
-  const bogusBundles = await db
-    .select()
-    .from(creditBundlesTable)
-    .where(inArray(creditBundlesTable.id, [8, 9, 10]));
-  const expected = [
-    { id: 8, credits: 200 },
-    { id: 9, credits: 400 },
-    { id: 10, credits: 800 },
-  ];
-  for (const e of expected) {
-    const row = bogusBundles.find((b) => b.id === e.id);
-    if (!row || row.credits !== e.credits) {
-      throw new Error(`Expected credit_bundles id=${e.id} with credits=${e.credits}, found ${JSON.stringify(row)}. Aborting.`);
-    }
-  }
-  await db.delete(creditBundlesTable).where(inArray(creditBundlesTable.id, [8, 9, 10]));
-  console.log("Deleted bogus credit_bundles rows id=8,9,10");
 
   await pool.end();
 }

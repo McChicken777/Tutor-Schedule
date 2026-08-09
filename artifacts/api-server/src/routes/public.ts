@@ -3,7 +3,7 @@ import { eq, asc, and } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   lessonTypesTable,
-  creditBundlesTable,
+  lessonTypePackagesTable,
   testimonialsTable,
   faqsTable,
   siteSettingsTable,
@@ -31,7 +31,7 @@ router.get("/lesson-types", async (_req, res): Promise<void> => {
       id: t.id,
       name: t.name,
       durationMinutes: t.durationMinutes,
-      creditCost: t.creditCost,
+      priceCents: t.priceCents,
       description: t.description,
       isActive: t.isActive,
       isTrial: t.isTrial,
@@ -40,13 +40,24 @@ router.get("/lesson-types", async (_req, res): Promise<void> => {
   );
 });
 
-router.get("/credit-bundles", async (_req, res): Promise<void> => {
-  const bundles = await db
-    .select()
-    .from(creditBundlesTable)
-    .where(eq(creditBundlesTable.isActive, true))
-    .orderBy(asc(creditBundlesTable.credits));
-  res.json(bundles);
+// Bulk offers for the public pricing section, grouped by lesson type so the
+// landing page can show each length with its own discounts.
+router.get("/lesson-type-packages", async (_req, res): Promise<void> => {
+  const rows = await db
+    .select({ pkg: lessonTypePackagesTable })
+    .from(lessonTypePackagesTable)
+    .innerJoin(lessonTypesTable, eq(lessonTypePackagesTable.lessonTypeId, lessonTypesTable.id))
+    .innerJoin(teachersTable, eq(lessonTypesTable.teacherId, teachersTable.id))
+    .where(
+      and(
+        eq(lessonTypePackagesTable.isActive, true),
+        eq(lessonTypesTable.isActive, true),
+        eq(teachersTable.isBanned, false),
+      ),
+    )
+    .orderBy(asc(lessonTypePackagesTable.sortOrder), asc(lessonTypePackagesTable.quantity));
+
+  res.json(rows.map((r) => r.pkg));
 });
 
 router.get("/available-slots", async (req, res): Promise<void> => {

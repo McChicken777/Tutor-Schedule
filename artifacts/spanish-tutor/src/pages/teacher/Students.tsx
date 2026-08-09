@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListTeacherStudents, useGetTeacherStudent, useGrantPackage, useListTeacherHomework } from "@workspace/api-client-react";
+import { useListTeacherStudents, useGetTeacherStudent, useGrantPackage, useListTeacherHomework, useListLessonTypes } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,7 +37,7 @@ export default function TeacherStudents() {
               <tr>
                 <th className="p-4 font-medium text-muted-foreground">Name</th>
                 <th className="p-4 font-medium text-muted-foreground">Email</th>
-                <th className="p-4 font-medium text-muted-foreground">Credits Left</th>
+                <th className="p-4 font-medium text-muted-foreground">Lessons Left</th>
                 <th className="p-4 font-medium text-muted-foreground">Bookings</th>
                 <th className="p-4 font-medium text-muted-foreground">Joined</th>
                 <th className="p-4 font-medium text-muted-foreground text-right">Action</th>
@@ -48,7 +48,7 @@ export default function TeacherStudents() {
                 <tr key={s.id} className="hover:bg-accent/20 transition">
                   <td className="p-4 font-medium text-foreground">{s.displayName}</td>
                   <td className="p-4 text-muted-foreground">{s.email}</td>
-                  <td className="p-4 font-bold text-primary">{s.totalCredits - s.usedCredits}</td>
+                  <td className="p-4 font-bold text-primary">{s.remainingLessons}</td>
                   <td className="p-4 text-foreground">{s.totalBookings}</td>
                   <td className="p-4 text-muted-foreground">{format(new Date(s.createdAt), "MMM yyyy")}</td>
                   <td className="p-4 text-right">
@@ -81,18 +81,27 @@ function StudentDetail({ id }: { id: number }) {
   const qc = useQueryClient();
   const { toast } = useToast();
 
-  const [grantCredits, setGrantCredits] = useState(5);
+  const [grantLessons, setGrantLessons] = useState(5);
+  const [grantLessonTypeId, setGrantLessonTypeId] = useState<number | null>(null);
+  const { data: lessonTypes } = useListLessonTypes();
+  const grantableLessonTypes = (lessonTypes ?? []).filter((lt) => lt.isActive && !lt.isTrial);
+  const lessonTypeName = (lessonTypeId: number) =>
+    (lessonTypes ?? []).find((lt) => lt.id === lessonTypeId)?.name ?? "Lesson";
 
   if (isLoading || !student) return <Skeleton className="h-64 w-full" />;
 
   const handleGrant = () => {
-    grantMutation.mutate({ data: { studentId: id, totalCredits: grantCredits } }, {
+    if (grantLessonTypeId == null) {
+      toast({ title: "Pick a lesson type first", variant: "destructive" });
+      return;
+    }
+    grantMutation.mutate({ data: { studentId: id, lessonTypeId: grantLessonTypeId, totalLessons: grantLessons } }, {
       onSuccess: () => {
-        toast({ title: "Credits granted" });
+        toast({ title: "Lessons granted" });
         qc.invalidateQueries({ queryKey: getGetTeacherStudentQueryKey(id) });
         qc.invalidateQueries({ queryKey: getListTeacherStudentsQueryKey() });
       },
-      onError: () => toast({ title: "Couldn't grant credits", variant: "destructive" }),
+      onError: () => toast({ title: "Couldn't grant lessons", variant: "destructive" }),
     });
   };
 
@@ -105,16 +114,30 @@ function StudentDetail({ id }: { id: number }) {
         </div>
       </div>
 
+      {/* Manual grant, for lessons paid for outside the request flow. Balances
+          are per lesson type, so the type has to be chosen explicitly. */}
       <div className="bg-accent/30 p-6 rounded-2xl border border-border">
-        <h3 className="font-bold text-lg mb-4">Grant Credits</h3>
-        <div className="flex gap-4">
+        <h3 className="font-bold text-lg mb-4">Grant lessons</h3>
+        <div className="flex flex-wrap gap-3 items-center">
           <Input
             type="number"
-            value={grantCredits}
-            onChange={(e) => setGrantCredits(Number(e.target.value))}
+            value={grantLessons}
+            onChange={(e) => setGrantLessons(Number(e.target.value))}
             className="w-24 bg-background"
             min={1}
           />
+          <select
+            value={grantLessonTypeId ?? ""}
+            onChange={(e) => setGrantLessonTypeId(e.target.value ? Number(e.target.value) : null)}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="">Choose a lesson type…</option>
+            {grantableLessonTypes.map((lt) => (
+              <option key={lt.id} value={lt.id}>
+                {lt.name} ({lt.durationMinutes} min)
+              </option>
+            ))}
+          </select>
           <Button onClick={handleGrant} disabled={grantMutation.isPending}>Grant</Button>
         </div>
       </div>
@@ -129,7 +152,10 @@ function StudentDetail({ id }: { id: number }) {
                   <span className="text-sm text-muted-foreground">Purchased {format(new Date(pkg.purchasedAt), "MMM d")}</span>
                 </div>
                 <div className="font-bold text-primary">
-                  {pkg.remainingCredits} / {pkg.totalCredits} credits left
+                  {pkg.remainingLessons} / {pkg.totalLessons} left
+                  <span className="block text-xs font-normal text-muted-foreground">
+                    {lessonTypeName(pkg.lessonTypeId)}
+                  </span>
                 </div>
               </div>
             ))}

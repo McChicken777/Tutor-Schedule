@@ -6,9 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface PackageGrantInput {
-  studentId: number;
-  lessonTypeId: number;
-  /** @minimum 1 */
-  totalLessons: number;
+export interface PackageRequestInput {
+  lessonTypePackageId: number;
+  note?: string;
 }

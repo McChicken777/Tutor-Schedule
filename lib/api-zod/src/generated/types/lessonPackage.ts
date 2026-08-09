@@ -8,8 +8,9 @@
 
 export interface LessonPackage {
   id: number;
-  totalCredits: number;
-  usedCredits: number;
-  remainingCredits: number;
+  lessonTypeId: number;
+  totalLessons: number;
+  usedLessons: number;
+  remainingLessons: number;
   purchasedAt: Date;
 }

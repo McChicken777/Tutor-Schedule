@@ -6,13 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Booking } from './booking';
+import type { LessonBalance } from './lessonBalance';
 import type { LessonPackage } from './lessonPackage';
 import type { TeacherHomework } from './teacherHomework';
 
 export interface StudentDashboard {
   nextBooking?: Booking;
   upcomingBookings: Booking[];
-  totalRemainingCredits: number;
+  lessonBalances: LessonBalance[];
   /** Whether this student can still book the free trial lesson (never booked it before, and one is configured/enabled). */
   trialAvailable: boolean;
   /** Whether this student has already seen (or skipped) the first-login onboarding tour. */

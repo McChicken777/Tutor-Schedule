@@ -86,20 +86,20 @@ paths:
                 items:
                   $ref: "#/components/schemas/LessonType"
 
-  /credit-bundles:
+  /lesson-type-packages:
     get:
-      operationId: listCreditBundles
+      operationId: listLessonTypePackages
       tags: [public]
-      summary: List active credit bundles
+      summary: List active bulk packages for all lesson types
       responses:
         "200":
-          description: List of active credit bundles
+          description: List of active packages
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/CreditBundle"
+                  $ref: "#/components/schemas/LessonTypePackage"
 
   /available-slots:
     get:
@@ -772,43 +772,43 @@ paths:
         "204":
           description: Deleted
 
-  /teacher/credit-bundles:
+  /teacher/lesson-type-packages:
     get:
-      operationId: listTeacherCreditBundles
+      operationId: listTeacherLessonTypePackages
       tags: [teacher]
-      summary: List all credit bundles (including inactive)
+      summary: List all packages (including inactive)
       responses:
         "200":
-          description: All credit bundles
+          description: All packages
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/CreditBundle"
+                  $ref: "#/components/schemas/LessonTypePackage"
     post:
-      operationId: createCreditBundle
+      operationId: createLessonTypePackage
       tags: [teacher]
-      summary: Create a purchasable credit bundle
+      summary: Create a bulk package for a lesson type
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreditBundleInput"
+              $ref: "#/components/schemas/LessonTypePackageInput"
       responses:
         "201":
-          description: Created credit bundle
+          description: Created package
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreditBundle"
+                $ref: "#/components/schemas/LessonTypePackage"
 
-  /teacher/credit-bundles/{id}:
+  /teacher/lesson-type-packages/{id}:
     patch:
-      operationId: updateCreditBundle
+      operationId: updateLessonTypePackage
       tags: [teacher]
-      summary: Update a credit bundle
+      summary: Update a package
       parameters:
         - name: id
           in: path
@@ -820,20 +820,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreditBundleUpdate"
+              $ref: "#/components/schemas/LessonTypePackageUpdate"
       responses:
         "200":
-          description: Updated credit bundle
+          description: Updated package
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreditBundle"
+                $ref: "#/components/schemas/LessonTypePackage"
         "404":
           description: Not found
     delete:
-      operationId: deleteCreditBundle
+      operationId: deleteLessonTypePackage
       tags: [teacher]
-      summary: Delete a credit bundle
+      summary: Retire a package
       parameters:
         - name: id
           in: path
@@ -842,8 +842,123 @@ paths:
             type: number
       responses:
         "204":
-          description: Deleted
+          description: Retired
 
+  /teacher/package-requests:
+    get:
+      operationId: listTeacherPackageRequests
+      tags: [teacher]
+      summary: List package purchase requests
+      responses:
+        "200":
+          description: All requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PackageRequest"
+
+  /teacher/package-requests/{id}:
+    patch:
+      operationId: resolvePackageRequest
+      tags: [teacher]
+      summary: Mark a package request paid or declined
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PackageRequestResolve"
+      responses:
+        "200":
+          description: Resolved request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageRequest"
+        "404":
+          description: Not found
+        "409":
+          description: Already resolved
+
+  /teacher/bookings/{id}/mark-paid:
+    patch:
+      operationId: markBookingPaid
+      tags: [teacher]
+      summary: Confirm payment for a one-off booking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Updated booking payment state
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: number
+                  paymentStatus:
+                    type: string
+                  priceCents:
+                    type: number
+                  paidAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+                required:
+                  - id
+                  - paymentStatus
+                  - priceCents
+        "404":
+          description: Not found
+        "409":
+          description: Not awaiting payment
+
+  /student/package-requests:
+    get:
+      operationId: listStudentPackageRequests
+      tags: [student]
+      summary: List my package requests
+      responses:
+        "200":
+          description: My requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PackageRequest"
+    post:
+      operationId: createPackageRequest
+      tags: [student]
+      summary: Request to buy a package
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PackageRequestInput"
+      responses:
+        "201":
+          description: Created request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageRequest"
+        "404":
+          description: Package not found
   /teacher/homework:
     get:
       operationId: listTeacherHomework
@@ -1700,7 +1815,7 @@ components:
           type: string
         durationMinutes:
           type: number
-        creditCost:
+        priceCents:
           type: number
         description:
           type: string
@@ -1715,7 +1830,7 @@ components:
         - id
         - name
         - durationMinutes
-        - creditCost
+        - priceCents
         - description
         - isActive
         - isTrial
@@ -1730,9 +1845,9 @@ components:
         durationMinutes:
           type: number
           minimum: 15
-        creditCost:
+        priceCents:
           type: number
-          minimum: 1
+          minimum: 0
         description:
           type: string
         isActive:
@@ -1742,7 +1857,7 @@ components:
       required:
         - name
         - durationMinutes
-        - creditCost
+        - priceCents
         - description
 
     LessonTypeUpdate:
@@ -1754,9 +1869,9 @@ components:
         durationMinutes:
           type: number
           minimum: 15
-        creditCost:
+        priceCents:
           type: number
-          minimum: 1
+          minimum: 0
         description:
           type: string
         isActive:
@@ -1764,14 +1879,16 @@ components:
         isTrial:
           type: boolean
 
-    CreditBundle:
+    LessonTypePackage:
       type: object
       properties:
         id:
           type: number
-        credits:
+        lessonTypeId:
           type: number
-        priceCents:
+        quantity:
+          type: number
+        totalCents:
           type: number
         sortOrder:
           type: number
@@ -1782,19 +1899,22 @@ components:
           format: date-time
       required:
         - id
-        - credits
-        - priceCents
+        - lessonTypeId
+        - quantity
+        - totalCents
         - sortOrder
         - isActive
         - createdAt
 
-    CreditBundleInput:
+    LessonTypePackageInput:
       type: object
       properties:
-        credits:
+        lessonTypeId:
           type: number
-          minimum: 1
-        priceCents:
+        quantity:
+          type: number
+          minimum: 2
+        totalCents:
           type: number
           minimum: 0
         sortOrder:
@@ -1802,22 +1922,101 @@ components:
         isActive:
           type: boolean
       required:
-        - credits
-        - priceCents
+        - lessonTypeId
+        - quantity
+        - totalCents
 
-    CreditBundleUpdate:
+    LessonTypePackageUpdate:
       type: object
       properties:
-        credits:
+        quantity:
           type: number
-          minimum: 1
-        priceCents:
+          minimum: 2
+        totalCents:
           type: number
           minimum: 0
         sortOrder:
           type: number
         isActive:
           type: boolean
+
+    LessonBalance:
+      type: object
+      properties:
+        lessonTypeId:
+          type: number
+        lessonTypeName:
+          type: string
+        durationMinutes:
+          type: number
+        remaining:
+          type: number
+      required:
+        - lessonTypeId
+        - lessonTypeName
+        - durationMinutes
+        - remaining
+
+    PackageRequest:
+      type: object
+      properties:
+        id:
+          type: number
+        studentId:
+          type: number
+        studentName:
+          type: string
+        lessonTypeId:
+          type: number
+        lessonTypeName:
+          type: string
+        durationMinutes:
+          type: number
+        quantity:
+          type: number
+        totalCents:
+          type: number
+        status:
+          type: string
+          enum: [pending, paid, declined]
+        note:
+          type: string
+          nullable: true
+        requestedAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - studentId
+        - lessonTypeId
+        - lessonTypeName
+        - quantity
+        - totalCents
+        - status
+        - requestedAt
+
+    PackageRequestInput:
+      type: object
+      properties:
+        lessonTypePackageId:
+          type: number
+        note:
+          type: string
+      required:
+        - lessonTypePackageId
+
+    PackageRequestResolve:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [paid, declined]
+      required:
+        - status
 
     TimeSlot:
       type: object
@@ -2250,20 +2449,23 @@ components:
       properties:
         id:
           type: number
-        totalCredits:
+        lessonTypeId:
           type: number
-        usedCredits:
+        totalLessons:
           type: number
-        remainingCredits:
+        usedLessons:
+          type: number
+        remainingLessons:
           type: number
         purchasedAt:
           type: string
           format: date-time
       required:
         - id
-        - totalCredits
-        - usedCredits
-        - remainingCredits
+        - lessonTypeId
+        - totalLessons
+        - usedLessons
+        - remainingLessons
         - purchasedAt
 
     StudentProfile:
@@ -2277,8 +2479,10 @@ components:
           type: string
         displayName:
           type: string
-        totalRemainingCredits:
-          type: number
+        lessonBalances:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonBalance"
         upcomingLessonsCount:
           type: number
         createdAt:
@@ -2289,7 +2493,7 @@ components:
         - clerkUserId
         - email
         - displayName
-        - totalRemainingCredits
+        - lessonBalances
         - upcomingLessonsCount
         - createdAt
 
@@ -2302,8 +2506,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Booking"
-        totalRemainingCredits:
-          type: number
+        lessonBalances:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonBalance"
         trialAvailable:
           type: boolean
           description: Whether this student can still book the free trial lesson (never booked it before, and one is configured/enabled).
@@ -2325,7 +2531,7 @@ components:
             $ref: "#/components/schemas/TeacherHomework"
       required:
         - upcomingBookings
-        - totalRemainingCredits
+        - lessonBalances
         - trialAvailable
         - hasSeenTour
         - pendingHomeworkCount
@@ -2771,9 +2977,11 @@ components:
           type: string
         displayName:
           type: string
-        totalCredits:
+        totalLessons:
           type: number
-        usedCredits:
+        usedLessons:
+          type: number
+        remainingLessons:
           type: number
         totalBookings:
           type: number
@@ -2784,8 +2992,9 @@ components:
         - id
         - email
         - displayName
-        - totalCredits
-        - usedCredits
+        - totalLessons
+        - usedLessons
+        - remainingLessons
         - totalBookings
         - createdAt
 
@@ -2881,12 +3090,15 @@ components:
       properties:
         studentId:
           type: number
-        totalCredits:
+        lessonTypeId:
+          type: number
+        totalLessons:
           type: number
           minimum: 1
       required:
         - studentId
-        - totalCredits
+        - lessonTypeId
+        - totalLessons
 
     CalendarStatus:
       type: object

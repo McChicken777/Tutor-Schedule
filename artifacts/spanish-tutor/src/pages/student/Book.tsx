@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
+import { formatEuros } from "@/lib/money";
 import { format, startOfDay, endOfDay, isBefore } from "date-fns";
 import {
   useListLessonTypes,
@@ -45,21 +46,25 @@ export default function BookLesson() {
 
   const activeLessonTypes = lessonTypes?.filter(lt => lt.isActive) || [];
   const selectedTypeDetails = activeLessonTypes.find(lt => lt.id === selectedLessonType);
-  const walletBalance = dashboard?.totalRemainingCredits ?? 0;
   const trialLessonTypeExists = activeLessonTypes.some(lt => lt.isTrial);
 
-  // A lesson type is bookable if it's the trial (and not yet used) or the
-  // student's shared wallet balance covers its credit cost — locked cards
-  // can't be selected at all, so there's nothing to reject at confirm time.
+  // Balances are per lesson length, so each card reports its own.
+  function remainingFor(lessonTypeId: number): number {
+    return (dashboard?.lessonBalances ?? []).find(b => b.lessonTypeId === lessonTypeId)?.remaining ?? 0;
+  }
+  const selectedRemaining = selectedTypeDetails ? remainingFor(selectedTypeDetails.id) : 0;
+
+  // Only the trial is ever locked, and only once used. A paid lesson with no
+  // balance is still bookable — it just gets billed as a one-off, which is how
+  // students who pay per lesson rather than in packages work.
   function isBookable(lt: (typeof activeLessonTypes)[number]): boolean {
     if (lt.isTrial) return !!dashboard?.trialAvailable;
-    return walletBalance >= lt.creditCost;
+    return true;
   }
 
   function lockReason(lt: (typeof activeLessonTypes)[number]): string {
     if (lt.isTrial) return "Free lesson already used";
-    if (trialLessonTypeExists && dashboard?.trialAvailable) return "Complete your free lesson first";
-    return "Out of credits";
+    return "";
   }
 
   function canBuyCredits(lt: (typeof activeLessonTypes)[number]): boolean {
@@ -133,8 +138,13 @@ export default function BookLesson() {
                     <div className="flex items-center gap-2 mb-4">
                       <span className="text-sm text-muted-foreground">{lt.durationMinutes} minutes</span>
                       <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-xs font-semibold">
-                        {lt.isTrial ? "Free" : `${lt.creditCost} credit${lt.creditCost === 1 ? "" : "s"}`}
+                        {lt.isTrial ? "Free" : formatEuros(lt.priceCents)}
                       </span>
+                      {!lt.isTrial && remainingFor(lt.id) > 0 && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-secondary/10 text-secondary text-xs font-semibold">
+                          {remainingFor(lt.id)} in your balance
+                        </span>
+                      )}
                     </div>
                     <p className="text-muted-foreground text-sm mb-4">{lt.description}</p>
                     {!bookable && (
@@ -149,7 +159,7 @@ export default function BookLesson() {
                             variant="outline"
                             onClick={(e) => { e.stopPropagation(); setShowPurchaseDialog(true); }}
                           >
-                            Buy credits
+                            Buy a package
                           </Button>
                         )}
                       </div>
@@ -266,7 +276,7 @@ export default function BookLesson() {
               </div>
               <div className="text-right">
                 <div className="text-2xl font-serif font-bold">
-                  {selectedTypeDetails.isTrial ? "Free" : `${selectedTypeDetails.creditCost} credit${selectedTypeDetails.creditCost === 1 ? "" : "s"}`}
+                  {selectedTypeDetails.isTrial ? "Free" : formatEuros(selectedTypeDetails.priceCents)}
                 </div>
               </div>
             </div>
@@ -282,11 +292,19 @@ export default function BookLesson() {
             </div>
 
             <div className="mt-8 pt-6 border-t border-border flex justify-between items-center">
-              <span className="text-muted-foreground">Your Balance</span>
-              <span className="font-bold">
-                {selectedTypeDetails?.isTrial
-                  ? "Free — your one-time trial"
-                  : `${walletBalance} credit${walletBalance === 1 ? "" : "s"} (uses ${selectedTypeDetails.creditCost})`}
+              <span className="text-muted-foreground">Your balance</span>
+              <span className="font-bold text-right">
+                {selectedTypeDetails?.isTrial ? (
+                  "Free — your one-time trial"
+                ) : selectedRemaining > 0 ? (
+                  <>
+                    {selectedRemaining} → {selectedRemaining - 1} after booking
+                  </>
+                ) : (
+                  <span className="text-muted-foreground font-medium">
+                    None left — {formatEuros(selectedTypeDetails.priceCents)} payable to your tutor
+                  </span>
+                )}
               </span>
             </div>
           </div>

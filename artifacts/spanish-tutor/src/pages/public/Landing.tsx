@@ -1,24 +1,17 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { useGetSiteSettings, useListLessonTypes, useListTestimonials, useListFaqs, useListCreditBundles } from "@workspace/api-client-react";
+import { useGetSiteSettings, useListLessonTypes, useListTestimonials, useListFaqs, useListLessonTypePackages } from "@workspace/api-client-react";
+import { formatEuros } from "@/lib/money";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import ErrorState from "@/components/ErrorState";
-
-// Rounds a raw computed price UP to the next "charm price" ending in .49 or .99,
-// so marketing copy reads like normal retail pricing while the advertised figure
-// is always a ceiling — the real price a student pays is never higher than this.
-function toCharmPrice(price: number): number {
-  const steps = Math.ceil((price - 0.49) / 0.5);
-  return Math.max(0.49, 0.49 + steps * 0.5);
-}
 
 export default function Landing() {
   const { data: settings, isLoading: loadingSettings, error: settingsError, refetch: refetchSettings } = useGetSiteSettings();
   const { data: lessonTypes } = useListLessonTypes();
   const { data: testimonials } = useListTestimonials();
   const { data: faqs } = useListFaqs();
-  const { data: creditBundles } = useListCreditBundles();
+  const { data: lessonPackages } = useListLessonTypePackages();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   if (settingsError) {
@@ -38,13 +31,17 @@ export default function Landing() {
   const activeLessonTypes = lessonTypes?.filter((lt) => lt.isActive) ?? [];
   const trialLessonType = activeLessonTypes.find((lt) => lt.isTrial);
   const trialAvailable = !!settings?.freeTrialEnabled && !!trialLessonType;
-  const activeBundles = (creditBundles ?? []).filter((b) => b.isActive);
-  const perCreditRate =
-    activeBundles.length > 0
-      ? Math.min(...activeBundles.map((b) => b.priceCents / b.credits)) / 100
-      : null;
+  const activePackages = (lessonPackages ?? []).filter((p) => p.isActive);
+  // The headline figure is the cheapest per-lesson rate available for a lesson
+  // type — i.e. its largest package — so "from" is always truthful.
+  const bestRateFor = (lessonTypeId: number): number | null => {
+    const rates = activePackages
+      .filter((p) => p.lessonTypeId === lessonTypeId)
+      .map((p) => p.totalCents / p.quantity);
+    return rates.length > 0 ? Math.min(...rates) : null;
+  };
   const sortedLessonTypes = [...activeLessonTypes].sort(
-    (a, b) => (a.isTrial ? 0 : a.creditCost) - (b.isTrial ? 0 : b.creditCost)
+    (a, b) => (a.isTrial ? 0 : a.priceCents) - (b.isTrial ? 0 : b.priceCents)
   );
 
   return (
@@ -208,13 +205,18 @@ export default function Landing() {
                   <div className="flex items-center gap-6 shrink-0">
                     <div className="text-right">
                       <div className="text-2xl font-serif font-bold text-foreground">
-                        {lt.isTrial && settings?.freeTrialEnabled
-                          ? "Free"
-                          : perCreditRate !== null
-                            ? `from €${toCharmPrice(perCreditRate * lt.creditCost).toFixed(2)}`
-                            : null}
+                        {lt.isTrial && settings?.freeTrialEnabled ? "Free" : formatEuros(lt.priceCents)}
                       </div>
                       <div className="text-sm text-muted-foreground">{lt.durationMinutes} min</div>
+                      {!lt.isTrial &&
+                        (() => {
+                          const best = bestRateFor(lt.id);
+                          return best !== null && best < lt.priceCents ? (
+                            <div className="text-xs text-primary mt-0.5">
+                              from {formatEuros(best)} in a package
+                            </div>
+                          ) : null;
+                        })()}
                     </div>
                     <ArrowUpRight className="text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
                   </div>

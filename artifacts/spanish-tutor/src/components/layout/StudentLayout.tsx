@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import PingDot from "@/components/ui/ping-dot";
 import PurchaseCreditsDialog from "@/components/PurchaseCreditsDialog";
 import AppPrompts from "@/components/AppPrompts";
+import LessonBalanceBadge from "@/components/LessonBalanceBadge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,8 +52,9 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
   const hasUnreadMessages = !!dashboard?.hasUnreadMessages;
   const tour = useStudentTour();
   const [purchaseOpen, setPurchaseOpen] = useState(false);
-  const totalRemainingCredits = dashboard?.totalRemainingCredits ?? 0;
-  const isLowOnCredits = !!dashboard && totalRemainingCredits <= 1;
+  const balances = dashboard?.lessonBalances ?? [];
+  const totalRemainingLessons = balances.reduce((sum, b) => sum + b.remaining, 0);
+  const isLowOnLessons = !!dashboard && totalRemainingLessons <= 1;
 
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -92,8 +94,8 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setPurchaseOpen(true)}>
               <UserIcon className="w-4 h-4 mr-2" />
-              <span className={isLowOnCredits ? "text-destructive" : ""}>
-                {dashboard ? totalRemainingCredits : "–"} credits remaining
+              <span className={isLowOnLessons ? "text-destructive" : ""}>
+                {dashboard ? totalRemainingLessons : "–"} lessons remaining
               </span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -117,19 +119,26 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
           </Link>
         </div>
 
+        {/* Balances are per lesson length, so the sidebar lists each one rather
+            than a single number that would hide which lessons are actually left. */}
         <button onClick={() => setPurchaseOpen(true)} className="w-full text-left px-6 pb-4 block">
-          <div
-            className={`rounded-xl border px-4 py-3 transition-colors ${
-              isLowOnCredits ? "bg-destructive/10 border-destructive/30" : "bg-primary/10 border-primary/20"
-            }`}
-          >
-            <p className={`text-xs ${isLowOnCredits ? "text-destructive" : "text-muted-foreground"}`}>
-              {isLowOnCredits ? "Low on credits" : "Credits Remaining"}
-            </p>
-            <p className={`text-2xl font-bold ${isLowOnCredits ? "text-destructive" : "text-primary"}`}>
-              {dashboard ? totalRemainingCredits : "–"}
-            </p>
-          </div>
+          {balances.length > 0 ? (
+            <div className="space-y-1.5">
+              {balances.map((b) => (
+                <LessonBalanceBadge
+                  key={b.lessonTypeId}
+                  durationMinutes={b.durationMinutes}
+                  lessonTypeName={b.lessonTypeName}
+                  count={b.remaining}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border px-4 py-3">
+              <p className="text-xs text-muted-foreground">No lessons in your balance</p>
+              <p className="text-sm font-medium text-primary">Buy a package</p>
+            </div>
+          )}
         </button>
 
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">

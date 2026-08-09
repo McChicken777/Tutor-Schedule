@@ -6,11 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface CreditBundleUpdate {
-  /** @minimum 1 */
-  credits?: number;
+export interface LessonTypePackageInput {
+  lessonTypeId: number;
+  /** @minimum 2 */
+  quantity: number;
   /** @minimum 0 */
-  priceCents?: number;
+  totalCents: number;
   sortOrder?: number;
   isActive?: boolean;
 }

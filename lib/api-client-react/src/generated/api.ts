@@ -34,9 +34,6 @@ import type {
   CompleteBookingInput,
   CompleteTour200,
   CompletedBooking,
-  CreditBundle,
-  CreditBundleInput,
-  CreditBundleUpdate,
   DisconnectCalendar200,
   FaqEntry,
   FaqInput,
@@ -52,15 +49,22 @@ import type {
   LessonPackage,
   LessonType,
   LessonTypeInput,
+  LessonTypePackage,
+  LessonTypePackageInput,
+  LessonTypePackageUpdate,
   LessonTypeUpdate,
   ListReportsParams,
   ListStudentBookingsParams,
   ListTeacherBookingsParams,
   ListTeacherHomeworkParams,
+  MarkBookingPaid200,
   Message,
   MessageInput,
   MessageThread,
   PackageGrantInput,
+  PackageRequest,
+  PackageRequestInput,
+  PackageRequestResolve,
   RelinkHomeworkFileInput,
   Report,
   ReportInput,
@@ -413,20 +417,20 @@ export function useListLessonTypes<TData = Awaited<ReturnType<typeof listLessonT
 
 
 
-export const getListCreditBundlesUrl = () => {
+export const getListLessonTypePackagesUrl = () => {
 
 
 
 
-  return `/api/credit-bundles`
+  return `/api/lesson-type-packages`
 }
 
 /**
- * @summary List active credit bundles
+ * @summary List active bulk packages for all lesson types
  */
-export const listCreditBundles = async ( options?: Parameters<typeof customFetch>[1]): Promise<CreditBundle[]> => {
+export const listLessonTypePackages = async ( options?: Parameters<typeof customFetch>[1]): Promise<LessonTypePackage[]> => {
 
-  return customFetch<CreditBundle[]>(getListCreditBundlesUrl(),
+  return customFetch<LessonTypePackage[]>(getListLessonTypePackagesUrl(),
   {
     ...options,
     method: 'GET'
@@ -439,45 +443,45 @@ export const listCreditBundles = async ( options?: Parameters<typeof customFetch
 
 
 
-export const getListCreditBundlesQueryKey = () => {
+export const getListLessonTypePackagesQueryKey = () => {
     return [
-    `/api/credit-bundles`
+    `/api/lesson-type-packages`
     ] as const;
     }
 
 
-export const getListCreditBundlesQueryOptions = <TData = Awaited<ReturnType<typeof listCreditBundles>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreditBundles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListLessonTypePackagesQueryOptions = <TData = Awaited<ReturnType<typeof listLessonTypePackages>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLessonTypePackages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListCreditBundlesQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListLessonTypePackagesQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCreditBundles>>> = ({ signal }) => listCreditBundles({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLessonTypePackages>>> = ({ signal }) => listLessonTypePackages({ signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCreditBundles>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLessonTypePackages>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type ListCreditBundlesQueryResult = NonNullable<Awaited<ReturnType<typeof listCreditBundles>>>
-export type ListCreditBundlesQueryError = ErrorType<unknown>
+export type ListLessonTypePackagesQueryResult = NonNullable<Awaited<ReturnType<typeof listLessonTypePackages>>>
+export type ListLessonTypePackagesQueryError = ErrorType<unknown>
 
 
 /**
- * @summary List active credit bundles
+ * @summary List active bulk packages for all lesson types
  */
 
-export function useListCreditBundles<TData = Awaited<ReturnType<typeof listCreditBundles>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreditBundles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useListLessonTypePackages<TData = Awaited<ReturnType<typeof listLessonTypePackages>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLessonTypePackages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListCreditBundlesQueryOptions(options)
+  const queryOptions = getListLessonTypePackagesQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -2886,20 +2890,20 @@ export const useDeleteLessonType = <TError = ErrorType<unknown>,
       return useMutation(getDeleteLessonTypeMutationOptions(options));
     }
 
-export const getListTeacherCreditBundlesUrl = () => {
+export const getListTeacherLessonTypePackagesUrl = () => {
 
 
 
 
-  return `/api/teacher/credit-bundles`
+  return `/api/teacher/lesson-type-packages`
 }
 
 /**
- * @summary List all credit bundles (including inactive)
+ * @summary List all packages (including inactive)
  */
-export const listTeacherCreditBundles = async ( options?: Parameters<typeof customFetch>[1]): Promise<CreditBundle[]> => {
+export const listTeacherLessonTypePackages = async ( options?: Parameters<typeof customFetch>[1]): Promise<LessonTypePackage[]> => {
 
-  return customFetch<CreditBundle[]>(getListTeacherCreditBundlesUrl(),
+  return customFetch<LessonTypePackage[]>(getListTeacherLessonTypePackagesUrl(),
   {
     ...options,
     method: 'GET'
@@ -2912,45 +2916,45 @@ export const listTeacherCreditBundles = async ( options?: Parameters<typeof cust
 
 
 
-export const getListTeacherCreditBundlesQueryKey = () => {
+export const getListTeacherLessonTypePackagesQueryKey = () => {
     return [
-    `/api/teacher/credit-bundles`
+    `/api/teacher/lesson-type-packages`
     ] as const;
     }
 
 
-export const getListTeacherCreditBundlesQueryOptions = <TData = Awaited<ReturnType<typeof listTeacherCreditBundles>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeacherCreditBundles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListTeacherLessonTypePackagesQueryOptions = <TData = Awaited<ReturnType<typeof listTeacherLessonTypePackages>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeacherLessonTypePackages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListTeacherCreditBundlesQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListTeacherLessonTypePackagesQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeacherCreditBundles>>> = ({ signal }) => listTeacherCreditBundles({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeacherLessonTypePackages>>> = ({ signal }) => listTeacherLessonTypePackages({ signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTeacherCreditBundles>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTeacherLessonTypePackages>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type ListTeacherCreditBundlesQueryResult = NonNullable<Awaited<ReturnType<typeof listTeacherCreditBundles>>>
-export type ListTeacherCreditBundlesQueryError = ErrorType<unknown>
+export type ListTeacherLessonTypePackagesQueryResult = NonNullable<Awaited<ReturnType<typeof listTeacherLessonTypePackages>>>
+export type ListTeacherLessonTypePackagesQueryError = ErrorType<unknown>
 
 
 /**
- * @summary List all credit bundles (including inactive)
+ * @summary List all packages (including inactive)
  */
 
-export function useListTeacherCreditBundles<TData = Awaited<ReturnType<typeof listTeacherCreditBundles>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeacherCreditBundles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useListTeacherLessonTypePackages<TData = Awaited<ReturnType<typeof listTeacherLessonTypePackages>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeacherLessonTypePackages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListTeacherCreditBundlesQueryOptions(options)
+  const queryOptions = getListTeacherLessonTypePackagesQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -2963,25 +2967,25 @@ export function useListTeacherCreditBundles<TData = Awaited<ReturnType<typeof li
 
 
 
-export const getCreateCreditBundleUrl = () => {
+export const getCreateLessonTypePackageUrl = () => {
 
 
 
 
-  return `/api/teacher/credit-bundles`
+  return `/api/teacher/lesson-type-packages`
 }
 
 /**
- * @summary Create a purchasable credit bundle
+ * @summary Create a bulk package for a lesson type
  */
-export const createCreditBundle = async (creditBundleInput: CreditBundleInput, options?: Parameters<typeof customFetch>[1]): Promise<CreditBundle> => {
+export const createLessonTypePackage = async (lessonTypePackageInput: LessonTypePackageInput, options?: Parameters<typeof customFetch>[1]): Promise<LessonTypePackage> => {
 
-  return customFetch<CreditBundle>(getCreateCreditBundleUrl(),
+  return customFetch<LessonTypePackage>(getCreateLessonTypePackageUrl(),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(creditBundleInput)
+    body: JSON.stringify(lessonTypePackageInput)
   }
 );}
 
@@ -2989,11 +2993,11 @@ export const createCreditBundle = async (creditBundleInput: CreditBundleInput, o
 
 
 
-export const getCreateCreditBundleMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCreditBundle>>, TError,{data: BodyType<CreditBundleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof createCreditBundle>>, TError,{data: BodyType<CreditBundleInput>}, TContext> => {
+export const getCreateLessonTypePackageMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLessonTypePackage>>, TError,{data: BodyType<LessonTypePackageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createLessonTypePackage>>, TError,{data: BodyType<LessonTypePackageInput>}, TContext> => {
 
-const mutationKey = ['createCreditBundle'];
+const mutationKey = ['createLessonTypePackage'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -3003,10 +3007,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCreditBundle>>, {data: BodyType<CreditBundleInput>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createLessonTypePackage>>, {data: BodyType<LessonTypePackageInput>}> = (props) => {
           const {data} = props ?? {};
 
-          return  createCreditBundle(data,requestOptions)
+          return  createLessonTypePackage(data,requestOptions)
         }
 
 
@@ -3016,44 +3020,44 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type CreateCreditBundleMutationResult = NonNullable<Awaited<ReturnType<typeof createCreditBundle>>>
-    export type CreateCreditBundleMutationBody = BodyType<CreditBundleInput>
-    export type CreateCreditBundleMutationError = ErrorType<unknown>
+    export type CreateLessonTypePackageMutationResult = NonNullable<Awaited<ReturnType<typeof createLessonTypePackage>>>
+    export type CreateLessonTypePackageMutationBody = BodyType<LessonTypePackageInput>
+    export type CreateLessonTypePackageMutationError = ErrorType<unknown>
 
     /**
- * @summary Create a purchasable credit bundle
+ * @summary Create a bulk package for a lesson type
  */
-export const useCreateCreditBundle = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCreditBundle>>, TError,{data: BodyType<CreditBundleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+export const useCreateLessonTypePackage = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLessonTypePackage>>, TError,{data: BodyType<LessonTypePackageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof createCreditBundle>>,
+        Awaited<ReturnType<typeof createLessonTypePackage>>,
         TError,
-        {data: BodyType<CreditBundleInput>},
+        {data: BodyType<LessonTypePackageInput>},
         TContext
       > => {
-      return useMutation(getCreateCreditBundleMutationOptions(options));
+      return useMutation(getCreateLessonTypePackageMutationOptions(options));
     }
 
-export const getUpdateCreditBundleUrl = (id: number,) => {
+export const getUpdateLessonTypePackageUrl = (id: number,) => {
 
 
 
 
-  return `/api/teacher/credit-bundles/${id}`
+  return `/api/teacher/lesson-type-packages/${id}`
 }
 
 /**
- * @summary Update a credit bundle
+ * @summary Update a package
  */
-export const updateCreditBundle = async (id: number,
-    creditBundleUpdate: CreditBundleUpdate, options?: Parameters<typeof customFetch>[1]): Promise<CreditBundle> => {
+export const updateLessonTypePackage = async (id: number,
+    lessonTypePackageUpdate: LessonTypePackageUpdate, options?: Parameters<typeof customFetch>[1]): Promise<LessonTypePackage> => {
 
-  return customFetch<CreditBundle>(getUpdateCreditBundleUrl(id),
+  return customFetch<LessonTypePackage>(getUpdateLessonTypePackageUrl(id),
   {
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(creditBundleUpdate)
+    body: JSON.stringify(lessonTypePackageUpdate)
   }
 );}
 
@@ -3061,11 +3065,11 @@ export const updateCreditBundle = async (id: number,
 
 
 
-export const getUpdateCreditBundleMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCreditBundle>>, TError,{id: number;data: BodyType<CreditBundleUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof updateCreditBundle>>, TError,{id: number;data: BodyType<CreditBundleUpdate>}, TContext> => {
+export const getUpdateLessonTypePackageMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateLessonTypePackage>>, TError,{id: number;data: BodyType<LessonTypePackageUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateLessonTypePackage>>, TError,{id: number;data: BodyType<LessonTypePackageUpdate>}, TContext> => {
 
-const mutationKey = ['updateCreditBundle'];
+const mutationKey = ['updateLessonTypePackage'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -3075,10 +3079,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCreditBundle>>, {id: number;data: BodyType<CreditBundleUpdate>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateLessonTypePackage>>, {id: number;data: BodyType<LessonTypePackageUpdate>}> = (props) => {
           const {id,data} = props ?? {};
 
-          return  updateCreditBundle(id,data,requestOptions)
+          return  updateLessonTypePackage(id,data,requestOptions)
         }
 
 
@@ -3088,38 +3092,38 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type UpdateCreditBundleMutationResult = NonNullable<Awaited<ReturnType<typeof updateCreditBundle>>>
-    export type UpdateCreditBundleMutationBody = BodyType<CreditBundleUpdate>
-    export type UpdateCreditBundleMutationError = ErrorType<void>
+    export type UpdateLessonTypePackageMutationResult = NonNullable<Awaited<ReturnType<typeof updateLessonTypePackage>>>
+    export type UpdateLessonTypePackageMutationBody = BodyType<LessonTypePackageUpdate>
+    export type UpdateLessonTypePackageMutationError = ErrorType<void>
 
     /**
- * @summary Update a credit bundle
+ * @summary Update a package
  */
-export const useUpdateCreditBundle = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCreditBundle>>, TError,{id: number;data: BodyType<CreditBundleUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+export const useUpdateLessonTypePackage = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateLessonTypePackage>>, TError,{id: number;data: BodyType<LessonTypePackageUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof updateCreditBundle>>,
+        Awaited<ReturnType<typeof updateLessonTypePackage>>,
         TError,
-        {id: number;data: BodyType<CreditBundleUpdate>},
+        {id: number;data: BodyType<LessonTypePackageUpdate>},
         TContext
       > => {
-      return useMutation(getUpdateCreditBundleMutationOptions(options));
+      return useMutation(getUpdateLessonTypePackageMutationOptions(options));
     }
 
-export const getDeleteCreditBundleUrl = (id: number,) => {
+export const getDeleteLessonTypePackageUrl = (id: number,) => {
 
 
 
 
-  return `/api/teacher/credit-bundles/${id}`
+  return `/api/teacher/lesson-type-packages/${id}`
 }
 
 /**
- * @summary Delete a credit bundle
+ * @summary Retire a package
  */
-export const deleteCreditBundle = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+export const deleteLessonTypePackage = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
 
-  return customFetch<void>(getDeleteCreditBundleUrl(id),
+  return customFetch<void>(getDeleteLessonTypePackageUrl(id),
   {
     ...options,
     method: 'DELETE'
@@ -3132,11 +3136,11 @@ export const deleteCreditBundle = async (id: number, options?: Parameters<typeof
 
 
 
-export const getDeleteCreditBundleMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCreditBundle>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof deleteCreditBundle>>, TError,{id: number}, TContext> => {
+export const getDeleteLessonTypePackageMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteLessonTypePackage>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteLessonTypePackage>>, TError,{id: number}, TContext> => {
 
-const mutationKey = ['deleteCreditBundle'];
+const mutationKey = ['deleteLessonTypePackage'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -3146,10 +3150,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCreditBundle>>, {id: number}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteLessonTypePackage>>, {id: number}> = (props) => {
           const {id} = props ?? {};
 
-          return  deleteCreditBundle(id,requestOptions)
+          return  deleteLessonTypePackage(id,requestOptions)
         }
 
 
@@ -3159,22 +3163,390 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type DeleteCreditBundleMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCreditBundle>>>
+    export type DeleteLessonTypePackageMutationResult = NonNullable<Awaited<ReturnType<typeof deleteLessonTypePackage>>>
 
-    export type DeleteCreditBundleMutationError = ErrorType<unknown>
+    export type DeleteLessonTypePackageMutationError = ErrorType<unknown>
 
     /**
- * @summary Delete a credit bundle
+ * @summary Retire a package
  */
-export const useDeleteCreditBundle = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCreditBundle>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+export const useDeleteLessonTypePackage = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteLessonTypePackage>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof deleteCreditBundle>>,
+        Awaited<ReturnType<typeof deleteLessonTypePackage>>,
         TError,
         {id: number},
         TContext
       > => {
-      return useMutation(getDeleteCreditBundleMutationOptions(options));
+      return useMutation(getDeleteLessonTypePackageMutationOptions(options));
+    }
+
+export const getListTeacherPackageRequestsUrl = () => {
+
+
+
+
+  return `/api/teacher/package-requests`
+}
+
+/**
+ * @summary List package purchase requests
+ */
+export const listTeacherPackageRequests = async ( options?: Parameters<typeof customFetch>[1]): Promise<PackageRequest[]> => {
+
+  return customFetch<PackageRequest[]>(getListTeacherPackageRequestsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTeacherPackageRequestsQueryKey = () => {
+    return [
+    `/api/teacher/package-requests`
+    ] as const;
+    }
+
+
+export const getListTeacherPackageRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listTeacherPackageRequests>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeacherPackageRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTeacherPackageRequestsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeacherPackageRequests>>> = ({ signal }) => listTeacherPackageRequests({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTeacherPackageRequests>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTeacherPackageRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listTeacherPackageRequests>>>
+export type ListTeacherPackageRequestsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List package purchase requests
+ */
+
+export function useListTeacherPackageRequests<TData = Awaited<ReturnType<typeof listTeacherPackageRequests>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeacherPackageRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTeacherPackageRequestsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getResolvePackageRequestUrl = (id: number,) => {
+
+
+
+
+  return `/api/teacher/package-requests/${id}`
+}
+
+/**
+ * @summary Mark a package request paid or declined
+ */
+export const resolvePackageRequest = async (id: number,
+    packageRequestResolve: PackageRequestResolve, options?: Parameters<typeof customFetch>[1]): Promise<PackageRequest> => {
+
+  return customFetch<PackageRequest>(getResolvePackageRequestUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(packageRequestResolve)
+  }
+);}
+
+
+
+
+
+export const getResolvePackageRequestMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resolvePackageRequest>>, TError,{id: number;data: BodyType<PackageRequestResolve>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resolvePackageRequest>>, TError,{id: number;data: BodyType<PackageRequestResolve>}, TContext> => {
+
+const mutationKey = ['resolvePackageRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resolvePackageRequest>>, {id: number;data: BodyType<PackageRequestResolve>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  resolvePackageRequest(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResolvePackageRequestMutationResult = NonNullable<Awaited<ReturnType<typeof resolvePackageRequest>>>
+    export type ResolvePackageRequestMutationBody = BodyType<PackageRequestResolve>
+    export type ResolvePackageRequestMutationError = ErrorType<void>
+
+    /**
+ * @summary Mark a package request paid or declined
+ */
+export const useResolvePackageRequest = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resolvePackageRequest>>, TError,{id: number;data: BodyType<PackageRequestResolve>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resolvePackageRequest>>,
+        TError,
+        {id: number;data: BodyType<PackageRequestResolve>},
+        TContext
+      > => {
+      return useMutation(getResolvePackageRequestMutationOptions(options));
+    }
+
+export const getMarkBookingPaidUrl = (id: number,) => {
+
+
+
+
+  return `/api/teacher/bookings/${id}/mark-paid`
+}
+
+/**
+ * @summary Confirm payment for a one-off booking
+ */
+export const markBookingPaid = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<MarkBookingPaid200> => {
+
+  return customFetch<MarkBookingPaid200>(getMarkBookingPaidUrl(id),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+
+export const getMarkBookingPaidMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markBookingPaid>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markBookingPaid>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['markBookingPaid'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markBookingPaid>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  markBookingPaid(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkBookingPaidMutationResult = NonNullable<Awaited<ReturnType<typeof markBookingPaid>>>
+
+    export type MarkBookingPaidMutationError = ErrorType<void>
+
+    /**
+ * @summary Confirm payment for a one-off booking
+ */
+export const useMarkBookingPaid = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markBookingPaid>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markBookingPaid>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getMarkBookingPaidMutationOptions(options));
+    }
+
+export const getListStudentPackageRequestsUrl = () => {
+
+
+
+
+  return `/api/student/package-requests`
+}
+
+/**
+ * @summary List my package requests
+ */
+export const listStudentPackageRequests = async ( options?: Parameters<typeof customFetch>[1]): Promise<PackageRequest[]> => {
+
+  return customFetch<PackageRequest[]>(getListStudentPackageRequestsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListStudentPackageRequestsQueryKey = () => {
+    return [
+    `/api/student/package-requests`
+    ] as const;
+    }
+
+
+export const getListStudentPackageRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listStudentPackageRequests>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStudentPackageRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListStudentPackageRequestsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listStudentPackageRequests>>> = ({ signal }) => listStudentPackageRequests({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listStudentPackageRequests>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListStudentPackageRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listStudentPackageRequests>>>
+export type ListStudentPackageRequestsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List my package requests
+ */
+
+export function useListStudentPackageRequests<TData = Awaited<ReturnType<typeof listStudentPackageRequests>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStudentPackageRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListStudentPackageRequestsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreatePackageRequestUrl = () => {
+
+
+
+
+  return `/api/student/package-requests`
+}
+
+/**
+ * @summary Request to buy a package
+ */
+export const createPackageRequest = async (packageRequestInput: PackageRequestInput, options?: Parameters<typeof customFetch>[1]): Promise<PackageRequest> => {
+
+  return customFetch<PackageRequest>(getCreatePackageRequestUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(packageRequestInput)
+  }
+);}
+
+
+
+
+
+export const getCreatePackageRequestMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPackageRequest>>, TError,{data: BodyType<PackageRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPackageRequest>>, TError,{data: BodyType<PackageRequestInput>}, TContext> => {
+
+const mutationKey = ['createPackageRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPackageRequest>>, {data: BodyType<PackageRequestInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPackageRequest(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePackageRequestMutationResult = NonNullable<Awaited<ReturnType<typeof createPackageRequest>>>
+    export type CreatePackageRequestMutationBody = BodyType<PackageRequestInput>
+    export type CreatePackageRequestMutationError = ErrorType<void>
+
+    /**
+ * @summary Request to buy a package
+ */
+export const useCreatePackageRequest = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPackageRequest>>, TError,{data: BodyType<PackageRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPackageRequest>>,
+        TError,
+        {data: BodyType<PackageRequestInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePackageRequestMutationOptions(options));
     }
 
 export const getListTeacherHomeworkUrl = (params?: ListTeacherHomeworkParams,) => {

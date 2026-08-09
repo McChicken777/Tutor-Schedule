@@ -6,10 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface CreditBundle {
+export interface LessonTypePackage {
   id: number;
-  credits: number;
-  priceCents: number;
+  lessonTypeId: number;
+  quantity: number;
+  totalCents: number;
   sortOrder: number;
   isActive: boolean;
   createdAt: Date;

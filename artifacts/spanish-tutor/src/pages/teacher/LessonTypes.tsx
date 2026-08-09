@@ -16,6 +16,7 @@ import {
   getListLessonTypesQueryKey,
 } from "@workspace/api-client-react";
 import { useState } from "react";
+import { formatEuros, parseEurosToCents } from "@/lib/money";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function TeacherLessonTypes() {
@@ -27,8 +28,8 @@ export default function TeacherLessonTypes() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const [newLesson, setNewLesson] = useState({ name: "", durationMinutes: 30, creditCost: 1, description: "", isTrial: false });
-  const [editForm, setEditForm] = useState({ name: "", durationMinutes: 30, creditCost: 1, description: "" });
+  const [newLesson, setNewLesson] = useState({ name: "", durationMinutes: 45, priceEuros: "16.00", description: "", isTrial: false });
+  const [editForm, setEditForm] = useState({ name: "", durationMinutes: 45, priceEuros: "16.00", description: "" });
 
   const handleToggleActive = (id: number, isActive: boolean) => {
     updateMutation.mutate({ id, data: { isActive } }, {
@@ -52,14 +53,25 @@ export default function TeacherLessonTypes() {
     });
   };
 
-  const openEdit = (lt: { id: number; name: string; durationMinutes: number; creditCost: number; description: string }) => {
-    setEditForm({ name: lt.name, durationMinutes: lt.durationMinutes, creditCost: lt.creditCost, description: lt.description });
+  const openEdit = (lt: { id: number; name: string; durationMinutes: number; priceCents: number; description: string }) => {
+    setEditForm({
+      name: lt.name,
+      durationMinutes: lt.durationMinutes,
+      priceEuros: (lt.priceCents / 100).toFixed(2),
+      description: lt.description,
+    });
     setEditingId(lt.id);
   };
 
   const handleEditSave = () => {
     if (editingId == null) return;
-    updateMutation.mutate({ id: editingId, data: editForm }, {
+    const priceCents = parseEurosToCents(editForm.priceEuros);
+    if (priceCents === null) {
+      toast({ title: "Enter a price like 16.00", variant: "destructive" });
+      return;
+    }
+    const { priceEuros, ...rest } = editForm;
+    updateMutation.mutate({ id: editingId, data: { ...rest, priceCents } }, {
       onSuccess: () => {
         toast({ title: "Lesson updated" });
         qc.invalidateQueries({ queryKey: getListTeacherLessonTypesQueryKey() });
@@ -71,12 +83,18 @@ export default function TeacherLessonTypes() {
   };
 
   const handleCreate = () => {
-    createMutation.mutate({ data: { ...newLesson, isActive: true } }, {
+    const priceCents = parseEurosToCents(newLesson.priceEuros);
+    if (priceCents === null) {
+      toast({ title: "Enter a price like 16.00", variant: "destructive" });
+      return;
+    }
+    const { priceEuros, ...rest } = newLesson;
+    createMutation.mutate({ data: { ...rest, priceCents, isActive: true } }, {
       onSuccess: () => {
         toast({ title: "Lesson created" });
         qc.invalidateQueries({ queryKey: getListTeacherLessonTypesQueryKey() });
         setIsCreateOpen(false);
-        setNewLesson({ name: "", durationMinutes: 30, creditCost: 1, description: "", isTrial: false });
+        setNewLesson({ name: "", durationMinutes: 45, priceEuros: "16.00", description: "", isTrial: false });
       },
       onError: () => toast({ title: "Couldn't create lesson", variant: "destructive" }),
     });
@@ -105,8 +123,8 @@ export default function TeacherLessonTypes() {
                   <Input type="number" value={newLesson.durationMinutes} onChange={e => setNewLesson({...newLesson, durationMinutes: Number(e.target.value)})} />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Credits required</label>
-                  <Input type="number" min={1} value={newLesson.creditCost} onChange={e => setNewLesson({...newLesson, creditCost: Number(e.target.value)})} />
+                  <label className="text-sm font-medium mb-1 block">Price (€)</label>
+                  <Input inputMode="decimal" value={newLesson.priceEuros} onChange={e => setNewLesson({...newLesson, priceEuros: e.target.value})} placeholder="16.00" />
                 </div>
               </div>
               <div>
@@ -142,8 +160,8 @@ export default function TeacherLessonTypes() {
                 <Input type="number" value={editForm.durationMinutes} onChange={e => setEditForm({...editForm, durationMinutes: Number(e.target.value)})} />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Credits required</label>
-                <Input type="number" min={1} value={editForm.creditCost} onChange={e => setEditForm({...editForm, creditCost: Number(e.target.value)})} />
+                <label className="text-sm font-medium mb-1 block">Price (€)</label>
+                <Input inputMode="decimal" value={editForm.priceEuros} onChange={e => setEditForm({...editForm, priceEuros: e.target.value})} placeholder="16.00" />
               </div>
             </div>
             <div>
@@ -178,7 +196,7 @@ export default function TeacherLessonTypes() {
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-sm text-muted-foreground">{lt.durationMinutes} minutes</span>
                 <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-xs font-semibold">
-                  {lt.isTrial ? "Free" : `${lt.creditCost} credit${lt.creditCost === 1 ? "" : "s"}`}
+                  {lt.isTrial ? "Free" : formatEuros(lt.priceCents)}
                 </span>
               </div>
               <p className="text-muted-foreground text-sm mb-4">{lt.description}</p>

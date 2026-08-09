@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, FileText, ArrowRight, Video, Clock, Gift, Bell } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import ErrorState from "@/components/ErrorState";
+import LessonBalanceBadge from "@/components/LessonBalanceBadge";
 
 export default function StudentDashboard() {
   const { data: dashboard, isLoading, error, refetch } = useGetStudentDashboard();
@@ -83,7 +84,7 @@ export default function StudentDashboard() {
             <div>
               <p className="font-bold text-foreground">You have a free first lesson waiting</p>
               <p className="text-sm text-muted-foreground">
-                {trialLessonType!.durationMinutes} minutes, on us — no credits needed.
+                {trialLessonType!.durationMinutes} minutes, on us — completely free.
               </p>
             </div>
           </div>
@@ -154,8 +155,23 @@ export default function StudentDashboard() {
       {/* Stats Grid */}
       <div className="grid md:grid-cols-3 gap-6 mb-10">
         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">Credits Remaining</h3>
-          <p className="text-4xl font-serif font-bold text-foreground">{dashboard.totalRemainingCredits}</p>
+          <h3 className="text-sm font-medium text-muted-foreground mb-3">Lessons Remaining</h3>
+          {dashboard.lessonBalances.length > 0 ? (
+            <div className="space-y-2">
+              {dashboard.lessonBalances.map((b) => (
+                <LessonBalanceBadge
+                  key={b.lessonTypeId}
+                  durationMinutes={b.durationMinutes}
+                  lessonTypeName={b.lessonTypeName}
+                  count={b.remaining}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No lessons left — book a single lesson or buy a package.
+            </p>
+          )}
         </div>
         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
           <h3 className="text-sm font-medium text-muted-foreground mb-2">Pending Homework</h3>
@@ -164,7 +180,7 @@ export default function StudentDashboard() {
         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm flex flex-col justify-center items-start">
           <h3 className="text-sm font-medium text-muted-foreground mb-2">Packages</h3>
           <Link href="/book" className="text-primary font-medium hover:underline flex items-center gap-1">
-            Buy more credits <ArrowRight className="w-4 h-4" />
+            Buy a package <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </div>

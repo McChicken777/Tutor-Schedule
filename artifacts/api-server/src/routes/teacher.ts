@@ -6,7 +6,8 @@ import {
   bookingsTable,
   lessonTypesTable,
   lessonPackagesTable,
-  creditBundlesTable,
+  lessonTypePackagesTable,
+  packageRequestsTable,
   homeworkTable,
   homeworkFilesTable,
   siteSettingsTable,
@@ -22,10 +23,9 @@ import {
   UpdateLessonTypeBody,
   UpdateLessonTypeParams,
   DeleteLessonTypeParams,
-  CreateCreditBundleBody,
-  UpdateCreditBundleBody,
-  UpdateCreditBundleParams,
-  DeleteCreditBundleParams,
+  CreateLessonTypePackageBody,
+  UpdateLessonTypePackageBody,
+  ResolvePackageRequestBody,
   UpdateHomeworkBody,
   AttachHomeworkFileBody,
   RelinkHomeworkFileBody,
@@ -40,6 +40,7 @@ import {
 import { randomBytes } from "crypto";
 import { requireTeacher } from "../middlewares/requireTeacher";
 import { sendPushToUser } from "../lib/push";
+import { mapPackageRequest } from "../lib/packageRequestMapper";
 import { isCalendarConnected, getCalendarEmail, deleteCalendarEvent, createOAuth2Client, getFreeBusySlots, zonedDayRange } from "../lib/calendar";
 import { google } from "googleapis";
 import { calendarTokensTable } from "@workspace/db";
@@ -238,26 +239,29 @@ router.patch("/teacher/bookings/:id", requireTeacher, async (req, res): Promise<
   // lesson not to happen, and the FAQ promises credits are always returned
   // for a cancelled lesson. Locked per-student to match the same
   // read-then-write pattern used for student-initiated cancel/booking.
-  const updated = isNewlyCancelled && !row.lessonType.isTrial
+  const updated = isNewlyCancelled && row.booking.paymentStatus === "balance"
     ? await withStudentLock(row.booking.studentId, async (tx) => {
         const [u] = await tx.update(bookingsTable).set(updateData).where(eq(bookingsTable.id, id)).returning();
 
+        // Give the lesson back to the balance it came from — same lesson type,
+        // most recently drawn-down grant first.
         const packages = await tx
           .select()
           .from(lessonPackagesTable)
-          .where(eq(lessonPackagesTable.studentId, row.booking.studentId))
+          .where(
+            and(
+              eq(lessonPackagesTable.studentId, row.booking.studentId),
+              eq(lessonPackagesTable.lessonTypeId, row.booking.lessonTypeId),
+            ),
+          )
           .orderBy(desc(lessonPackagesTable.purchasedAt));
 
-        let remainingToRefund = row.lessonType.creditCost;
-        for (const pkg of packages) {
-          if (remainingToRefund <= 0) break;
-          if (pkg.usedCredits <= 0) continue;
-          const refund = Math.min(pkg.usedCredits, remainingToRefund);
+        const mostRecentlyUsed = packages.find((pkg) => pkg.usedLessons > 0);
+        if (mostRecentlyUsed) {
           await tx
             .update(lessonPackagesTable)
-            .set({ usedCredits: pkg.usedCredits - refund })
-            .where(eq(lessonPackagesTable.id, pkg.id));
-          remainingToRefund -= refund;
+            .set({ usedLessons: mostRecentlyUsed.usedLessons - 1 })
+            .where(eq(lessonPackagesTable.id, mostRecentlyUsed.id));
         }
 
         return u;
@@ -395,7 +399,7 @@ router.post("/teacher/lesson-types", requireTeacher, async (req, res): Promise<v
       teacherId,
       name: parsed.data.name,
       durationMinutes: parsed.data.durationMinutes,
-      creditCost: parsed.data.creditCost,
+      priceCents: parsed.data.priceCents,
       description: parsed.data.description,
       isActive: parsed.data.isActive ?? true,
       isTrial: parsed.data.isTrial ?? false,
@@ -442,7 +446,7 @@ router.patch("/teacher/lesson-types/:id", requireTeacher, async (req, res): Prom
   const updateData: any = {};
   if (parsed.data.name != null) updateData.name = parsed.data.name;
   if (parsed.data.durationMinutes != null) updateData.durationMinutes = parsed.data.durationMinutes;
-  if (parsed.data.creditCost != null) updateData.creditCost = parsed.data.creditCost;
+  if (parsed.data.priceCents != null) updateData.priceCents = parsed.data.priceCents;
   if (parsed.data.description != null) updateData.description = parsed.data.description;
   if (parsed.data.isActive != null) updateData.isActive = parsed.data.isActive;
   if (parsed.data.isTrial != null) updateData.isTrial = parsed.data.isTrial;
@@ -474,89 +478,230 @@ router.delete("/teacher/lesson-types/:id", requireTeacher, async (req, res): Pro
   res.sendStatus(204);
 });
 
-router.get("/teacher/credit-bundles", requireTeacher, async (req, res): Promise<void> => {
+router.get("/teacher/lesson-type-packages", requireTeacher, async (req, res): Promise<void> => {
   const teacherId = (req as any).teacherId as number;
-  const bundles = await db
-    .select()
-    .from(creditBundlesTable)
-    .where(eq(creditBundlesTable.teacherId, teacherId))
-    .orderBy(asc(creditBundlesTable.sortOrder), asc(creditBundlesTable.credits));
-  res.json(bundles);
+  const rows = await db
+    .select({ pkg: lessonTypePackagesTable })
+    .from(lessonTypePackagesTable)
+    .innerJoin(lessonTypesTable, eq(lessonTypePackagesTable.lessonTypeId, lessonTypesTable.id))
+    .where(eq(lessonTypesTable.teacherId, teacherId))
+    .orderBy(asc(lessonTypePackagesTable.sortOrder), asc(lessonTypePackagesTable.quantity));
+  res.json(rows.map((r) => r.pkg));
 });
 
-router.post("/teacher/credit-bundles", requireTeacher, async (req, res): Promise<void> => {
+// Ownership of a package is checked through its lesson type, which is the only
+// row carrying a teacherId.
+async function findOwnedLessonType(teacherId: number, lessonTypeId: number) {
+  const [row] = await db
+    .select()
+    .from(lessonTypesTable)
+    .where(and(eq(lessonTypesTable.id, lessonTypeId), eq(lessonTypesTable.teacherId, teacherId)));
+  return row ?? null;
+}
+
+async function findOwnedPackage(teacherId: number, packageId: number) {
+  const [row] = await db
+    .select({ pkg: lessonTypePackagesTable })
+    .from(lessonTypePackagesTable)
+    .innerJoin(lessonTypesTable, eq(lessonTypePackagesTable.lessonTypeId, lessonTypesTable.id))
+    .where(and(eq(lessonTypePackagesTable.id, packageId), eq(lessonTypesTable.teacherId, teacherId)));
+  return row?.pkg ?? null;
+}
+
+router.post("/teacher/lesson-type-packages", requireTeacher, async (req, res): Promise<void> => {
   const teacherId = (req as any).teacherId as number;
-  const parsed = CreateCreditBundleBody.safeParse(req.body);
+  const parsed = CreateLessonTypePackageBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
 
-  const [bundle] = await db
-    .insert(creditBundlesTable)
+  if (!(await findOwnedLessonType(teacherId, parsed.data.lessonTypeId))) {
+    res.status(404).json({ error: "Lesson type not found" });
+    return;
+  }
+
+  const [pkg] = await db
+    .insert(lessonTypePackagesTable)
     .values({
-      teacherId,
-      credits: parsed.data.credits,
-      priceCents: parsed.data.priceCents,
+      lessonTypeId: parsed.data.lessonTypeId,
+      quantity: parsed.data.quantity,
+      totalCents: parsed.data.totalCents,
       sortOrder: parsed.data.sortOrder ?? 0,
       isActive: parsed.data.isActive ?? true,
     })
     .returning();
 
-  res.status(201).json(bundle);
+  res.status(201).json(pkg);
 });
 
-router.patch("/teacher/credit-bundles/:id", requireTeacher, async (req, res): Promise<void> => {
+router.patch("/teacher/lesson-type-packages/:id", requireTeacher, async (req, res): Promise<void> => {
   const teacherId = (req as any).teacherId as number;
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
 
-  const parsed = UpdateCreditBundleBody.safeParse(req.body);
+  const parsed = UpdateLessonTypePackageBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
 
-  const [existing] = await db
-    .select()
-    .from(creditBundlesTable)
-    .where(and(eq(creditBundlesTable.id, id), eq(creditBundlesTable.teacherId, teacherId)));
-  if (!existing) {
-    res.status(404).json({ error: "Credit bundle not found" });
+  if (!(await findOwnedPackage(teacherId, id))) {
+    res.status(404).json({ error: "Package not found" });
     return;
   }
 
   const updateData: any = {};
-  if (parsed.data.credits != null) updateData.credits = parsed.data.credits;
-  if (parsed.data.priceCents != null) updateData.priceCents = parsed.data.priceCents;
+  if (parsed.data.quantity != null) updateData.quantity = parsed.data.quantity;
+  if (parsed.data.totalCents != null) updateData.totalCents = parsed.data.totalCents;
   if (parsed.data.sortOrder != null) updateData.sortOrder = parsed.data.sortOrder;
   if (parsed.data.isActive != null) updateData.isActive = parsed.data.isActive;
 
   const [updated] = await db
-    .update(creditBundlesTable)
+    .update(lessonTypePackagesTable)
     .set(updateData)
-    .where(eq(creditBundlesTable.id, id))
+    .where(eq(lessonTypePackagesTable.id, id))
     .returning();
 
   res.json(updated);
 });
 
-router.delete("/teacher/credit-bundles/:id", requireTeacher, async (req, res): Promise<void> => {
+router.delete("/teacher/lesson-type-packages/:id", requireTeacher, async (req, res): Promise<void> => {
   const teacherId = (req as any).teacherId as number;
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
 
-  const [existing] = await db
-    .select()
-    .from(creditBundlesTable)
-    .where(and(eq(creditBundlesTable.id, id), eq(creditBundlesTable.teacherId, teacherId)));
-  if (!existing) {
-    res.status(404).json({ error: "Credit bundle not found" });
+  if (!(await findOwnedPackage(teacherId, id))) {
+    res.status(404).json({ error: "Package not found" });
     return;
   }
 
-  await db.delete(creditBundlesTable).where(eq(creditBundlesTable.id, id));
+  // Deactivate rather than delete — past requests reference this row, and a
+  // student who already bought it should still see what they paid for.
+  await db
+    .update(lessonTypePackagesTable)
+    .set({ isActive: false })
+    .where(eq(lessonTypePackagesTable.id, id));
   res.sendStatus(204);
+});
+
+router.patch("/teacher/bookings/:id/mark-paid", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+
+  const [booking] = await db
+    .select()
+    .from(bookingsTable)
+    .where(and(eq(bookingsTable.id, id), eq(bookingsTable.teacherId, teacherId)));
+  if (!booking) {
+    res.status(404).json({ error: "Booking not found" });
+    return;
+  }
+  // Only a one-off actually owes anything; a lesson drawn from a balance or a
+  // free trial was already settled.
+  if (booking.paymentStatus !== "unpaid") {
+    res.status(409).json({ error: "This booking is not awaiting payment" });
+    return;
+  }
+
+  const [updated] = await db
+    .update(bookingsTable)
+    .set({ paymentStatus: "paid", paidAt: new Date() })
+    .where(eq(bookingsTable.id, id))
+    .returning();
+
+  res.json({
+    id: updated.id,
+    paymentStatus: updated.paymentStatus,
+    priceCents: updated.priceCents,
+    paidAt: updated.paidAt,
+  });
+});
+
+// ─── Package requests ─────────────────────────────────────────────────────────
+// The student pays off the platform; marking a request paid is what actually
+// grants the lessons.
+
+router.get("/teacher/package-requests", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
+  const rows = await db
+    .select({ request: packageRequestsTable, lessonType: lessonTypesTable, student: usersTable })
+    .from(packageRequestsTable)
+    .innerJoin(lessonTypesTable, eq(packageRequestsTable.lessonTypeId, lessonTypesTable.id))
+    .innerJoin(usersTable, eq(packageRequestsTable.studentId, usersTable.id))
+    .where(eq(packageRequestsTable.teacherId, teacherId))
+    .orderBy(desc(packageRequestsTable.requestedAt));
+
+  res.json(
+    rows.map((r) => ({
+      ...mapPackageRequest(r.request, r.lessonType.name),
+      studentName: r.student.displayName,
+      durationMinutes: r.lessonType.durationMinutes,
+    })),
+  );
+});
+
+router.patch("/teacher/package-requests/:id", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+
+  const parsed = ResolvePackageRequestBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [row] = await db
+    .select({ request: packageRequestsTable, lessonType: lessonTypesTable, student: usersTable })
+    .from(packageRequestsTable)
+    .innerJoin(lessonTypesTable, eq(packageRequestsTable.lessonTypeId, lessonTypesTable.id))
+    .innerJoin(usersTable, eq(packageRequestsTable.studentId, usersTable.id))
+    .where(and(eq(packageRequestsTable.id, id), eq(packageRequestsTable.teacherId, teacherId)));
+
+  if (!row) {
+    res.status(404).json({ error: "Request not found" });
+    return;
+  }
+  if (row.request.status !== "pending") {
+    res.status(409).json({ error: "This request has already been resolved" });
+    return;
+  }
+
+  const now = new Date();
+  const updated = await withStudentLock(row.request.studentId, async (tx) => {
+    const [u] = await tx
+      .update(packageRequestsTable)
+      .set({ status: parsed.data.status, resolvedAt: now })
+      .where(eq(packageRequestsTable.id, id))
+      .returning();
+
+    // Granting the lessons is the whole point of marking a request paid, so it
+    // has to land in the same transaction as the status change.
+    if (parsed.data.status === "paid") {
+      await tx.insert(lessonPackagesTable).values({
+        studentId: row.request.studentId,
+        teacherId,
+        lessonTypeId: row.request.lessonTypeId,
+        totalLessons: row.request.quantity,
+        usedLessons: 0,
+        packageRequestId: row.request.id,
+        purchasedAt: now,
+      });
+    }
+    return u;
+  });
+
+  if (parsed.data.status === "paid") {
+    sendPushToUser(row.student.clerkUserId, {
+      title: "Lessons added",
+      body: `Your ${row.request.quantity} × ${row.lessonType.name} are ready to book.`,
+      url: "/dashboard",
+    }).catch((err) => console.error("Failed to send package-paid push:", err));
+  }
+
+  res.json(mapPackageRequest(updated!, row.lessonType.name));
 });
 
 // ─── Homework ─────────────────────────────────────────────────────────────────
@@ -819,8 +964,8 @@ router.get("/teacher/students", requireTeacher, async (req, res): Promise<void> 
         .select()
         .from(lessonPackagesTable)
         .where(eq(lessonPackagesTable.studentId, s.id));
-      const total = packages.reduce((a, p) => a + p.totalCredits, 0);
-      const used = packages.reduce((a, p) => a + p.usedCredits, 0);
+      const totalLessons = packages.reduce((a, p) => a + p.totalLessons, 0);
+      const usedLessons = packages.reduce((a, p) => a + p.usedLessons, 0);
 
       const [{ count }] = await db
         .select({ count: sql<number>`count(*)::int` })
@@ -831,8 +976,9 @@ router.get("/teacher/students", requireTeacher, async (req, res): Promise<void> 
         id: s.id,
         email: s.email,
         displayName: s.displayName,
-        totalCredits: total,
-        usedCredits: used,
+        totalLessons,
+        usedLessons,
+        remainingLessons: totalLessons - usedLessons,
         totalBookings: count,
         createdAt: s.createdAt,
       };
@@ -874,9 +1020,10 @@ router.get("/teacher/students/:id", requireTeacher, async (req, res): Promise<vo
     displayName: student.displayName,
     packages: packages.map((p) => ({
       id: p.id,
-      totalCredits: p.totalCredits,
-      usedCredits: p.usedCredits,
-      remainingCredits: p.totalCredits - p.usedCredits,
+      lessonTypeId: p.lessonTypeId,
+      totalLessons: p.totalLessons,
+      usedLessons: p.usedLessons,
+      remainingLessons: p.totalLessons - p.usedLessons,
       purchasedAt: p.purchasedAt,
     })),
     bookings: bookings.map((r) => ({
@@ -1024,7 +1171,7 @@ router.post("/teacher/packages", requireTeacher, async (req, res): Promise<void>
     return;
   }
 
-  const { studentId, totalCredits } = parsed.data;
+  const { studentId, lessonTypeId, totalLessons } = parsed.data;
 
   const [student] = await db
     .select()
@@ -1037,14 +1184,15 @@ router.post("/teacher/packages", requireTeacher, async (req, res): Promise<void>
 
   const [pkg] = await db
     .insert(lessonPackagesTable)
-    .values({ teacherId, studentId, totalCredits, usedCredits: 0 })
+    .values({ teacherId, studentId, lessonTypeId, totalLessons, usedLessons: 0 })
     .returning();
 
   res.status(201).json({
     id: pkg.id,
-    totalCredits: pkg.totalCredits,
-    usedCredits: pkg.usedCredits,
-    remainingCredits: pkg.totalCredits - pkg.usedCredits,
+    lessonTypeId: pkg.lessonTypeId,
+    totalLessons: pkg.totalLessons,
+    usedLessons: pkg.usedLessons,
+    remainingLessons: pkg.totalLessons - pkg.usedLessons,
     purchasedAt: pkg.purchasedAt,
   });
 });

@@ -12,6 +12,7 @@ import {
   MessageCircle,
   ShieldCheck,
   MoreHorizontal,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PingDot from "@/components/ui/ping-dot";
@@ -37,6 +38,7 @@ import {
   useGetTeacherDashboard,
   useListTeacherHomework,
   useListTeacherMessageThreads,
+  useListTeacherPackageRequests,
 } from "@workspace/api-client-react";
 
 export default function TeacherLayout({ children }: { children: ReactNode }) {
@@ -50,6 +52,8 @@ export default function TeacherLayout({ children }: { children: ReactNode }) {
   const { data: messageThreads } = useListTeacherMessageThreads();
   const hasUnreadMessages = (messageThreads ?? []).some((t) => t.unreadCount > 0);
   const pendingReviewCount = dashboard?.pendingHomeworkCount ?? 0;
+  const { data: packageRequests } = useListTeacherPackageRequests();
+  const hasPendingPackages = (packageRequests ?? []).some((r) => r.status === "pending");
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -67,6 +71,7 @@ export default function TeacherLayout({ children }: { children: ReactNode }) {
     { label: "Messages", href: "/teacher/messages", icon: MessageCircle, primary: true },
     { label: "Homework", href: "/teacher/homework", icon: FileText, primary: true },
     { label: "Students", href: "/teacher/students", icon: Users },
+    { label: "Packages", href: "/teacher/packages", icon: Wallet },
     { label: "Availability", href: "/teacher/availability", icon: CalendarOff },
     { label: "Lesson Types", href: "/teacher/lesson-types", icon: BookOpen },
   ];
@@ -141,6 +146,7 @@ export default function TeacherLayout({ children }: { children: ReactNode }) {
                 <span className="flex-1">{item.label}</span>
                 {item.href === "/teacher/homework" && hasNeedsReview && <PingDot />}
                 {item.href === "/teacher/messages" && hasUnreadMessages && <PingDot />}
+                {item.href === "/teacher/packages" && hasPendingPackages && <PingDot />}
                 {badgeCount > 0 && (
                   <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-xs font-bold">
                     {badgeCount}
@@ -225,7 +231,14 @@ export default function TeacherLayout({ children }: { children: ReactNode }) {
             moreActive || moreOpen ? "text-secondary" : "text-muted-foreground",
           )}
         >
-          <MoreHorizontal className="w-5 h-5" />
+          <span className="relative">
+            <MoreHorizontal className="w-5 h-5" />
+            {hasPendingPackages && (
+              <span className="absolute -top-0.5 -right-1.5">
+                <PingDot />
+              </span>
+            )}
+          </span>
           More
         </button>
       </nav>
@@ -256,6 +269,7 @@ export default function TeacherLayout({ children }: { children: ReactNode }) {
               >
                 <item.icon className="w-5 h-5" />
                 <span className="flex-1">{item.label}</span>
+                {item.href === "/teacher/packages" && hasPendingPackages && <PingDot />}
               </Link>
             ))}
 
