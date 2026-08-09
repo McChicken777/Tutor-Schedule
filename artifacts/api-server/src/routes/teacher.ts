@@ -51,7 +51,7 @@ import { isKeyForBookingContext } from "../lib/objectStorage";
 const router: IRouter = Router();
 
 // Advisory lock namespace shared with student.ts's locking scheme (2 = per-student).
-// Serializes refund/credit writes against concurrent student-side booking/cancel
+// Serializes refund/balance writes against concurrent student-side booking/cancel
 // operations touching the same student's lessonPackages rows.
 const STUDENT_ADVISORY_LOCK_NAMESPACE = 2;
 
@@ -234,9 +234,9 @@ router.patch("/teacher/bookings/:id", requireTeacher, async (req, res): Promise<
   if (parsed.data.status != null) updateData.status = parsed.data.status;
   if (parsed.data.notes != null) updateData.notes = parsed.data.notes;
 
-  // A teacher-initiated cancellation always refunds the credit — unlike a
+  // A teacher-initiated cancellation always returns the lesson — unlike a
   // student cancelling within 24h, the student isn't the one who caused the
-  // lesson not to happen, and the FAQ promises credits are always returned
+  // lesson not to happen, and the FAQ promises the lesson is always returned
   // for a cancelled lesson. Locked per-student to match the same
   // read-then-write pattern used for student-initiated cancel/booking.
   const updated = isNewlyCancelled && row.booking.paymentStatus === "balance"

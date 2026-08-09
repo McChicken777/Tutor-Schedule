@@ -51,9 +51,9 @@ import { mapPackageRequest } from "../lib/packageRequestMapper";
 const router: IRouter = Router();
 
 // Booking creation/reschedule races (two requests both passing a slot-taken or
-// credit-sufficiency check before either write lands) are real without some
+// balance-sufficiency check before either write lands) are real without some
 // form of serialization — there's no unique constraint that could catch a
-// double-booked slot or a FIFO credit deduction after the fact. Postgres
+// double-booked slot or an oldest-first balance deduction after the fact. Postgres
 // advisory locks (scoped per-teacher / per-student via a namespace int so the
 // two id spaces can't collide) serialize just the requests that could
 // actually conflict, held for the transaction's lifetime and auto-released on
@@ -175,7 +175,7 @@ async function getOrCreateUser(clerkUserId: string) {
   return user;
 }
 
-// The trial lesson type needs no credits to book, but a student can only ever
+// The trial lesson type is free to book, but a student can only ever
 // use it once. Only a "completed" (the lesson actually happened) booking
 // counts as used — an upcoming or cancelled trial doesn't burn the one-time
 // trial, so a student can still be re-scheduled or try again before it happens.
@@ -469,7 +469,7 @@ router.post("/student/bookings", requireAuth, async (req, res): Promise<void> =>
   const end = new Date(start.getTime() + lessonType.durationMinutes * 60 * 1000);
 
   // Everything that reads-then-writes a shared invariant (slot availability,
-  // credit balance) happens inside one locked transaction — see
+  // lesson balance) happens inside one locked transaction — see
   // withTeacherAndStudentLock — so two concurrent requests for the same
   // teacher/student can't both pass a check that only one of them should.
   const result = await withTeacherAndStudentLock(teacherId, user.id, async (

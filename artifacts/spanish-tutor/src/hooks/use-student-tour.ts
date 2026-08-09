@@ -17,7 +17,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     href: "/dashboard",
     title: "Your dashboard",
-    description: "See your next class and remaining credits at a glance.",
+    description: "See your next class and how many lessons you have left.",
   },
   {
     href: "/bookings",

@@ -7,7 +7,7 @@ import TourCard from "@/components/tour/TourCard";
 import { LogOut, LayoutDashboard, Calendar, BookOpen, MessageCircle, FileText, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PingDot from "@/components/ui/ping-dot";
-import PurchaseCreditsDialog from "@/components/PurchaseCreditsDialog";
+import BuyLessonsDialog from "@/components/BuyLessonsDialog";
 import AppPrompts from "@/components/AppPrompts";
 import LessonBalanceBadge from "@/components/LessonBalanceBadge";
 import {
@@ -274,7 +274,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
         </nav>
       </div>
 
-      <PurchaseCreditsDialog open={purchaseOpen} onOpenChange={setPurchaseOpen} />
+      <BuyLessonsDialog open={purchaseOpen} onOpenChange={setPurchaseOpen} />
       {/* Suppressed during the tour: AppPrompts is z-40, the same layer as the
           backdrop, and sits exactly where the tour card goes. The install and
           notification nudges can wait until onboarding is done. */}

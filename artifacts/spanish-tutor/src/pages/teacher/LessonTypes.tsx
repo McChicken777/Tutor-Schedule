@@ -17,6 +17,7 @@ import {
 } from "@workspace/api-client-react";
 import { useState } from "react";
 import { formatEuros, parseEurosToCents } from "@/lib/money";
+import LessonPackagesEditor from "@/components/LessonPackagesEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function TeacherLessonTypes() {
@@ -134,7 +135,7 @@ export default function TeacherLessonTypes() {
               <div className="flex items-center justify-between p-3 bg-accent/50 rounded-xl border border-border">
                 <div>
                   <p className="font-medium text-sm">Free trial lesson</p>
-                  <p className="text-xs text-muted-foreground">New students automatically get 1 free credit for this lesson.</p>
+                  <p className="text-xs text-muted-foreground">New students can book this lesson once, free.</p>
                 </div>
                 <Switch checked={newLesson.isTrial} onCheckedChange={(v) => setNewLesson({ ...newLesson, isTrial: v })} />
               </div>
@@ -200,6 +201,9 @@ export default function TeacherLessonTypes() {
                 </span>
               </div>
               <p className="text-muted-foreground text-sm mb-4">{lt.description}</p>
+              {!lt.isTrial && (
+                <LessonPackagesEditor lessonTypeId={lt.id} singlePriceCents={lt.priceCents} />
+              )}
               <div className="flex items-center justify-between pt-4 border-t border-border">
                 <span className="text-sm text-muted-foreground">Free trial lesson</span>
                 <Switch checked={lt.isTrial} onCheckedChange={(v) => handleToggleTrial(lt.id, v)} />

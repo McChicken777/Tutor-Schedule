@@ -62,37 +62,70 @@ export async function seed() {
     console.log("Seeded lesson types");
   }
 
-  // Bulk packages, seeded per lesson type. Only non-trial types get them — a
-  // free trial has nothing to discount. Priced as a total, which is the figure
-  // the student actually pays; the per-lesson rate is derived for display.
+  // Default pricing, keyed by DURATION rather than lesson name — a database
+  // that predates real prices already has its own lesson names, and matching on
+  // those would silently skip it and leave every lesson showing EUR 0.00.
+  //
+  // ~6% off for five, ~12.5% off for ten. Holding the discount steady across
+  // lengths keeps the per-minute rate at roughly EUR 0.36 / 0.33 / 0.31 for
+  // single / 5 / 10 whichever lesson you buy, so no length is a loophole.
+  const defaultsByDuration: Record<
+    number,
+    { priceCents: number; packages: { quantity: number; totalCents: number }[] }
+  > = {
+    25: {
+      priceCents: 900,
+      packages: [
+        { quantity: 5, totalCents: 4245 },
+        { quantity: 10, totalCents: 7890 },
+      ],
+    },
+    45: {
+      priceCents: 1600,
+      packages: [
+        { quantity: 5, totalCents: 7495 },
+        { quantity: 10, totalCents: 13990 },
+      ],
+    },
+    // The five-pack is 14145 rather than the 13995 the discount implies, so it
+    // is not a near-twin of the 45-minute ten-pack at 13990.
+    85: {
+      priceCents: 3000,
+      packages: [
+        { quantity: 5, totalCents: 14145 },
+        { quantity: 10, totalCents: 26490 },
+      ],
+    },
+  };
+
   const teacherLessonTypes = await db
     .select()
     .from(lessonTypesTable)
     .where(and(eq(lessonTypesTable.teacherId, teacher.id), eq(lessonTypesTable.isTrial, false)));
 
-  const packagesByLessonName: Record<string, { quantity: number; totalCents: number }[]> = {
-    // ~6% off for five, ~12.5% off for ten. Holding the discount steady across
-    // lengths keeps the per-minute rate at roughly EUR 0.36 / 0.33 / 0.31 for
-    // single / 5 / 10 whichever lesson you buy, so no length is a loophole.
-    "Short Lesson": [
-      { quantity: 5, totalCents: 4245 },
-      { quantity: 10, totalCents: 7890 },
-    ],
-    "Standard Lesson": [
-      { quantity: 5, totalCents: 7495 },
-      { quantity: 10, totalCents: 13990 },
-    ],
-    // 14145 rather than the 13995 the discount implies, so it is not a
-    // near-twin of the 45-minute ten-pack at 13990.
-    "Intensive Lesson": [
-      { quantity: 5, totalCents: 14145 },
-      { quantity: 10, totalCents: 26490 },
-    ],
-  };
-
   for (const lessonType of teacherLessonTypes) {
-    const desired = packagesByLessonName[lessonType.name];
-    if (!desired) continue;
+    const defaults = defaultsByDuration[lessonType.durationMinutes];
+    if (!defaults) continue;
+
+    // Backfill a price only where none has ever been set. Once the teacher has
+    // priced a lesson, seed must never overwrite it.
+    if (lessonType.priceCents === 0) {
+      await db
+        .update(lessonTypesTable)
+        .set({ priceCents: defaults.priceCents })
+        .where(eq(lessonTypesTable.id, lessonType.id));
+      console.log(`Backfilled price for "${lessonType.name}"`);
+    }
+
+    // Same rule for packages: seed defaults only for a lesson type that has
+    // none at all, so edited or deleted offers are left alone.
+    const existingPackages = await db
+      .select()
+      .from(lessonTypePackagesTable)
+      .where(eq(lessonTypePackagesTable.lessonTypeId, lessonType.id));
+    if (existingPackages.length > 0) continue;
+
+    const desired = defaults.packages;
 
     for (const [index, pkg] of desired.entries()) {
       const [existing] = await db
@@ -120,20 +153,6 @@ export async function seed() {
       }
     }
 
-    // Retire offers from a previous pricing scheme rather than deleting them —
-    // past requests reference these rows.
-    await db
-      .update(lessonTypePackagesTable)
-      .set({ isActive: false })
-      .where(
-        and(
-          eq(lessonTypePackagesTable.lessonTypeId, lessonType.id),
-          notInArray(
-            lessonTypePackagesTable.quantity,
-            desired.map((p) => p.quantity),
-          ),
-        ),
-      );
   }
   console.log("Synced lesson packages");
 

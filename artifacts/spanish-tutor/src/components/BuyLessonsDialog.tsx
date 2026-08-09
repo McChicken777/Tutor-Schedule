@@ -12,12 +12,12 @@ import { useToast } from "@/hooks/use-toast";
 import { LessonMark } from "@/components/LessonBalanceBadge";
 import { formatEuros } from "@/lib/money";
 
-interface PurchaseCreditsDialogProps {
+interface BuyLessonsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export default function PurchaseCreditsDialog({ open, onOpenChange }: PurchaseCreditsDialogProps) {
+export default function BuyLessonsDialog({ open, onOpenChange }: BuyLessonsDialogProps) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const { data: lessonTypes } = useListLessonTypes();

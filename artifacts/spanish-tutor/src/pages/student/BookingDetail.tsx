@@ -175,7 +175,7 @@ export default function BookingDetail() {
                     Are you sure you want to cancel this lesson? This action cannot be undone.
                     {withinNoRefundWindow && (
                       <span className="block mt-2 font-medium text-destructive">
-                        You're cancelling less than 24 hours before your lesson — your credit will not be refunded.
+                        You're cancelling less than 24 hours before your lesson — this lesson will not go back into your balance.
                       </span>
                     )}
                   </p>

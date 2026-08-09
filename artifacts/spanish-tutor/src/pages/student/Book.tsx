@@ -17,7 +17,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle2, ArrowLeft, ArrowRight, Clock, Lock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import PurchaseCreditsDialog from "@/components/PurchaseCreditsDialog";
+import BuyLessonsDialog from "@/components/BuyLessonsDialog";
 
 export default function BookLesson() {
   const [, setLocation] = useLocation();
@@ -67,7 +67,7 @@ export default function BookLesson() {
     return "";
   }
 
-  function canBuyCredits(lt: (typeof activeLessonTypes)[number]): boolean {
+  function canBuyPackage(lt: (typeof activeLessonTypes)[number]): boolean {
     if (lt.isTrial) return false;
     if (trialLessonTypeExists && dashboard?.trialAvailable) return false;
     return true;
@@ -153,7 +153,7 @@ export default function BookLesson() {
                           <Lock className="w-3.5 h-3.5" />
                           {lockReason(lt)}
                         </p>
-                        {canBuyCredits(lt) && (
+                        {canBuyPackage(lt) && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -320,7 +320,7 @@ export default function BookLesson() {
         </div>
       )}
 
-      <PurchaseCreditsDialog
+      <BuyLessonsDialog
         open={showPurchaseDialog}
         onOpenChange={setShowPurchaseDialog}
       />
