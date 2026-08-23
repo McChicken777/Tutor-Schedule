@@ -8,6 +8,8 @@
     "backfill-homework-files": "tsx ./src/backfill-homework-files.ts",
     "backfill-teacher-id": "tsx ./src/backfill-teacher-id.ts",
     "backfill-teacher-isadmin": "tsx ./src/backfill-teacher-isadmin.ts",
+    "backfill-teacher-signup-codes": "tsx ./src/backfill-teacher-signup-codes.ts",
+    "backfill-testimonials-faqs-teacher-id": "tsx ./src/backfill-testimonials-faqs-teacher-id.ts",
     "fix-duplicate-seed-rows": "tsx ./src/fix-duplicate-seed-rows.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Response } from "express";
 import { clerkClient } from "@clerk/express";
 import { eq, ne, lt, gt, and, asc, desc, sql, inArray, isNull } from "drizzle-orm";
 import { db } from "@workspace/db";
@@ -17,6 +17,8 @@ import {
   availabilityOverridesTable,
   reportsTable,
   teachersTable,
+  testimonialsTable,
+  faqsTable,
 } from "@workspace/db";
 import {
   CreateBookingBody,
@@ -34,6 +36,7 @@ import {
   SendStudentMessageBody,
   CreateStudentReportBody,
   CreatePackageRequestBody,
+  LinkTeacherByCodeBody,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/requireAuth";
 import { sendPushToUser } from "../lib/push";
@@ -41,6 +44,8 @@ import {
   createCalendarEventWithMeet,
   deleteCalendarEvent,
   getFreeBusySlots,
+  getBusyBlocks,
+  generateAvailableSlots,
 } from "../lib/calendar";
 import { mapHomeworkFields, mapHomeworkRow } from "../lib/homeworkMapper";
 import { mapReportRow } from "../lib/reportMapper";
@@ -175,6 +180,19 @@ async function getOrCreateUser(clerkUserId: string) {
   return user;
 }
 
+// Shared guard for the catalog/content routes below (lesson types, slots,
+// site settings, testimonials, FAQs) — all of them are scoped to the
+// caller's own linked teacher, resolved server-side, never from a client
+// param, so a student can't read another teacher's data by tampering a
+// request. Writes the 403 itself so call sites can just early-return.
+function requireLinkedTeacherId(user: { teacherId: number | null }, res: Response): number | null {
+  if (user.teacherId == null) {
+    res.status(403).json({ error: "Link your teacher's signup code first" });
+    return null;
+  }
+  return user.teacherId;
+}
+
 // The trial lesson type is free to book, but a student can only ever
 // use it once. Only a "completed" (the lesson actually happened) booking
 // counts as used — an upcoming or cancelled trial doesn't burn the one-time
@@ -202,10 +220,11 @@ function isTestStudent(email: string): boolean {
   return !!testEmail && email.toLowerCase() === testEmail.toLowerCase();
 }
 
-// Before a student's first booking, user.teacherId is still null (adopted on
-// first booking — see POST /student/bookings) and there's no "pick a teacher"
-// UI yet, so we can't scope this to one teacher's settings. Falls back to the
-// legacy unscoped lookup in that case; once adopted, scopes strictly.
+// Between Clerk signup and completing /student/link-teacher, user.teacherId
+// is briefly still null (the dashboard is fetched at that gate before the
+// redirect decision is made), so we can't always scope this to one teacher's
+// settings. Falls back to the legacy unscoped lookup in that case; once
+// linked, scopes strictly.
 async function getTrialLessonType(teacherId: number | null) {
   const [settings] =
     teacherId != null
@@ -292,9 +311,56 @@ router.get("/student/me", requireAuth, async (req, res): Promise<void> => {
     clerkUserId: user.clerkUserId,
     email: user.email,
     displayName: user.displayName,
+    teacherId: user.teacherId,
     lessonBalances: balances,
     upcomingLessonsCount: upcoming.length,
     createdAt: user.createdAt,
+  });
+});
+
+router.post("/student/link-teacher", requireAuth, async (req, res): Promise<void> => {
+  const clerkUserId = (req as any).clerkUserId;
+  const user = await getOrCreateUser(clerkUserId);
+
+  if (user.teacherId != null) {
+    res.status(409).json({ error: "You're already linked to a teacher" });
+    return;
+  }
+
+  const parsed = LinkTeacherByCodeBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request" });
+    return;
+  }
+
+  const code = parsed.data.code.trim().toUpperCase();
+  const [teacher] = await db.select().from(teachersTable).where(eq(teachersTable.signupCode, code));
+  if (!teacher || teacher.isBanned) {
+    res.status(400).json({ error: "Invalid code" });
+    return;
+  }
+
+  const [updated] = await db
+    .update(usersTable)
+    .set({ teacherId: teacher.id })
+    .where(eq(usersTable.id, user.id))
+    .returning();
+
+  const balances = await getLessonBalances(updated.id);
+  const upcoming = await db
+    .select()
+    .from(bookingsTable)
+    .where(and(eq(bookingsTable.studentId, updated.id), eq(bookingsTable.status, "upcoming")));
+
+  res.json({
+    id: updated.id,
+    clerkUserId: updated.clerkUserId,
+    email: updated.email,
+    displayName: updated.displayName,
+    teacherId: updated.teacherId,
+    lessonBalances: balances,
+    upcomingLessonsCount: upcoming.length,
+    createdAt: updated.createdAt,
   });
 });
 
@@ -453,8 +519,13 @@ router.post("/student/bookings", requireAuth, async (req, res): Promise<void> =>
     return;
   }
 
+  if (user.teacherId == null) {
+    res.status(403).json({ error: "Link your teacher's signup code first" });
+    return;
+  }
+
   const teacherId = lessonType.teacherId;
-  if (user.teacherId != null && user.teacherId !== teacherId) {
+  if (user.teacherId !== teacherId) {
     res.status(400).json({ error: "This lesson type belongs to a different teacher" });
     return;
   }
@@ -475,14 +546,6 @@ router.post("/student/bookings", requireAuth, async (req, res): Promise<void> =>
   const result = await withTeacherAndStudentLock(teacherId, user.id, async (
     tx,
   ): Promise<{ error: { status: number; message: string } } | { booking: typeof bookingsTable.$inferSelect }> => {
-    // One teacher per student: adopt this teacher on the student's first-ever
-    // booking. No UI offers a teacher choice yet, so a mismatch shouldn't be
-    // reachable today — this is a defensive guard against that invariant breaking.
-    if (user.teacherId == null) {
-      await tx.update(usersTable).set({ teacherId }).where(eq(usersTable.id, user.id));
-      user.teacherId = teacherId;
-    }
-
     // The trial lesson is free, but only once ever, per student
     let packages: (typeof lessonPackagesTable.$inferSelect)[] = [];
     if (lessonType.isTrial) {
@@ -1142,6 +1205,159 @@ router.patch("/student/tour-complete", requireAuth, async (req, res): Promise<vo
   await db.update(usersTable).set({ hasSeenTour: true }).where(eq(usersTable.id, user.id));
 
   res.json({ hasSeenTour: true });
+});
+
+// ─── Catalog & content (scoped to the student's linked teacher) ───────────────
+// Moved here from the former public.ts now that browsing is fully code-gated —
+// there is no unauthenticated multi-tutor discovery surface. Every route below
+// resolves teacherId from the caller's own linked teacher, never a client param.
+
+router.get("/student/lesson-types", requireAuth, async (req, res): Promise<void> => {
+  const clerkUserId = (req as any).clerkUserId;
+  const user = await getOrCreateUser(clerkUserId);
+  const teacherId = requireLinkedTeacherId(user, res);
+  if (teacherId == null) return;
+
+  const types = await db
+    .select()
+    .from(lessonTypesTable)
+    .where(and(eq(lessonTypesTable.teacherId, teacherId), eq(lessonTypesTable.isActive, true)))
+    .orderBy(asc(lessonTypesTable.id));
+
+  res.json(
+    types.map((t) => ({
+      id: t.id,
+      name: t.name,
+      durationMinutes: t.durationMinutes,
+      priceCents: t.priceCents,
+      description: t.description,
+      isActive: t.isActive,
+      isTrial: t.isTrial,
+      createdAt: t.createdAt,
+    })),
+  );
+});
+
+router.get("/student/lesson-type-packages", requireAuth, async (req, res): Promise<void> => {
+  const clerkUserId = (req as any).clerkUserId;
+  const user = await getOrCreateUser(clerkUserId);
+  const teacherId = requireLinkedTeacherId(user, res);
+  if (teacherId == null) return;
+
+  const rows = await db
+    .select({ pkg: lessonTypePackagesTable })
+    .from(lessonTypePackagesTable)
+    .innerJoin(lessonTypesTable, eq(lessonTypePackagesTable.lessonTypeId, lessonTypesTable.id))
+    .where(
+      and(
+        eq(lessonTypesTable.teacherId, teacherId),
+        eq(lessonTypePackagesTable.isActive, true),
+        eq(lessonTypesTable.isActive, true),
+      ),
+    )
+    .orderBy(asc(lessonTypePackagesTable.sortOrder), asc(lessonTypePackagesTable.quantity));
+
+  res.json(rows.map((r) => r.pkg));
+});
+
+router.get("/student/available-slots", requireAuth, async (req, res): Promise<void> => {
+  const clerkUserId = (req as any).clerkUserId;
+  const user = await getOrCreateUser(clerkUserId);
+  const teacherId = requireLinkedTeacherId(user, res);
+  if (teacherId == null) return;
+
+  const rawLessonTypeId = parseInt(req.query.lessonTypeId as string, 10);
+  const rawStartDate = req.query.startDate as string;
+  const rawEndDate = req.query.endDate as string;
+
+  if (isNaN(rawLessonTypeId) || !rawStartDate || !rawEndDate) {
+    res.status(400).json({ error: "lessonTypeId, startDate, and endDate are required" });
+    return;
+  }
+
+  const [lessonType] = await db
+    .select()
+    .from(lessonTypesTable)
+    .where(eq(lessonTypesTable.id, rawLessonTypeId));
+
+  if (!lessonType) {
+    res.status(404).json({ error: "Lesson type not found" });
+    return;
+  }
+  if (lessonType.teacherId !== teacherId) {
+    res.status(403).json({ error: "This lesson type belongs to a different teacher" });
+    return;
+  }
+
+  // startDate/endDate already arrive as full day-boundary instants (the client
+  // computes them via startOfDay/endOfDay in its own timezone) — use them as-is.
+  const start = new Date(rawStartDate);
+  const end = new Date(rawEndDate);
+
+  const [settings] = await db.select().from(siteSettingsTable).where(eq(siteSettingsTable.teacherId, teacherId));
+
+  const busySlots = await getBusyBlocks(teacherId, start, end);
+  const slots = generateAvailableSlots(
+    busySlots,
+    start,
+    end,
+    lessonType.durationMinutes,
+    settings?.weeklyHours,
+    30,
+    settings?.timezone ?? "UTC",
+  );
+
+  res.json(slots.map((s) => ({ startTime: s.startTime, endTime: s.endTime, available: s.available })));
+});
+
+router.get("/student/site-settings", requireAuth, async (req, res): Promise<void> => {
+  const clerkUserId = (req as any).clerkUserId;
+  const user = await getOrCreateUser(clerkUserId);
+  const teacherId = requireLinkedTeacherId(user, res);
+  if (teacherId == null) return;
+
+  const [settings] = await db.select().from(siteSettingsTable).where(eq(siteSettingsTable.teacherId, teacherId));
+  if (!settings) {
+    res.status(404).json({ error: "No settings configured for this teacher" });
+    return;
+  }
+
+  res.json({
+    id: settings.id,
+    tutorName: settings.tutorName,
+    tutorBio: settings.tutorBio,
+    contactEmail: settings.contactEmail,
+    freeTrialEnabled: settings.freeTrialEnabled,
+    tutorPhotoUrl: settings.tutorPhotoUrl ?? null,
+  });
+});
+
+router.get("/student/testimonials", requireAuth, async (req, res): Promise<void> => {
+  const clerkUserId = (req as any).clerkUserId;
+  const user = await getOrCreateUser(clerkUserId);
+  const teacherId = requireLinkedTeacherId(user, res);
+  if (teacherId == null) return;
+
+  const items = await db
+    .select()
+    .from(testimonialsTable)
+    .where(and(eq(testimonialsTable.teacherId, teacherId), eq(testimonialsTable.isVisible, true)))
+    .orderBy(asc(testimonialsTable.createdAt));
+  res.json(items);
+});
+
+router.get("/student/faqs", requireAuth, async (req, res): Promise<void> => {
+  const clerkUserId = (req as any).clerkUserId;
+  const user = await getOrCreateUser(clerkUserId);
+  const teacherId = requireLinkedTeacherId(user, res);
+  if (teacherId == null) return;
+
+  const items = await db
+    .select()
+    .from(faqsTable)
+    .where(and(eq(faqsTable.teacherId, teacherId), eq(faqsTable.isVisible, true)))
+    .orderBy(asc(faqsTable.displayOrder));
+  res.json(items);
 });
 
 // ─── Messages ─────────────────────────────────────────────────────────────────

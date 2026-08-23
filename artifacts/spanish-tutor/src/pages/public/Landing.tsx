@@ -1,48 +1,17 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { useGetSiteSettings, useListLessonTypes, useListTestimonials, useListFaqs, useListLessonTypePackages } from "@workspace/api-client-react";
-import { formatEuros } from "@/lib/money";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
-import ErrorState from "@/components/ErrorState";
+import { ArrowRight } from "lucide-react";
 
+// Minimal, static landing page. This used to pull one shared tutor's live
+// bio/pricing/testimonials/FAQ from public, unauthenticated endpoints — but
+// browsing is now fully code-gated (each tutor is an independent business,
+// and there's no public multi-tutor marketplace), so that data no longer
+// exists at a public endpoint. A full SaaS marketing redesign (selling the
+// platform itself to prospective tutors, with tutor-authored testimonials)
+// is a deferred follow-up — this is just enough to route people to the
+// right sign-up path in the meantime.
 export default function Landing() {
-  const { data: settings, isLoading: loadingSettings, error: settingsError, refetch: refetchSettings } = useGetSiteSettings();
-  const { data: lessonTypes } = useListLessonTypes();
-  const { data: testimonials } = useListTestimonials();
-  const { data: faqs } = useListFaqs();
-  const { data: lessonPackages } = useListLessonTypePackages();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-  if (settingsError) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <ErrorState error={settingsError} onRetry={refetchSettings} />
-      </div>
-    );
-  }
-
-  if (loadingSettings) {
-    return <div className="min-h-screen bg-background animate-pulse" />;
-  }
-
-  const contactEmail = settings?.contactEmail || "hola@elsol.com";
-  const tutorName = settings?.tutorName || "your tutor";
-  const activeLessonTypes = lessonTypes?.filter((lt) => lt.isActive) ?? [];
-  const trialLessonType = activeLessonTypes.find((lt) => lt.isTrial);
-  const trialAvailable = !!settings?.freeTrialEnabled && !!trialLessonType;
-  const activePackages = (lessonPackages ?? []).filter((p) => p.isActive);
-  // The headline figure is the cheapest per-lesson rate available for a lesson
-  // type — i.e. its largest package — so "from" is always truthful.
-  const bestRateFor = (lessonTypeId: number): number | null => {
-    const rates = activePackages
-      .filter((p) => p.lessonTypeId === lessonTypeId)
-      .map((p) => p.totalCents / p.quantity);
-    return rates.length > 0 ? Math.min(...rates) : null;
-  };
-  const sortedLessonTypes = [...activeLessonTypes].sort(
-    (a, b) => (a.isTrial ? 0 : a.priceCents) - (b.isTrial ? 0 : b.priceCents)
-  );
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
@@ -59,18 +28,8 @@ export default function Landing() {
             <Link href="/sign-in" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
               Log in
             </Link>
-            {/* The full CTA does not fit beside the wordmark and "Log in" on a
-                narrow phone — it previously squeezed the brand name into an
-                ellipsis. Shorten the label rather than clipping the brand. */}
             <Button asChild size="sm">
-              <Link href="/sign-up">
-                <span className="sm:hidden whitespace-nowrap">
-                  {trialAvailable ? "Free lesson" : "Book"}
-                </span>
-                <span className="hidden sm:inline whitespace-nowrap">
-                  {trialAvailable ? "Book a free lesson" : "Book a lesson"}
-                </span>
-              </Link>
+              <Link href="/sign-up">Get started</Link>
             </Button>
           </nav>
         </div>
@@ -79,208 +38,62 @@ export default function Landing() {
       <main>
         {/* Hero */}
         <section className="pt-40 pb-24 px-6 max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-[1.1fr_0.9fr] gap-16 items-end">
-            <div>
-              <p className="flex items-center gap-3 text-sm font-medium text-primary mb-6">
-                <span className="w-8 h-px bg-primary" />
-                Spanish, one conversation at a time
-              </p>
-              <h1 className="text-5xl md:text-6xl font-serif font-bold text-foreground leading-[1.05] tracking-tight mb-8">
-                Fluency isn't a course.
-                <br />
-                It's a habit we build together.
-              </h1>
-              <p className="text-lg text-muted-foreground leading-relaxed max-w-md mb-10">
-                Live, 1-on-1 lessons with {tutorName} — shaped around your goals, your pace,
-                and the mistakes you need to make out loud to actually learn from them.
-              </p>
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
-                <Button asChild size="lg">
-                  <Link href="/sign-up">
-                    {trialAvailable ? "Book your free lesson" : "Book your first lesson"}
-                    <ArrowRight className="ml-1" />
-                  </Link>
-                </Button>
-                <a href="#packages" className="text-sm font-medium text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground">
-                  See lesson formats
-                </a>
-              </div>
-              {trialAvailable && (
-                <p className="text-sm text-muted-foreground mt-4">
-                  Your first {trialLessonType!.durationMinutes}-minute lesson is free — no card required.
-                </p>
-              )}
-            </div>
-
-            <div className="relative">
-              <div className="absolute -bottom-3 -right-3 md:-bottom-5 md:-right-5 w-full h-full bg-primary rounded-2xl -z-10" />
-              {settings?.tutorPhotoUrl ? (
-                <>
-                  <div className="aspect-[4/5] rounded-2xl overflow-hidden border-4 border-background shadow-xl -rotate-1">
-                    <img src={settings.tutorPhotoUrl} alt={tutorName} className="w-full h-full object-cover" />
-                  </div>
-                  <p className="mt-4 text-sm text-muted-foreground italic font-serif -rotate-1">
-                    {tutorName}, live from the first "hola"
-                  </p>
-                </>
-              ) : (
-                <div
-                  className="aspect-[4/5] rounded-2xl border-4 border-background shadow-xl -rotate-1 bg-secondary text-secondary-foreground p-9 flex flex-col justify-between"
-                  style={{
-                    backgroundImage:
-                      "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.14) 1px, transparent 0)",
-                    backgroundSize: "18px 18px",
-                  }}
-                >
-                  <span className="text-xs font-sans font-semibold tracking-[0.2em] uppercase opacity-60">
-                    Lección uno
-                  </span>
-                  <div>
-                    <p className="font-serif text-4xl md:text-5xl leading-[1.05] mb-4">
-                      Hola.
-                      <br />
-                      Empecemos.
-                    </p>
-                    <p className="text-sm opacity-75 max-w-[230px] font-sans leading-relaxed">
-                      "Hello. Let's begin." Real conversation from lesson one — not just flashcards.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* Bio — editorial pull-quote layout */}
-        <section className="py-20 px-6 border-y border-border bg-accent/40">
-          <div className="max-w-6xl mx-auto grid md:grid-cols-[auto_1fr] gap-8 md:gap-14">
-            <span className="font-serif text-8xl md:text-9xl leading-none text-primary/25 select-none">
-              "
-            </span>
-            <div className="max-w-2xl">
-              <p className="text-2xl md:text-3xl font-serif text-foreground leading-snug mb-6 whitespace-pre-wrap">
-                {settings?.tutorBio ||
-                  "I'm a native Spanish speaker who's taught students from a dozen countries to stop translating in their heads and start thinking in Spanish. Lessons are conversational, a little messy, and built entirely around you."}
-              </p>
-              <p className="text-sm font-medium text-foreground">
-                — {tutorName}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Lesson formats — menu style, not cards */}
-        <section id="packages" className="py-24 px-6 max-w-6xl mx-auto scroll-mt-20">
-          <div className="flex items-end justify-between gap-6 mb-12 flex-wrap">
-            <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground">Lesson formats</h2>
-            <p className="text-muted-foreground max-w-sm">Pick the cadence that fits your week — switch anytime.</p>
-          </div>
-
-          {activeLessonTypes.length === 0 ? (
-            <p className="text-muted-foreground border-t border-border pt-8">
-              No lesson types available right now.
+          <div className="max-w-2xl">
+            <p className="flex items-center gap-3 text-sm font-medium text-primary mb-6">
+              <span className="w-8 h-px bg-primary" />
+              For tutors and their students
             </p>
-          ) : (
-            <div className="border-t border-border">
-              {sortedLessonTypes.map((lt, i) => (
-                <Link
-                  key={lt.id}
-                  href="/sign-up"
-                  className="group flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-8 py-7 border-b border-border hover:bg-accent/50 transition-colors px-2 -mx-2 rounded-lg"
-                >
-                  <span className="font-serif text-2xl text-muted-foreground/60 w-10 shrink-0">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-xl font-bold text-foreground">{lt.name}</h3>
-                      {lt.isTrial && settings?.freeTrialEnabled && (
-                        <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-primary/10 text-primary">
-                          Free first lesson
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-muted-foreground">{lt.description}</p>
-                  </div>
-                  <div className="flex items-center gap-6 shrink-0">
-                    <div className="text-right">
-                      <div className="text-2xl font-serif font-bold text-foreground">
-                        {lt.isTrial && settings?.freeTrialEnabled ? "Free" : formatEuros(lt.priceCents)}
-                      </div>
-                      <div className="text-sm text-muted-foreground">{lt.durationMinutes} min</div>
-                      {!lt.isTrial &&
-                        (() => {
-                          const best = bestRateFor(lt.id);
-                          return best !== null && best < lt.priceCents ? (
-                            <div className="text-xs text-primary mt-0.5">
-                              from {formatEuros(best)} in a package
-                            </div>
-                          ) : null;
-                        })()}
-                    </div>
-                    <ArrowUpRight className="text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-                  </div>
+            <h1 className="text-5xl md:text-6xl font-serif font-bold text-foreground leading-[1.05] tracking-tight mb-8">
+              Everything your lessons need, in one place.
+            </h1>
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-md mb-10">
+              Booking, availability, homework, and messages — built for independent tutors to manage
+              the students they already have.
+            </p>
+            <div className="flex flex-wrap items-center gap-4">
+              <Button asChild size="lg">
+                <Link href="/sign-up">
+                  I have a tutor's code
+                  <ArrowRight className="ml-1" />
                 </Link>
-              ))}
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <Link href="/teacher/sign-up">I'm a tutor</Link>
+              </Button>
             </div>
-          )}
+          </div>
         </section>
 
-        {/* Testimonials — plain quotes, alternating rhythm */}
-        {testimonials && testimonials.length > 0 && (
-          <section className="py-24 bg-secondary text-secondary-foreground px-6">
-            <div className="max-w-6xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-serif font-bold mb-16">What students say</h2>
-              <div className="space-y-14">
-                {testimonials.slice(0, 3).map((t, i) => (
-                  <div
-                    key={t.id}
-                    className={`max-w-2xl ${i % 2 === 1 ? "ml-auto text-right" : ""}`}
-                  >
-                    <p className="text-xl md:text-2xl font-serif leading-snug mb-4">
-                      "{t.text}"
-                    </p>
-                    <p className="text-sm text-secondary-foreground/70">
-                      {t.studentName} · rated {t.rating}/5
-                    </p>
-                  </div>
-                ))}
-              </div>
+        {/* How it works */}
+        <section className="py-20 px-6 border-y border-border bg-accent/40">
+          <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-10">
+            <div>
+              <span className="font-serif text-4xl text-primary/50">01</span>
+              <h3 className="text-xl font-bold text-foreground mt-3 mb-2">Your tutor signs up</h3>
+              <p className="text-muted-foreground">They set up their lesson types, availability, and get a signup code to share.</p>
             </div>
-          </section>
-        )}
-
-        {/* FAQs */}
-        {faqs && faqs.length > 0 && (
-          <section className="py-24 px-6 max-w-3xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-serif font-bold mb-12">Questions, answered</h2>
-            <Accordion type="single" collapsible className="w-full">
-              {faqs.map((faq, i) => (
-                <AccordionItem key={faq.id} value={`item-${faq.id}`}>
-                  <AccordionTrigger className="text-left text-lg font-medium gap-4">
-                    <span className="font-serif text-muted-foreground/50 shrink-0">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span className="flex-1 text-left">{faq.question}</span>
-                  </AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground text-base leading-relaxed pl-9">
-                    {faq.answer}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </section>
-        )}
+            <div>
+              <span className="font-serif text-4xl text-primary/50">02</span>
+              <h3 className="text-xl font-bold text-foreground mt-3 mb-2">You enter their code</h3>
+              <p className="text-muted-foreground">Create your account and enter the code your tutor gave you — that connects you to them.</p>
+            </div>
+            <div>
+              <span className="font-serif text-4xl text-primary/50">03</span>
+              <h3 className="text-xl font-bold text-foreground mt-3 mb-2">Book and go</h3>
+              <p className="text-muted-foreground">See their availability, book lessons, message them, and track homework — all in one place.</p>
+            </div>
+          </div>
+        </section>
 
         {/* Closing CTA */}
         <section className="py-24 px-6 border-t border-border">
           <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-10 items-center">
             <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground leading-[1.05]">
-              Your first lesson could be this week.
+              Ready to get started?
             </h2>
             <div className="flex flex-col items-start md:items-end gap-4">
               <p className="text-muted-foreground max-w-sm md:text-right">
-                No packages to commit to upfront — just book a lesson and see how it feels.
+                Students need a code from their tutor. Tutors can register in a couple of minutes.
               </p>
               <Button asChild size="lg">
                 <Link href="/sign-up">
@@ -301,8 +114,6 @@ export default function Landing() {
             <span className="font-serif font-bold text-foreground">LaCastia</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            <a href={`mailto:${contactEmail}`} className="hover:text-foreground hover:underline">{contactEmail}</a>
-            <span className="mx-2">·</span>
             © {new Date().getFullYear()} LaCastia
             <span className="mx-2">·</span>
             <Link href="/teacher/sign-in" className="hover:text-foreground hover:underline">Teacher login</Link>

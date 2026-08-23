@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { useListAdminFaqs, useUpdateFaq, useDeleteFaq } from "@workspace/api-client-react";
+import {
+  useListTeacherFaqs,
+  useCreateTeacherFaq,
+  useUpdateTeacherFaq,
+  useDeleteTeacherFaq,
+  getListTeacherFaqsQueryKey,
+  getListStudentFaqsQueryKey,
+} from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,43 +15,60 @@ import ErrorState from "@/components/ErrorState";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { getListAdminFaqsQueryKey, getListStudentFaqsQueryKey } from "@workspace/api-client-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Trash2, Pencil } from "lucide-react";
 
-export default function AdminFaqs() {
-  const { data: faqs, isLoading, error, refetch } = useListAdminFaqs();
-  const updateMutation = useUpdateFaq();
-  const deleteMutation = useDeleteFaq();
+export default function TeacherFaqs() {
+  const { data: faqs, isLoading, error, refetch } = useListTeacherFaqs();
+  const createMutation = useCreateTeacherFaq();
+  const updateMutation = useUpdateTeacherFaq();
+  const deleteMutation = useDeleteTeacherFaq();
   const qc = useQueryClient();
   const { toast } = useToast();
 
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newFaq, setNewFaq] = useState({ question: "", answer: "", displayOrder: 0 });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({ question: "", answer: "", displayOrder: 0 });
+
+  const invalidateAll = () => {
+    qc.invalidateQueries({ queryKey: getListTeacherFaqsQueryKey() });
+    qc.invalidateQueries({ queryKey: getListStudentFaqsQueryKey() });
+  };
 
   const handleToggleVisible = (id: number, isVisible: boolean) => {
     updateMutation.mutate({ id, data: { isVisible } }, {
       onSuccess: () => {
         toast({ title: isVisible ? "Published" : "Hidden" });
-        qc.invalidateQueries({ queryKey: getListAdminFaqsQueryKey() });
-        qc.invalidateQueries({ queryKey: getListStudentFaqsQueryKey() });
+        invalidateAll();
       },
       onError: () => toast({ title: "Couldn't update FAQ", variant: "destructive" }),
     });
   };
 
   const handleDelete = (id: number) => {
-    if(confirm("Delete this FAQ?")) {
+    if (confirm("Delete this FAQ?")) {
       deleteMutation.mutate({ id }, {
         onSuccess: () => {
           toast({ title: "Deleted" });
-          qc.invalidateQueries({ queryKey: getListAdminFaqsQueryKey() });
-          qc.invalidateQueries({ queryKey: getListStudentFaqsQueryKey() });
+          invalidateAll();
         },
         onError: () => toast({ title: "Couldn't delete FAQ", variant: "destructive" }),
       });
     }
-  }
+  };
+
+  const handleCreate = () => {
+    createMutation.mutate({ data: { ...newFaq, isVisible: true } }, {
+      onSuccess: () => {
+        toast({ title: "FAQ added" });
+        invalidateAll();
+        setIsCreateOpen(false);
+        setNewFaq({ question: "", answer: "", displayOrder: 0 });
+      },
+      onError: () => toast({ title: "Couldn't add FAQ", variant: "destructive" }),
+    });
+  };
 
   const openEdit = (faq: { id: number; question: string; answer: string; displayOrder: number }) => {
     setEditForm({ question: faq.question, answer: faq.answer, displayOrder: faq.displayOrder });
@@ -56,8 +80,7 @@ export default function AdminFaqs() {
     updateMutation.mutate({ id: editingId, data: editForm }, {
       onSuccess: () => {
         toast({ title: "FAQ updated" });
-        qc.invalidateQueries({ queryKey: getListAdminFaqsQueryKey() });
-        qc.invalidateQueries({ queryKey: getListStudentFaqsQueryKey() });
+        invalidateAll();
         setEditingId(null);
       },
       onError: () => toast({ title: "Couldn't save changes", variant: "destructive" }),
@@ -67,10 +90,32 @@ export default function AdminFaqs() {
   return (
     <div className="p-6 md:p-10 bg-background min-h-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-serif font-bold text-foreground">FAQs</h1>
-          <p className="text-sm text-muted-foreground mt-1">Moderation view across every teacher. FAQ entries are created by teachers on their own FAQ page.</p>
-        </div>
+        <h1 className="text-3xl font-serif font-bold text-foreground">FAQs</h1>
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <DialogTrigger asChild>
+            <Button>Add FAQ</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New FAQ</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Question</label>
+                <Input value={newFaq.question} onChange={e => setNewFaq({...newFaq, question: e.target.value})} />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Answer</label>
+                <Textarea value={newFaq.answer} onChange={e => setNewFaq({...newFaq, answer: e.target.value})} className="h-32" />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Display Order</label>
+                <Input type="number" value={newFaq.displayOrder} onChange={e => setNewFaq({...newFaq, displayOrder: Number(e.target.value)})} />
+              </div>
+              <Button onClick={handleCreate} disabled={createMutation.isPending || !newFaq.question || !newFaq.answer} className="w-full">Save</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Dialog open={editingId != null} onOpenChange={(open) => { if (!open) setEditingId(null); }}>
@@ -116,12 +161,14 @@ export default function AdminFaqs() {
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
-              
+
               <h3 className="font-bold text-foreground text-lg mb-2 pr-24">{faq.question}</h3>
               <p className="text-muted-foreground whitespace-pre-wrap">{faq.answer}</p>
-              <p className="text-xs text-muted-foreground mt-2">Teacher #{faq.teacherId}</p>
             </div>
           ))}
+          {faqs?.length === 0 && (
+            <p className="text-sm text-muted-foreground">No FAQ entries yet. Add your first one above.</p>
+          )}
         </div>
       )}
     </div>

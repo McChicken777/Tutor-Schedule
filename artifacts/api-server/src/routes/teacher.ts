@@ -14,6 +14,8 @@ import {
   messagesTable,
   availabilityOverridesTable,
   reportsTable,
+  testimonialsTable,
+  faqsTable,
 } from "@workspace/db";
 import {
   UpdateTeacherBookingBody,
@@ -36,6 +38,10 @@ import {
   SetDayAvailabilityOverridesBody,
   DeleteAvailabilityOverrideParams,
   CreateTeacherReportBody,
+  CreateTeacherTestimonialBody,
+  UpdateTeacherTestimonialBody,
+  CreateTeacherFaqBody,
+  UpdateTeacherFaqBody,
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
 import { requireTeacher } from "../middlewares/requireTeacher";
@@ -475,6 +481,176 @@ router.delete("/teacher/lesson-types/:id", requireTeacher, async (req, res): Pro
   }
 
   await db.delete(lessonTypesTable).where(eq(lessonTypesTable.id, id));
+  res.sendStatus(204);
+});
+
+router.get("/teacher/testimonials", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
+  const rows = await db
+    .select()
+    .from(testimonialsTable)
+    .where(eq(testimonialsTable.teacherId, teacherId))
+    .orderBy(desc(testimonialsTable.createdAt));
+  res.json(rows);
+});
+
+router.post("/teacher/testimonials", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
+  const parsed = CreateTeacherTestimonialBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [testimonial] = await db
+    .insert(testimonialsTable)
+    .values({
+      teacherId,
+      studentName: parsed.data.studentName,
+      text: parsed.data.text,
+      rating: parsed.data.rating,
+      isVisible: parsed.data.isVisible ?? true,
+    })
+    .returning();
+
+  res.status(201).json(testimonial);
+});
+
+router.patch("/teacher/testimonials/:id", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+
+  const parsed = UpdateTeacherTestimonialBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [existing] = await db
+    .select()
+    .from(testimonialsTable)
+    .where(and(eq(testimonialsTable.id, id), eq(testimonialsTable.teacherId, teacherId)));
+  if (!existing) {
+    res.status(404).json({ error: "Testimonial not found" });
+    return;
+  }
+
+  const updateData: any = {};
+  if (parsed.data.studentName != null) updateData.studentName = parsed.data.studentName;
+  if (parsed.data.text != null) updateData.text = parsed.data.text;
+  if (parsed.data.rating != null) updateData.rating = parsed.data.rating;
+  if (parsed.data.isVisible != null) updateData.isVisible = parsed.data.isVisible;
+
+  const [updated] = await db
+    .update(testimonialsTable)
+    .set(updateData)
+    .where(eq(testimonialsTable.id, id))
+    .returning();
+
+  res.json(updated);
+});
+
+router.delete("/teacher/testimonials/:id", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+
+  const [existing] = await db
+    .select()
+    .from(testimonialsTable)
+    .where(and(eq(testimonialsTable.id, id), eq(testimonialsTable.teacherId, teacherId)));
+  if (!existing) {
+    res.status(404).json({ error: "Testimonial not found" });
+    return;
+  }
+
+  await db.delete(testimonialsTable).where(eq(testimonialsTable.id, id));
+  res.sendStatus(204);
+});
+
+router.get("/teacher/faqs", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
+  const rows = await db
+    .select()
+    .from(faqsTable)
+    .where(eq(faqsTable.teacherId, teacherId))
+    .orderBy(asc(faqsTable.displayOrder));
+  res.json(rows);
+});
+
+router.post("/teacher/faqs", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
+  const parsed = CreateTeacherFaqBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [faq] = await db
+    .insert(faqsTable)
+    .values({
+      teacherId,
+      question: parsed.data.question,
+      answer: parsed.data.answer,
+      displayOrder: parsed.data.displayOrder ?? 0,
+      isVisible: parsed.data.isVisible ?? true,
+    })
+    .returning();
+
+  res.status(201).json(faq);
+});
+
+router.patch("/teacher/faqs/:id", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+
+  const parsed = UpdateTeacherFaqBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [existing] = await db
+    .select()
+    .from(faqsTable)
+    .where(and(eq(faqsTable.id, id), eq(faqsTable.teacherId, teacherId)));
+  if (!existing) {
+    res.status(404).json({ error: "FAQ entry not found" });
+    return;
+  }
+
+  const updateData: any = {};
+  if (parsed.data.question != null) updateData.question = parsed.data.question;
+  if (parsed.data.answer != null) updateData.answer = parsed.data.answer;
+  if (parsed.data.displayOrder != null) updateData.displayOrder = parsed.data.displayOrder;
+  if (parsed.data.isVisible != null) updateData.isVisible = parsed.data.isVisible;
+
+  const [updated] = await db
+    .update(faqsTable)
+    .set(updateData)
+    .where(eq(faqsTable.id, id))
+    .returning();
+
+  res.json(updated);
+});
+
+router.delete("/teacher/faqs/:id", requireTeacher, async (req, res): Promise<void> => {
+  const teacherId = (req as any).teacherId as number;
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+
+  const [existing] = await db
+    .select()
+    .from(faqsTable)
+    .where(and(eq(faqsTable.id, id), eq(faqsTable.teacherId, teacherId)));
+  if (!existing) {
+    res.status(404).json({ error: "FAQ entry not found" });
+    return;
+  }
+
+  await db.delete(faqsTable).where(eq(faqsTable.id, id));
   res.sendStatus(204);
 });
 

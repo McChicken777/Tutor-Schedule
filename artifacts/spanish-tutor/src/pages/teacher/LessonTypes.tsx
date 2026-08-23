@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   getListTeacherLessonTypesQueryKey,
-  getListLessonTypesQueryKey,
+  getListStudentLessonTypesQueryKey,
 } from "@workspace/api-client-react";
 import { useState } from "react";
 import { formatEuros, parseEurosToCents } from "@/lib/money";
@@ -37,7 +37,7 @@ export default function TeacherLessonTypes() {
       onSuccess: () => {
         toast({ title: isActive ? "Lesson activated" : "Lesson deactivated" });
         qc.invalidateQueries({ queryKey: getListTeacherLessonTypesQueryKey() });
-        qc.invalidateQueries({ queryKey: getListLessonTypesQueryKey() });
+        qc.invalidateQueries({ queryKey: getListStudentLessonTypesQueryKey() });
       },
       onError: () => toast({ title: "Couldn't update lesson", variant: "destructive" }),
     });
@@ -48,7 +48,7 @@ export default function TeacherLessonTypes() {
       onSuccess: () => {
         toast({ title: isTrial ? "Set as the free trial lesson" : "No longer the free trial lesson" });
         qc.invalidateQueries({ queryKey: getListTeacherLessonTypesQueryKey() });
-        qc.invalidateQueries({ queryKey: getListLessonTypesQueryKey() });
+        qc.invalidateQueries({ queryKey: getListStudentLessonTypesQueryKey() });
       },
       onError: () => toast({ title: "Couldn't update lesson", variant: "destructive" }),
     });
@@ -76,7 +76,7 @@ export default function TeacherLessonTypes() {
       onSuccess: () => {
         toast({ title: "Lesson updated" });
         qc.invalidateQueries({ queryKey: getListTeacherLessonTypesQueryKey() });
-        qc.invalidateQueries({ queryKey: getListLessonTypesQueryKey() });
+        qc.invalidateQueries({ queryKey: getListStudentLessonTypesQueryKey() });
         setEditingId(null);
       },
       onError: () => toast({ title: "Couldn't save changes", variant: "destructive" }),

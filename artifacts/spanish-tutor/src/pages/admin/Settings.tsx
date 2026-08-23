@@ -8,7 +8,7 @@ import ErrorState from "@/components/ErrorState";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { getGetTeacherSiteSettingsQueryKey, getGetSiteSettingsQueryKey } from "@workspace/api-client-react";
+import { getGetTeacherSiteSettingsQueryKey, getGetStudentSiteSettingsQueryKey } from "@workspace/api-client-react";
 
 export default function AdminSettings() {
   const { data: settings, isLoading, error, refetch } = useGetTeacherSiteSettings();
@@ -41,7 +41,7 @@ export default function AdminSettings() {
       onSuccess: () => {
         toast({ title: "Settings saved" });
         qc.invalidateQueries({ queryKey: getGetTeacherSiteSettingsQueryKey() });
-        qc.invalidateQueries({ queryKey: getGetSiteSettingsQueryKey() });
+        qc.invalidateQueries({ queryKey: getGetStudentSiteSettingsQueryKey() });
       },
       onError: () => toast({ title: "Couldn't save settings", variant: "destructive" }),
     });

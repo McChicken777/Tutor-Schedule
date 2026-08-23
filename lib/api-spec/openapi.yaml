@@ -10,8 +10,6 @@ servers:
 tags:
   - name: health
     description: Health operations
-  - name: public
-    description: Public endpoints (no auth required)
   - name: student
     description: Student endpoints (Clerk auth required)
   - name: teacher
@@ -70,12 +68,52 @@ paths:
         "401":
           description: Missing or invalid X-Internal-Secret header
 
-  # ─── PUBLIC ───────────────────────────────────────────────────────────────
-  /lesson-types:
+  # ─── STUDENT ──────────────────────────────────────────────────────────────
+  /student/me:
     get:
-      operationId: listLessonTypes
-      tags: [public]
-      summary: List active lesson types
+      operationId: getStudentProfile
+      tags: [student]
+      summary: Get current student profile and lesson balances
+      responses:
+        "200":
+          description: Student profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentProfile"
+        "401":
+          description: Unauthorized
+
+  /student/link-teacher:
+    post:
+      operationId: linkTeacherByCode
+      tags: [student]
+      summary: Link the current student to a teacher via that teacher's signup code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnterSignupCodeInput"
+      responses:
+        "200":
+          description: Linked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentProfile"
+        "400":
+          description: Invalid code
+        "401":
+          description: Unauthorized
+        "409":
+          description: This student is already linked to a teacher
+
+  /student/lesson-types:
+    get:
+      operationId: listStudentLessonTypes
+      tags: [student]
+      summary: List active lesson types for the student's linked teacher
       responses:
         "200":
           description: List of lesson types
@@ -85,12 +123,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/LessonType"
+        "403":
+          description: Student has not linked a teacher yet
 
-  /lesson-type-packages:
+  /student/lesson-type-packages:
     get:
-      operationId: listLessonTypePackages
-      tags: [public]
-      summary: List active bulk packages for all lesson types
+      operationId: listStudentLessonTypePackages
+      tags: [student]
+      summary: List active bulk packages for the student's linked teacher
       responses:
         "200":
           description: List of active packages
@@ -100,12 +140,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/LessonTypePackage"
+        "403":
+          description: Student has not linked a teacher yet
 
-  /available-slots:
+  /student/available-slots:
     get:
-      operationId: getAvailableSlots
-      tags: [public]
-      summary: Get available booking slots
+      operationId: getStudentAvailableSlots
+      tags: [student]
+      summary: Get available booking slots for a lesson type belonging to the student's linked teacher
       parameters:
         - name: lessonTypeId
           in: query
@@ -133,12 +175,29 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TimeSlot"
+        "403":
+          description: Student has not linked a teacher yet, or the lesson type belongs to a different teacher
 
-  /testimonials:
+  /student/site-settings:
     get:
-      operationId: listTestimonials
-      tags: [public]
-      summary: List visible testimonials
+      operationId: getStudentSiteSettings
+      tags: [student]
+      summary: Get the student's linked teacher's public site settings
+      responses:
+        "200":
+          description: Site settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteSettings"
+        "403":
+          description: Student has not linked a teacher yet
+
+  /student/testimonials:
+    get:
+      operationId: listStudentTestimonials
+      tags: [student]
+      summary: List visible testimonials for the student's linked teacher
       responses:
         "200":
           description: List of testimonials
@@ -148,12 +207,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Testimonial"
+        "403":
+          description: Student has not linked a teacher yet
 
-  /faqs:
+  /student/faqs:
     get:
-      operationId: listFaqs
-      tags: [public]
-      summary: List visible FAQ entries
+      operationId: listStudentFaqs
+      tags: [student]
+      summary: List visible FAQ entries for the student's linked teacher
       responses:
         "200":
           description: List of FAQ entries
@@ -163,35 +224,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/FaqEntry"
-
-  /site-settings:
-    get:
-      operationId: getSiteSettings
-      tags: [public]
-      summary: Get public site settings
-      responses:
-        "200":
-          description: Site settings
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SiteSettings"
-
-  # ─── STUDENT ──────────────────────────────────────────────────────────────
-  /student/me:
-    get:
-      operationId: getStudentProfile
-      tags: [student]
-      summary: Get current student profile and lesson balances
-      responses:
-        "200":
-          description: Student profile
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StudentProfile"
-        "401":
-          description: Unauthorized
+        "403":
+          description: Student has not linked a teacher yet
 
   /student/dashboard:
     get:
@@ -576,6 +610,23 @@ paths:
         "409":
           description: This Clerk user is already linked to a teacher row
 
+  /teachers/regenerate-code:
+    post:
+      operationId: regenerateSignupCode
+      tags: [teacher]
+      summary: Regenerate the current teacher's signup code, invalidating the old one
+      responses:
+        "200":
+          description: Teacher row with new signup code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Teacher"
+        "401":
+          description: Unauthorized
+        "404":
+          description: No teacher row is linked to this Clerk user
+
   /teachers/claim:
     post:
       operationId: claimTeacher
@@ -771,6 +822,154 @@ paths:
       responses:
         "204":
           description: Deleted
+
+  /teacher/testimonials:
+    get:
+      operationId: listTeacherTestimonials
+      tags: [teacher]
+      summary: List all testimonials for the current teacher
+      responses:
+        "200":
+          description: All testimonials
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Testimonial"
+    post:
+      operationId: createTeacherTestimonial
+      tags: [teacher]
+      summary: Create a testimonial for the current teacher
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestimonialInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Testimonial"
+
+  /teacher/testimonials/{id}:
+    patch:
+      operationId: updateTeacherTestimonial
+      tags: [teacher]
+      summary: Update one of the current teacher's testimonials
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestimonialUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Testimonial"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteTeacherTestimonial
+      tags: [teacher]
+      summary: Delete one of the current teacher's testimonials
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /teacher/faqs:
+    get:
+      operationId: listTeacherFaqs
+      tags: [teacher]
+      summary: List all FAQ entries for the current teacher
+      responses:
+        "200":
+          description: All FAQs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FaqEntry"
+    post:
+      operationId: createTeacherFaq
+      tags: [teacher]
+      summary: Create a FAQ entry for the current teacher
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FaqInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FaqEntry"
+
+  /teacher/faqs/{id}:
+    patch:
+      operationId: updateTeacherFaq
+      tags: [teacher]
+      summary: Update one of the current teacher's FAQ entries
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FaqUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FaqEntry"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteTeacherFaq
+      tags: [teacher]
+      summary: Delete one of the current teacher's FAQ entries
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
 
   /teacher/lesson-type-packages:
     get:
@@ -1607,7 +1806,7 @@ paths:
     get:
       operationId: listAdminTestimonials
       tags: [admin]
-      summary: List all testimonials
+      summary: List all testimonials across every teacher, for moderation
       responses:
         "200":
           description: All testimonials
@@ -1617,23 +1816,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Testimonial"
-    post:
-      operationId: createTestimonial
-      tags: [admin]
-      summary: Create a testimonial
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/TestimonialInput"
-      responses:
-        "201":
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Testimonial"
 
   /admin/testimonials/{id}:
     patch:
@@ -1679,7 +1861,7 @@ paths:
     get:
       operationId: listAdminFaqs
       tags: [admin]
-      summary: List all FAQ entries
+      summary: List all FAQ entries across every teacher, for moderation
       responses:
         "200":
           description: All FAQs
@@ -1689,23 +1871,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/FaqEntry"
-    post:
-      operationId: createFaq
-      tags: [admin]
-      summary: Create a FAQ entry
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/FaqInput"
-      responses:
-        "201":
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FaqEntry"
 
   /admin/faqs/{id}:
     patch:
@@ -2479,6 +2644,9 @@ components:
           type: string
         displayName:
           type: string
+        teacherId:
+          type: ["number", "null"]
+          description: The teacher this student linked to via a signup code, or null before they've entered one. The frontend gates every other student page behind this being set.
         lessonBalances:
           type: array
           items:
@@ -2493,6 +2661,7 @@ components:
         - clerkUserId
         - email
         - displayName
+        - teacherId
         - lessonBalances
         - upcomingLessonsCount
         - createdAt
@@ -2544,6 +2713,8 @@ components:
       properties:
         id:
           type: number
+        teacherId:
+          type: number
         studentName:
           type: string
         text:
@@ -2559,6 +2730,7 @@ components:
           format: date-time
       required:
         - id
+        - teacherId
         - studentName
         - text
         - rating
@@ -2604,6 +2776,8 @@ components:
       properties:
         id:
           type: number
+        teacherId:
+          type: number
         question:
           type: string
         answer:
@@ -2614,6 +2788,7 @@ components:
           type: boolean
       required:
         - id
+        - teacherId
         - question
         - answer
         - displayOrder
@@ -2749,11 +2924,15 @@ components:
           type: string
         isAdmin:
           type: boolean
+        signupCode:
+          type: string
+          description: Static code a student enters at signup to link to this teacher. Regenerable via POST /teachers/regenerate-code.
       required:
         - id
         - email
         - displayName
         - isAdmin
+        - signupCode
 
     ClaimTeacherInput:
       type: object
@@ -2762,6 +2941,14 @@ components:
           type: string
       required:
         - password
+
+    EnterSignupCodeInput:
+      type: object
+      properties:
+        code:
+          type: string
+      required:
+        - code
 
     TeacherDashboard:
       type: object

@@ -1,6 +1,6 @@
 import {
-  useListLessonTypes,
-  useListLessonTypePackages,
+  useListStudentLessonTypes,
+  useListStudentLessonTypePackages,
   useCreatePackageRequest,
   useListStudentPackageRequests,
   getListStudentPackageRequestsQueryKey,
@@ -20,8 +20,8 @@ interface BuyLessonsDialogProps {
 export default function BuyLessonsDialog({ open, onOpenChange }: BuyLessonsDialogProps) {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const { data: lessonTypes } = useListLessonTypes();
-  const { data: packages } = useListLessonTypePackages();
+  const { data: lessonTypes } = useListStudentLessonTypes();
+  const { data: packages } = useListStudentLessonTypePackages();
   const { data: myRequests } = useListStudentPackageRequests();
   const requestMutation = useCreatePackageRequest();
 

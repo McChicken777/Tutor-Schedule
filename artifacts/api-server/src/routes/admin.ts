@@ -13,9 +13,7 @@ import {
   homeworkFilesTable,
 } from "@workspace/db";
 import {
-  CreateTestimonialBody,
   UpdateTestimonialBody,
-  CreateFaqBody,
   UpdateFaqBody,
   UpdateReportParams,
   UpdateReportBody,
@@ -320,32 +318,13 @@ router.delete("/admin/students/:id/ban", requireAdmin, async (req, res): Promise
 });
 
 // ─── Testimonials ─────────────────────────────────────────────────────────────
-// Deliberately left unscoped by teacher — a single global testimonials list,
-// admin-managed platform-wide content.
+// Per-teacher content (each tutor is an independent business) — this is the
+// superadmin moderation view across every teacher, not a creation surface.
+// Creation happens teacher-side (see /teacher/testimonials in teacher.ts).
 
 router.get("/admin/testimonials", requireAdmin, async (_req, res): Promise<void> => {
   const items = await db.select().from(testimonialsTable).orderBy(desc(testimonialsTable.createdAt));
   res.json(items);
-});
-
-router.post("/admin/testimonials", requireAdmin, async (req, res): Promise<void> => {
-  const parsed = CreateTestimonialBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-
-  const [item] = await db
-    .insert(testimonialsTable)
-    .values({
-      studentName: parsed.data.studentName,
-      text: parsed.data.text,
-      rating: parsed.data.rating,
-      isVisible: parsed.data.isVisible ?? true,
-    })
-    .returning();
-
-  res.status(201).json(item);
 });
 
 router.patch("/admin/testimonials/:id", requireAdmin, async (req, res): Promise<void> => {
@@ -387,31 +366,12 @@ router.delete("/admin/testimonials/:id", requireAdmin, async (req, res): Promise
 });
 
 // ─── FAQs ─────────────────────────────────────────────────────────────────────
-// Deliberately left unscoped — see Testimonials note above.
+// Per-teacher content — see Testimonials note above. Creation happens
+// teacher-side (see /teacher/faqs in teacher.ts).
 
 router.get("/admin/faqs", requireAdmin, async (_req, res): Promise<void> => {
   const items = await db.select().from(faqsTable).orderBy(asc(faqsTable.displayOrder));
   res.json(items);
-});
-
-router.post("/admin/faqs", requireAdmin, async (req, res): Promise<void> => {
-  const parsed = CreateFaqBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-
-  const [item] = await db
-    .insert(faqsTable)
-    .values({
-      question: parsed.data.question,
-      answer: parsed.data.answer,
-      displayOrder: parsed.data.displayOrder ?? 0,
-      isVisible: parsed.data.isVisible ?? true,
-    })
-    .returning();
-
-  res.status(201).json(item);
 });
 
 router.patch("/admin/faqs/:id", requireAdmin, async (req, res): Promise<void> => {

@@ -4,7 +4,7 @@ import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
 import { QueryCache, MutationCache, QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
-import { useGetTeacherMe, useGetStudentDashboard } from "@workspace/api-client-react";
+import { useGetTeacherMe, useGetStudentDashboard, useGetStudentProfile } from "@workspace/api-client-react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import Landing from "@/pages/public/Landing";
 import SignInPage from "@/pages/public/SignIn";
 import SignUpPage from "@/pages/public/SignUp";
 import StudentDashboard from "@/pages/student/Dashboard";
+import LinkTeacher from "@/pages/student/LinkTeacher";
 import StudentBookings from "@/pages/student/Bookings";
 import BookingDetail from "@/pages/student/BookingDetail";
 import BookLesson from "@/pages/student/Book";
@@ -36,6 +37,9 @@ import TeacherHomework from "@/pages/teacher/Homework";
 import TeacherStudents from "@/pages/teacher/Students";
 import TeacherMessages from "@/pages/teacher/Messages";
 import TeacherAvailability from "@/pages/teacher/Availability";
+import TeacherSettings from "@/pages/teacher/Settings";
+import TeacherTestimonials from "@/pages/teacher/Testimonials";
+import TeacherFaqs from "@/pages/teacher/Faqs";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import AdminTestimonials from "@/pages/admin/Testimonials";
 import AdminFaqs from "@/pages/admin/Faqs";
@@ -254,11 +258,25 @@ function StudentPortal({ children }: { children: React.ReactNode }) {
   );
 }
 
+function LinkTeacherGate() {
+  return (
+    <>
+      <Show when="signed-in">
+        <LinkTeacher />
+      </Show>
+      <Show when="signed-out">
+        <Redirect to="/sign-in" />
+      </Show>
+    </>
+  );
+}
+
 function RequireStudentNotBanned({ children }: { children: React.ReactNode }) {
   const { data: teacher, isLoading: isTeacherLoading } = useGetTeacherMe();
   const { error } = useGetStudentDashboard();
+  const { data: profile, isLoading: isProfileLoading } = useGetStudentProfile();
 
-  if (isTeacherLoading) {
+  if (isTeacherLoading || isProfileLoading) {
     return <LoadingScreen />;
   }
   if (teacher) {
@@ -266,6 +284,9 @@ function RequireStudentNotBanned({ children }: { children: React.ReactNode }) {
   }
   if (isBannedError(error)) {
     return <BannedScreen />;
+  }
+  if (profile && profile.teacherId == null) {
+    return <Redirect to="/link-teacher" />;
   }
 
   return <StudentLayout>{children}</StudentLayout>;
@@ -406,6 +427,15 @@ function ClerkProviderWithRoutes() {
             <Route path="/teacher/availability">
               <TeacherPortal><TeacherAvailability /></TeacherPortal>
             </Route>
+            <Route path="/teacher/testimonials">
+              <TeacherPortal><TeacherTestimonials /></TeacherPortal>
+            </Route>
+            <Route path="/teacher/faqs">
+              <TeacherPortal><TeacherFaqs /></TeacherPortal>
+            </Route>
+            <Route path="/teacher/settings">
+              <TeacherPortal><TeacherSettings /></TeacherPortal>
+            </Route>
 
             {/* Admin Portal (Clerk + teacher-row + isAdmin gated) */}
             <Route path="/admin">
@@ -426,6 +456,8 @@ function ClerkProviderWithRoutes() {
             <Route path="/admin/accounts">
               <AdminPortal><AdminAccounts /></AdminPortal>
             </Route>
+
+            <Route path="/link-teacher" component={LinkTeacherGate} />
 
             {/* Student Portal */}
             <Route path="/dashboard">

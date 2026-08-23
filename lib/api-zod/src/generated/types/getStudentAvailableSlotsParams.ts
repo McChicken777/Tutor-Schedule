@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type GetAvailableSlotsParams = {
+export type GetStudentAvailableSlotsParams = {
 lessonTypeId: number;
 startDate: Date;
 endDate: Date;

@@ -156,29 +156,36 @@ export async function seed() {
   }
   console.log("Synced lesson packages");
 
-  // Testimonials
-  const existingTestimonials = await db.select().from(testimonialsTable);
+  // Testimonials — per-teacher, same existence-check shape as site settings
+  // below (matches un-backfilled rows too, so seed() can't insert a duplicate
+  // while running ahead of the testimonials/faqs teacherId backfill).
+  const allTestimonials = await db.select().from(testimonialsTable);
+  const existingTestimonials = allTestimonials.filter((t) => t.teacherId === teacher.id || t.teacherId === null);
   if (existingTestimonials.length === 0) {
     await db.insert(testimonialsTable).values([
       {
+        teacherId: teacher.id,
         studentName: "Sarah M.",
         text: "I went from zero Spanish to holding full conversations in just six months. The personalized approach made all the difference — every lesson felt tailored to exactly what I needed.",
         rating: 5,
         isVisible: true,
       },
       {
+        teacherId: teacher.id,
         studentName: "James T.",
         text: "Finally found a tutor who makes grammar fun instead of painful. The sessions are engaging, patient, and I always leave feeling like I've genuinely made progress.",
         rating: 5,
         isVisible: true,
       },
       {
+        teacherId: teacher.id,
         studentName: "Priya K.",
         text: "The flexibility of scheduling and the quality of teaching are both top-notch. I fit lessons around my busy schedule and the progress has been remarkable.",
         rating: 5,
         isVisible: true,
       },
       {
+        teacherId: teacher.id,
         studentName: "Carlos R.",
         text: "As a heritage speaker wanting to improve my formal Spanish, this was exactly what I needed. Nuanced, thoughtful, and incredibly effective.",
         rating: 5,
@@ -188,41 +195,48 @@ export async function seed() {
     console.log("Seeded testimonials");
   }
 
-  // FAQs
-  const existingFaqs = await db.select().from(faqsTable);
+  // FAQs — same per-teacher treatment as testimonials.
+  const allFaqs = await db.select().from(faqsTable);
+  const existingFaqs = allFaqs.filter((f) => f.teacherId === teacher.id || f.teacherId === null);
   if (existingFaqs.length === 0) {
     await db.insert(faqsTable).values([
       {
+        teacherId: teacher.id,
         question: "What level of Spanish do I need to get started?",
         answer: "Absolutely none! Lessons are tailored to all levels, from complete beginners to advanced speakers looking to refine their fluency.",
         displayOrder: 1,
         isVisible: true,
       },
       {
+        teacherId: teacher.id,
         question: "How do classes work online?",
         answer: "Each lesson takes place over Google Meet. Once you book, a unique meeting link is automatically generated and sent to you. All you need is a stable internet connection.",
         displayOrder: 2,
         isVisible: true,
       },
       {
+        teacherId: teacher.id,
         question: "Can I cancel or reschedule a lesson?",
         answer: "Yes, you can cancel or reschedule from your dashboard up to 24 hours before your lesson. A cancelled lesson goes straight back into your balance.",
         displayOrder: 3,
         isVisible: true,
       },
       {
+        teacherId: teacher.id,
         question: "How do lesson packages work?",
         answer: "You can pay for lessons one at a time, or buy a package of 5 or 10 at a lower price per lesson. Request a package from your dashboard, and once your tutor confirms payment the lessons appear in your balance. Each lesson length has its own balance.",
         displayOrder: 4,
         isVisible: true,
       },
       {
+        teacherId: teacher.id,
         question: "Is there a free first lesson?",
         answer: "Yes! A free 25-minute lesson is available so you can experience the teaching style before committing. Just book the 'Trial Lesson' type.",
         displayOrder: 5,
         isVisible: true,
       },
       {
+        teacherId: teacher.id,
         question: "What materials do I need?",
         answer: "Just yourself and curiosity! Materials and exercises are provided during lessons. A notebook for vocabulary is always a good idea.",
         displayOrder: 6,

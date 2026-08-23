@@ -1,4 +1,4 @@
-import { useGetStudentDashboard, useListLessonTypes } from "@workspace/api-client-react";
+import { useGetStudentDashboard, useListStudentLessonTypes } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { format, isBefore, addMinutes, differenceInMinutes } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import LessonBalanceBadge from "@/components/LessonBalanceBadge";
 
 export default function StudentDashboard() {
   const { data: dashboard, isLoading, error, refetch } = useGetStudentDashboard();
-  const { data: lessonTypes } = useListLessonTypes();
+  const { data: lessonTypes } = useListStudentLessonTypes();
 
   if (isLoading) {
     return (

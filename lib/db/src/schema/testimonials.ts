@@ -1,9 +1,14 @@
 import { pgTable, text, serial, timestamp, integer, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { teachersTable } from "./teachers";
 
 export const testimonialsTable = pgTable("testimonials", {
   id: serial("id").primaryKey(),
+  // Nullable only during the multi-tenant cutover backfill (see
+  // scripts/backfill-testimonials-faqs-teacher-id.ts); becomes NOT NULL once
+  // existing rows are backfilled.
+  teacherId: integer("teacher_id").references(() => teachersTable.id),
   studentName: text("student_name").notNull(),
   text: text("text").notNull(),
   rating: integer("rating").notNull(),

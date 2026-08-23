@@ -11,4 +11,6 @@ export interface Teacher {
   email: string;
   displayName: string;
   isAdmin: boolean;
+  /** Static code a student enters at signup to link to this teacher. Regenerable via POST /teachers/regenerate-code. */
+  signupCode: string;
 }

@@ -12,7 +12,7 @@ import {
   getListAvailabilityOverridesQueryKey,
   getGetCalendarBusyQueryKey,
   getGetTeacherSiteSettingsQueryKey,
-  getGetSiteSettingsQueryKey,
+  getGetStudentSiteSettingsQueryKey,
   getGetCalendarStatusQueryKey,
 } from "@workspace/api-client-react";
 import type { WeeklyHours, DayHours } from "@workspace/api-client-react";
@@ -223,7 +223,7 @@ export default function TeacherAvailability() {
         onSuccess: () => {
           toast({ title: "Working hours saved" });
           qc.invalidateQueries({ queryKey: getGetTeacherSiteSettingsQueryKey() });
-          qc.invalidateQueries({ queryKey: getGetSiteSettingsQueryKey() });
+          qc.invalidateQueries({ queryKey: getGetStudentSiteSettingsQueryKey() });
         },
         onError: () => toast({ title: "Couldn't save working hours", variant: "destructive" }),
       },

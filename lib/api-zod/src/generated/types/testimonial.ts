@@ -8,6 +8,7 @@
 
 export interface Testimonial {
   id: number;
+  teacherId: number;
   studentName: string;
   text: string;
   /**

@@ -12,6 +12,11 @@ export interface StudentProfile {
   clerkUserId: string;
   email: string;
   displayName: string;
+  /**
+     * The teacher this student linked to via a signup code, or null before they've entered one. The frontend gates every other student page behind this being set.
+     * @nullable
+     */
+  teacherId: number | null;
   lessonBalances: LessonBalance[];
   upcomingLessonsCount: number;
   createdAt: Date;

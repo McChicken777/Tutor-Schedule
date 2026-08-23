@@ -15,6 +15,10 @@ export const teachersTable = pgTable("teachers", {
   isAdmin: boolean("is_admin").notNull().default(false),
   isBanned: boolean("is_banned").notNull().default(false),
   bannedAt: timestamp("banned_at", { withTimezone: true }),
+  // Static per-teacher code a student enters at signup to link to this
+  // teacher (see /student/link-teacher). Unique, generated on registration;
+  // regenerable from teacher settings if it leaks.
+  signupCode: text("signup_code").notNull().unique().default(""),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

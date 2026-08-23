@@ -40,9 +40,53 @@ export const RunHomeworkFilesCleanupSweepResponse = zod.object({
 
 
 /**
- * @summary List active lesson types
+ * @summary Get current student profile and lesson balances
  */
-export const ListLessonTypesResponseItem = zod.object({
+export const GetStudentProfileResponse = zod.object({
+  "id": zod.number(),
+  "clerkUserId": zod.string(),
+  "email": zod.string(),
+  "displayName": zod.string(),
+  "teacherId": zod.number().nullable().describe('The teacher this student linked to via a signup code, or null before they\'ve entered one. The frontend gates every other student page behind this being set.'),
+  "lessonBalances": zod.array(zod.object({
+  "lessonTypeId": zod.number(),
+  "lessonTypeName": zod.string(),
+  "durationMinutes": zod.number(),
+  "remaining": zod.number()
+})),
+  "upcomingLessonsCount": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Link the current student to a teacher via that teacher's signup code
+ */
+export const LinkTeacherByCodeBody = zod.object({
+  "code": zod.string()
+})
+
+export const LinkTeacherByCodeResponse = zod.object({
+  "id": zod.number(),
+  "clerkUserId": zod.string(),
+  "email": zod.string(),
+  "displayName": zod.string(),
+  "teacherId": zod.number().nullable().describe('The teacher this student linked to via a signup code, or null before they\'ve entered one. The frontend gates every other student page behind this being set.'),
+  "lessonBalances": zod.array(zod.object({
+  "lessonTypeId": zod.number(),
+  "lessonTypeName": zod.string(),
+  "durationMinutes": zod.number(),
+  "remaining": zod.number()
+})),
+  "upcomingLessonsCount": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List active lesson types for the student's linked teacher
+ */
+export const ListStudentLessonTypesResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "durationMinutes": zod.number(),
@@ -52,13 +96,13 @@ export const ListLessonTypesResponseItem = zod.object({
   "isTrial": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
-export const ListLessonTypesResponse = zod.array(ListLessonTypesResponseItem)
+export const ListStudentLessonTypesResponse = zod.array(ListStudentLessonTypesResponseItem)
 
 
 /**
- * @summary List active bulk packages for all lesson types
+ * @summary List active bulk packages for the student's linked teacher
  */
-export const ListLessonTypePackagesResponseItem = zod.object({
+export const ListStudentLessonTypePackagesResponseItem = zod.object({
   "id": zod.number(),
   "lessonTypeId": zod.number(),
   "quantity": zod.number(),
@@ -67,61 +111,30 @@ export const ListLessonTypePackagesResponseItem = zod.object({
   "isActive": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
-export const ListLessonTypePackagesResponse = zod.array(ListLessonTypePackagesResponseItem)
+export const ListStudentLessonTypePackagesResponse = zod.array(ListStudentLessonTypePackagesResponseItem)
 
 
 /**
- * @summary Get available booking slots
+ * @summary Get available booking slots for a lesson type belonging to the student's linked teacher
  */
-export const GetAvailableSlotsQueryParams = zod.object({
+export const GetStudentAvailableSlotsQueryParams = zod.object({
   "lessonTypeId": zod.coerce.number(),
   "startDate": zod.date(),
   "endDate": zod.date()
 })
 
-export const GetAvailableSlotsResponseItem = zod.object({
+export const GetStudentAvailableSlotsResponseItem = zod.object({
   "startTime": zod.coerce.date(),
   "endTime": zod.coerce.date(),
   "available": zod.boolean().describe('False when this slot overlaps a busy block (Google Calendar, a teacher time-off block, or an existing booking); the UI greys it out.')
 })
-export const GetAvailableSlotsResponse = zod.array(GetAvailableSlotsResponseItem)
+export const GetStudentAvailableSlotsResponse = zod.array(GetStudentAvailableSlotsResponseItem)
 
 
 /**
- * @summary List visible testimonials
+ * @summary Get the student's linked teacher's public site settings
  */
-export const listTestimonialsResponseRatingMax = 5;
-
-
-
-export const ListTestimonialsResponseItem = zod.object({
-  "id": zod.number(),
-  "studentName": zod.string(),
-  "text": zod.string(),
-  "rating": zod.number().min(1).max(listTestimonialsResponseRatingMax),
-  "isVisible": zod.boolean(),
-  "createdAt": zod.coerce.date()
-})
-export const ListTestimonialsResponse = zod.array(ListTestimonialsResponseItem)
-
-
-/**
- * @summary List visible FAQ entries
- */
-export const ListFaqsResponseItem = zod.object({
-  "id": zod.number(),
-  "question": zod.string(),
-  "answer": zod.string(),
-  "displayOrder": zod.number(),
-  "isVisible": zod.boolean()
-})
-export const ListFaqsResponse = zod.array(ListFaqsResponseItem)
-
-
-/**
- * @summary Get public site settings
- */
-export const GetSiteSettingsResponse = zod.object({
+export const GetStudentSiteSettingsResponse = zod.object({
   "id": zod.number(),
   "tutorName": zod.string(),
   "tutorBio": zod.string(),
@@ -170,22 +183,36 @@ export const GetSiteSettingsResponse = zod.object({
 
 
 /**
- * @summary Get current student profile and credit summary
+ * @summary List visible testimonials for the student's linked teacher
  */
-export const GetStudentProfileResponse = zod.object({
+export const listStudentTestimonialsResponseRatingMax = 5;
+
+
+
+export const ListStudentTestimonialsResponseItem = zod.object({
   "id": zod.number(),
-  "clerkUserId": zod.string(),
-  "email": zod.string(),
-  "displayName": zod.string(),
-  "lessonBalances": zod.array(zod.object({
-  "lessonTypeId": zod.number(),
-  "lessonTypeName": zod.string(),
-  "durationMinutes": zod.number(),
-  "remaining": zod.number()
-})),
-  "upcomingLessonsCount": zod.number(),
+  "teacherId": zod.number(),
+  "studentName": zod.string(),
+  "text": zod.string(),
+  "rating": zod.number().min(1).max(listStudentTestimonialsResponseRatingMax),
+  "isVisible": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
+export const ListStudentTestimonialsResponse = zod.array(ListStudentTestimonialsResponseItem)
+
+
+/**
+ * @summary List visible FAQ entries for the student's linked teacher
+ */
+export const ListStudentFaqsResponseItem = zod.object({
+  "id": zod.number(),
+  "teacherId": zod.number(),
+  "question": zod.string(),
+  "answer": zod.string(),
+  "displayOrder": zod.number(),
+  "isVisible": zod.boolean()
+})
+export const ListStudentFaqsResponse = zod.array(ListStudentFaqsResponseItem)
 
 
 /**
@@ -744,7 +771,7 @@ export const SubmitReviewResponse = zod.object({
 
 
 /**
- * @summary List student's lesson packages and credits
+ * @summary List student's granted lesson packages
  */
 export const ListStudentPackagesResponseItem = zod.object({
   "id": zod.number(),
@@ -835,7 +862,8 @@ export const GetTeacherMeResponse = zod.object({
   "id": zod.number(),
   "email": zod.string(),
   "displayName": zod.string(),
-  "isAdmin": zod.boolean()
+  "isAdmin": zod.boolean(),
+  "signupCode": zod.string().describe('Static code a student enters at signup to link to this teacher. Regenerable via POST \/teachers\/regenerate-code.')
 })
 
 
@@ -846,7 +874,20 @@ export const RegisterTeacherResponse = zod.object({
   "id": zod.number(),
   "email": zod.string(),
   "displayName": zod.string(),
-  "isAdmin": zod.boolean()
+  "isAdmin": zod.boolean(),
+  "signupCode": zod.string().describe('Static code a student enters at signup to link to this teacher. Regenerable via POST \/teachers\/regenerate-code.')
+})
+
+
+/**
+ * @summary Regenerate the current teacher's signup code, invalidating the old one
+ */
+export const RegenerateSignupCodeResponse = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "displayName": zod.string(),
+  "isAdmin": zod.boolean(),
+  "signupCode": zod.string().describe('Static code a student enters at signup to link to this teacher. Regenerable via POST \/teachers\/regenerate-code.')
 })
 
 
@@ -861,7 +902,8 @@ export const ClaimTeacherResponse = zod.object({
   "id": zod.number(),
   "email": zod.string(),
   "displayName": zod.string(),
-  "isAdmin": zod.boolean()
+  "isAdmin": zod.boolean(),
+  "signupCode": zod.string().describe('Static code a student enters at signup to link to this teacher. Regenerable via POST \/teachers\/regenerate-code.')
 })
 
 
@@ -1070,6 +1112,171 @@ export const DeleteLessonTypeParams = zod.object({
 })
 
 export const DeleteLessonTypeResponse = zod.void()
+
+
+/**
+ * @summary List all testimonials for the current teacher
+ */
+export const listTeacherTestimonialsResponseRatingMax = 5;
+
+
+
+export const ListTeacherTestimonialsResponseItem = zod.object({
+  "id": zod.number(),
+  "teacherId": zod.number(),
+  "studentName": zod.string(),
+  "text": zod.string(),
+  "rating": zod.number().min(1).max(listTeacherTestimonialsResponseRatingMax),
+  "isVisible": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+export const ListTeacherTestimonialsResponse = zod.array(ListTeacherTestimonialsResponseItem)
+
+
+/**
+ * @summary Create a testimonial for the current teacher
+ */
+
+
+export const createTeacherTestimonialBodyRatingMax = 5;
+
+
+
+export const CreateTeacherTestimonialBody = zod.object({
+  "studentName": zod.string().min(1),
+  "text": zod.string().min(1),
+  "rating": zod.number().min(1).max(createTeacherTestimonialBodyRatingMax),
+  "isVisible": zod.boolean().optional()
+})
+
+export const createTeacherTestimonialResponseRatingMax = 5;
+
+
+
+export const CreateTeacherTestimonialResponse = zod.object({
+  "id": zod.number(),
+  "teacherId": zod.number(),
+  "studentName": zod.string(),
+  "text": zod.string(),
+  "rating": zod.number().min(1).max(createTeacherTestimonialResponseRatingMax),
+  "isVisible": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update one of the current teacher's testimonials
+ */
+export const UpdateTeacherTestimonialParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateTeacherTestimonialBodyRatingMax = 5;
+
+
+
+export const UpdateTeacherTestimonialBody = zod.object({
+  "studentName": zod.string().optional(),
+  "text": zod.string().optional(),
+  "rating": zod.number().min(1).max(updateTeacherTestimonialBodyRatingMax).optional(),
+  "isVisible": zod.boolean().optional()
+})
+
+export const updateTeacherTestimonialResponseRatingMax = 5;
+
+
+
+export const UpdateTeacherTestimonialResponse = zod.object({
+  "id": zod.number(),
+  "teacherId": zod.number(),
+  "studentName": zod.string(),
+  "text": zod.string(),
+  "rating": zod.number().min(1).max(updateTeacherTestimonialResponseRatingMax),
+  "isVisible": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete one of the current teacher's testimonials
+ */
+export const DeleteTeacherTestimonialParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteTeacherTestimonialResponse = zod.void()
+
+
+/**
+ * @summary List all FAQ entries for the current teacher
+ */
+export const ListTeacherFaqsResponseItem = zod.object({
+  "id": zod.number(),
+  "teacherId": zod.number(),
+  "question": zod.string(),
+  "answer": zod.string(),
+  "displayOrder": zod.number(),
+  "isVisible": zod.boolean()
+})
+export const ListTeacherFaqsResponse = zod.array(ListTeacherFaqsResponseItem)
+
+
+/**
+ * @summary Create a FAQ entry for the current teacher
+ */
+
+
+
+
+export const CreateTeacherFaqBody = zod.object({
+  "question": zod.string().min(1),
+  "answer": zod.string().min(1),
+  "displayOrder": zod.number().optional(),
+  "isVisible": zod.boolean().optional()
+})
+
+export const CreateTeacherFaqResponse = zod.object({
+  "id": zod.number(),
+  "teacherId": zod.number(),
+  "question": zod.string(),
+  "answer": zod.string(),
+  "displayOrder": zod.number(),
+  "isVisible": zod.boolean()
+})
+
+
+/**
+ * @summary Update one of the current teacher's FAQ entries
+ */
+export const UpdateTeacherFaqParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateTeacherFaqBody = zod.object({
+  "question": zod.string().optional(),
+  "answer": zod.string().optional(),
+  "displayOrder": zod.number().optional(),
+  "isVisible": zod.boolean().optional()
+})
+
+export const UpdateTeacherFaqResponse = zod.object({
+  "id": zod.number(),
+  "teacherId": zod.number(),
+  "question": zod.string(),
+  "answer": zod.string(),
+  "displayOrder": zod.number(),
+  "isVisible": zod.boolean()
+})
+
+
+/**
+ * @summary Delete one of the current teacher's FAQ entries
+ */
+export const DeleteTeacherFaqParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteTeacherFaqResponse = zod.void()
 
 
 /**
@@ -2167,7 +2374,7 @@ export const UnbanStudentAccountResponse = zod.object({
 
 
 /**
- * @summary List all testimonials
+ * @summary List all testimonials across every teacher, for moderation
  */
 export const listAdminTestimonialsResponseRatingMax = 5;
 
@@ -2175,6 +2382,7 @@ export const listAdminTestimonialsResponseRatingMax = 5;
 
 export const ListAdminTestimonialsResponseItem = zod.object({
   "id": zod.number(),
+  "teacherId": zod.number(),
   "studentName": zod.string(),
   "text": zod.string(),
   "rating": zod.number().min(1).max(listAdminTestimonialsResponseRatingMax),
@@ -2182,36 +2390,6 @@ export const ListAdminTestimonialsResponseItem = zod.object({
   "createdAt": zod.coerce.date()
 })
 export const ListAdminTestimonialsResponse = zod.array(ListAdminTestimonialsResponseItem)
-
-
-/**
- * @summary Create a testimonial
- */
-
-
-export const createTestimonialBodyRatingMax = 5;
-
-
-
-export const CreateTestimonialBody = zod.object({
-  "studentName": zod.string().min(1),
-  "text": zod.string().min(1),
-  "rating": zod.number().min(1).max(createTestimonialBodyRatingMax),
-  "isVisible": zod.boolean().optional()
-})
-
-export const createTestimonialResponseRatingMax = 5;
-
-
-
-export const CreateTestimonialResponse = zod.object({
-  "id": zod.number(),
-  "studentName": zod.string(),
-  "text": zod.string(),
-  "rating": zod.number().min(1).max(createTestimonialResponseRatingMax),
-  "isVisible": zod.boolean(),
-  "createdAt": zod.coerce.date()
-})
 
 
 /**
@@ -2238,6 +2416,7 @@ export const updateTestimonialResponseRatingMax = 5;
 
 export const UpdateTestimonialResponse = zod.object({
   "id": zod.number(),
+  "teacherId": zod.number(),
   "studentName": zod.string(),
   "text": zod.string(),
   "rating": zod.number().min(1).max(updateTestimonialResponseRatingMax),
@@ -2257,39 +2436,17 @@ export const DeleteTestimonialResponse = zod.void()
 
 
 /**
- * @summary List all FAQ entries
+ * @summary List all FAQ entries across every teacher, for moderation
  */
 export const ListAdminFaqsResponseItem = zod.object({
   "id": zod.number(),
+  "teacherId": zod.number(),
   "question": zod.string(),
   "answer": zod.string(),
   "displayOrder": zod.number(),
   "isVisible": zod.boolean()
 })
 export const ListAdminFaqsResponse = zod.array(ListAdminFaqsResponseItem)
-
-
-/**
- * @summary Create a FAQ entry
- */
-
-
-
-
-export const CreateFaqBody = zod.object({
-  "question": zod.string().min(1),
-  "answer": zod.string().min(1),
-  "displayOrder": zod.number().optional(),
-  "isVisible": zod.boolean().optional()
-})
-
-export const CreateFaqResponse = zod.object({
-  "id": zod.number(),
-  "question": zod.string(),
-  "answer": zod.string(),
-  "displayOrder": zod.number(),
-  "isVisible": zod.boolean()
-})
 
 
 /**
@@ -2308,6 +2465,7 @@ export const UpdateFaqBody = zod.object({
 
 export const UpdateFaqResponse = zod.object({
   "id": zod.number(),
+  "teacherId": zod.number(),
   "question": zod.string(),
   "answer": zod.string(),
   "displayOrder": zod.number(),

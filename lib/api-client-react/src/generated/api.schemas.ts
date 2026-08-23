@@ -385,6 +385,11 @@ export interface StudentProfile {
   clerkUserId: string;
   email: string;
   displayName: string;
+  /**
+     * The teacher this student linked to via a signup code, or null before they've entered one. The frontend gates every other student page behind this being set.
+     * @nullable
+     */
+  teacherId: number | null;
   lessonBalances: LessonBalance[];
   upcomingLessonsCount: number;
   createdAt: string;
@@ -439,6 +444,7 @@ export interface StudentDashboard {
 
 export interface Testimonial {
   id: number;
+  teacherId: number;
   studentName: string;
   text: string;
   /**
@@ -476,6 +482,7 @@ export interface TestimonialUpdate {
 
 export interface FaqEntry {
   id: number;
+  teacherId: number;
   question: string;
   answer: string;
   displayOrder: number;
@@ -544,10 +551,16 @@ export interface Teacher {
   email: string;
   displayName: string;
   isAdmin: boolean;
+  /** Static code a student enters at signup to link to this teacher. Regenerable via POST /teachers/regenerate-code. */
+  signupCode: string;
 }
 
 export interface ClaimTeacherInput {
   password: string;
+}
+
+export interface EnterSignupCodeInput {
+  code: string;
 }
 
 export type TeacherBookingStatus = typeof TeacherBookingStatus[keyof typeof TeacherBookingStatus];
@@ -805,7 +818,7 @@ export interface HomeworkFilesCleanupSweepResult {
   homeworkFileIds: number[];
 }
 
-export type GetAvailableSlotsParams = {
+export type GetStudentAvailableSlotsParams = {
 lessonTypeId: number;
 startDate: string;
 endDate: string;

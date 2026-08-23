@@ -3,11 +3,11 @@ import { Link, useLocation } from "wouter";
 import { formatEuros } from "@/lib/money";
 import { format, startOfDay, endOfDay, isBefore } from "date-fns";
 import {
-  useListLessonTypes,
-  useGetAvailableSlots,
+  useListStudentLessonTypes,
+  useGetStudentAvailableSlots,
   useCreateBooking,
   useGetStudentDashboard,
-  getGetAvailableSlotsQueryKey,
+  getGetStudentAvailableSlotsQueryKey,
   getGetStudentDashboardQueryKey,
   getListStudentBookingsQueryKey,
 } from "@workspace/api-client-react";
@@ -31,15 +31,15 @@ export default function BookLesson() {
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
 
   const { data: dashboard } = useGetStudentDashboard();
-  const { data: lessonTypes, isLoading: loadingTypes } = useListLessonTypes();
+  const { data: lessonTypes, isLoading: loadingTypes } = useListStudentLessonTypes();
 
   const startDate = selectedDate ? startOfDay(selectedDate).toISOString() : startOfDay(new Date()).toISOString();
   const endDate = selectedDate ? endOfDay(selectedDate).toISOString() : endOfDay(new Date()).toISOString();
 
   const slotsParams = { lessonTypeId: selectedLessonType || 0, startDate, endDate };
-  const { data: slots, isLoading: loadingSlots } = useGetAvailableSlots(
+  const { data: slots, isLoading: loadingSlots } = useGetStudentAvailableSlots(
     slotsParams,
-    { query: { enabled: !!selectedLessonType && !!selectedDate, queryKey: getGetAvailableSlotsQueryKey(slotsParams) } }
+    { query: { enabled: !!selectedLessonType && !!selectedDate, queryKey: getGetStudentAvailableSlotsQueryKey(slotsParams) } }
   );
 
   const createMutation = useCreateBooking();

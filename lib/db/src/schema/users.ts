@@ -10,8 +10,9 @@ export const usersTable = pgTable("users", {
   displayName: text("display_name").notNull(),
   hasSeenTour: boolean("has_seen_tour").notNull().default(false),
   // Nullable permanently: a brand-new student can hit /student/me before ever
-  // booking a lesson, at which point there's no teacher to assign yet. Set on
-  // first booking (adopt-on-first-booking in POST /student/bookings).
+  // linking to a teacher, at which point there's no teacher to assign yet. Set
+  // by POST /student/link-teacher (a valid teacher signup code), which the
+  // frontend gates every other student route behind.
   teacherId: integer("teacher_id").references(() => teachersTable.id),
   isBanned: boolean("is_banned").notNull().default(false),
   bannedAt: timestamp("banned_at", { withTimezone: true }),

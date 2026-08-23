@@ -6,11 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface FaqEntry {
-  id: number;
-  teacherId: number;
-  question: string;
-  answer: string;
-  displayOrder: number;
-  isVisible: boolean;
+export interface EnterSignupCodeInput {
+  code: string;
 }

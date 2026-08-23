@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListTeacherStudents, useGetTeacherStudent, useGrantPackage, useListTeacherHomework, useListLessonTypes } from "@workspace/api-client-react";
+import { useListTeacherStudents, useGetTeacherStudent, useGrantPackage, useListTeacherHomework, useListTeacherLessonTypes } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -83,7 +83,7 @@ function StudentDetail({ id }: { id: number }) {
 
   const [grantLessons, setGrantLessons] = useState(5);
   const [grantLessonTypeId, setGrantLessonTypeId] = useState<number | null>(null);
-  const { data: lessonTypes } = useListLessonTypes();
+  const { data: lessonTypes } = useListTeacherLessonTypes();
   const grantableLessonTypes = (lessonTypes ?? []).filter((lt) => lt.isActive && !lt.isTrial);
   const lessonTypeName = (lessonTypeId: number) =>
     (lessonTypes ?? []).find((lt) => lt.id === lessonTypeId)?.name ?? "Lesson";
