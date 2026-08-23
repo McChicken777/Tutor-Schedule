@@ -5,10 +5,7 @@ import { teachersTable } from "./teachers";
 
 export const faqsTable = pgTable("faqs", {
   id: serial("id").primaryKey(),
-  // Nullable only during the multi-tenant cutover backfill (see
-  // scripts/backfill-testimonials-faqs-teacher-id.ts); becomes NOT NULL once
-  // existing rows are backfilled.
-  teacherId: integer("teacher_id").references(() => teachersTable.id),
+  teacherId: integer("teacher_id").references(() => teachersTable.id).notNull(),
   question: text("question").notNull(),
   answer: text("answer").notNull(),
   displayOrder: integer("display_order").notNull().default(0),
