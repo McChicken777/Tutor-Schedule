@@ -18,6 +18,8 @@ import { useSyncPushSubscription } from "@/hooks/use-push-notifications";
 import Landing from "@/pages/public/Landing";
 import SignInPage from "@/pages/public/SignIn";
 import SignUpPage from "@/pages/public/SignUp";
+import Terms from "@/pages/public/Terms";
+import Privacy from "@/pages/public/Privacy";
 import StudentDashboard from "@/pages/student/Dashboard";
 import LinkTeacher from "@/pages/student/LinkTeacher";
 import StudentBookings from "@/pages/student/Bookings";
@@ -399,6 +401,8 @@ function ClerkProviderWithRoutes() {
             <Route path="/" component={HomeRedirect} />
             <Route path="/sign-in/*?" component={SignInPage} />
             <Route path="/sign-up/*?" component={SignUpPage} />
+            <Route path="/terms" component={Terms} />
+            <Route path="/privacy" component={Privacy} />
 
             {/* Teacher registration */}
             <Route path="/teacher/sign-in/*?" component={TeacherSignInGate} />

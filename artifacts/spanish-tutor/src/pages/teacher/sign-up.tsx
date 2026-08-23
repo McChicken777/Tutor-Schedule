@@ -1,4 +1,5 @@
 import { SignUp } from "@clerk/react";
+import SignUpConsentGate from "@/components/SignUpConsentGate";
 
 export default function TeacherSignUpPage() {
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -9,12 +10,14 @@ export default function TeacherSignUpPage() {
     >
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm"></div>
       <div className="relative z-10">
-        <SignUp
-          routing="path"
-          path={`${basePath}/teacher/sign-up`}
-          signInUrl={`${basePath}/teacher/sign-in`}
-          forceRedirectUrl={`${basePath}/teacher/onboarding`}
-        />
+        <SignUpConsentGate variant="teacher">
+          <SignUp
+            routing="path"
+            path={`${basePath}/teacher/sign-up`}
+            signInUrl={`${basePath}/teacher/sign-in`}
+            forceRedirectUrl={`${basePath}/teacher/onboarding`}
+          />
+        </SignUpConsentGate>
       </div>
     </div>
   );

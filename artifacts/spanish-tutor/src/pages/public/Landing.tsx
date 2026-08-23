@@ -113,12 +113,16 @@ export default function Landing() {
             <img src={`${basePath}/logo.png`} alt="Logo" className="w-8 h-8 opacity-70" />
             <span className="font-serif font-bold text-foreground">LaCastia</span>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground text-center sm:text-right">
             © {new Date().getFullYear()} LaCastia
             <span className="mx-2">·</span>
             <Link href="/teacher/sign-in" className="hover:text-foreground hover:underline">Teacher login</Link>
             <span className="mx-2">·</span>
             <Link href="/teacher/sign-up" className="hover:text-foreground hover:underline">Become a tutor</Link>
+            <span className="mx-2">·</span>
+            <Link href="/privacy" className="hover:text-foreground hover:underline">Privacy Policy</Link>
+            <span className="mx-2">·</span>
+            <Link href="/terms" className="hover:text-foreground hover:underline">Terms of Service</Link>
           </p>
         </div>
       </footer>
