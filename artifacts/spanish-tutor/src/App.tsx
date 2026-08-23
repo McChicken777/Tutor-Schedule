@@ -38,8 +38,6 @@ import TeacherStudents from "@/pages/teacher/Students";
 import TeacherMessages from "@/pages/teacher/Messages";
 import TeacherAvailability from "@/pages/teacher/Availability";
 import TeacherSettings from "@/pages/teacher/Settings";
-import TeacherTestimonials from "@/pages/teacher/Testimonials";
-import TeacherFaqs from "@/pages/teacher/Faqs";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import AdminTestimonials from "@/pages/admin/Testimonials";
 import AdminFaqs from "@/pages/admin/Faqs";
@@ -149,15 +147,20 @@ function PushSubscriptionSync() {
 function ClerkQueryClientCacheInvalidator() {
   const { addListener } = useClerk();
   const qc = useQueryClient();
-  const prevUserIdRef = useRef<string | null | undefined>(undefined);
+  const prevUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = addListener(({ user }) => {
       const userId = user?.id ?? null;
-      if (
-        prevUserIdRef.current !== undefined &&
-        prevUserIdRef.current !== userId
-      ) {
+      // Clerk briefly reports no user during its routine background session
+      // check (e.g. whenever the tab regains focus) — ignore that blip
+      // entirely rather than treating it as a sign-out. Only clear the cache
+      // when we go from one real signed-in user straight to a *different*
+      // real signed-in user (an actual account switch on a shared device);
+      // otherwise a focus-triggered false "sign-out" wipes every cached
+      // query and drops the whole app back to its loading screens.
+      if (userId == null) return;
+      if (prevUserIdRef.current != null && prevUserIdRef.current !== userId) {
         qc.clear();
       }
       prevUserIdRef.current = userId;
@@ -426,12 +429,6 @@ function ClerkProviderWithRoutes() {
             </Route>
             <Route path="/teacher/availability">
               <TeacherPortal><TeacherAvailability /></TeacherPortal>
-            </Route>
-            <Route path="/teacher/testimonials">
-              <TeacherPortal><TeacherTestimonials /></TeacherPortal>
-            </Route>
-            <Route path="/teacher/faqs">
-              <TeacherPortal><TeacherFaqs /></TeacherPortal>
             </Route>
             <Route path="/teacher/settings">
               <TeacherPortal><TeacherSettings /></TeacherPortal>

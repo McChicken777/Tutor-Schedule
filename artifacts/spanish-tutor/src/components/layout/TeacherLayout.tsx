@@ -14,8 +14,6 @@ import {
   MoreHorizontal,
   Wallet,
   Settings,
-  Star,
-  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PingDot from "@/components/ui/ping-dot";
@@ -77,8 +75,6 @@ export default function TeacherLayout({ children }: { children: ReactNode }) {
     { label: "Packages", href: "/teacher/packages", icon: Wallet },
     { label: "Availability", href: "/teacher/availability", icon: CalendarOff },
     { label: "Lesson Types", href: "/teacher/lesson-types", icon: BookOpen },
-    { label: "Testimonials", href: "/teacher/testimonials", icon: Star },
-    { label: "FAQ", href: "/teacher/faqs", icon: HelpCircle },
     { label: "Settings", href: "/teacher/settings", icon: Settings },
   ];
   const primaryItems = navItems.filter((item) => item.primary);
