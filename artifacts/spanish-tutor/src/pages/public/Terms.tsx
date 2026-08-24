@@ -26,9 +26,8 @@ export default function Terms() {
           <section>
             <p>
               These Terms of Service ("Terms") govern your use of LaCastia (the "Platform," "we," "us"),
-              operated by <strong>[LEGAL BUSINESS NAME — e.g. "Mellisa Ortiz, sole trader" or a registered
-              company name]</strong>. By creating an account or using the Platform, you agree to these
-              Terms. If you do not agree, do not use the Platform.
+              operated by <strong>Mellisa Andrea Ortiz Neciosup</strong>. By creating an account or using
+              the Platform, you agree to these Terms. If you do not agree, do not use the Platform.
             </p>
           </section>
 
@@ -159,7 +158,7 @@ export default function Terms() {
               Google Meet and Google Calendar) used in connection with it. To the extent any liability
               cannot be excluded, our total liability for any claim relating to the Platform is limited to
               the greater of the amount you paid us directly in the past 12 months (which, since we do not
-              charge for lesson payments, may be zero) or [PLACEHOLDER AMOUNT, e.g. €100].
+              charge for lesson payments, may be zero) or €100.
             </p>
           </section>
 
@@ -185,10 +184,9 @@ export default function Terms() {
           <section>
             <h2>13. Governing Law</h2>
             <p>
-              These Terms are governed by the laws of <strong>[PLACEHOLDER — your country/state of
-              operation]</strong>, without regard to conflict-of-law principles. Any dispute arising from
-              these Terms or the Platform will be subject to the exclusive jurisdiction of the courts of{" "}
-              <strong>[PLACEHOLDER — your city/country]</strong>.
+              These Terms are governed by the laws of <strong>Slovenia</strong>, without regard to
+              conflict-of-law principles. Any dispute arising from these Terms or the Platform will be
+              subject to the exclusive jurisdiction of the courts of <strong>Slovenia</strong>.
             </p>
           </section>
 
@@ -196,7 +194,7 @@ export default function Terms() {
             <h2>14. Contact</h2>
             <p>
               Questions about these Terms? Contact us at{" "}
-              <strong>[PLACEHOLDER — support/contact email]</strong>.
+              <strong>mellisa.neciosup@gmail.com</strong>.
             </p>
           </section>
 

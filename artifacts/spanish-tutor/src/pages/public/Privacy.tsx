@@ -26,9 +26,8 @@ export default function Privacy() {
           <section>
             <p>
               This Privacy Policy explains what information LaCastia (the "Platform," "we," "us"),
-              operated by <strong>[LEGAL BUSINESS NAME — placeholder, see Terms of Service]</strong>,
-              collects, how we use it, and the choices you have. It applies to tutors and students who use
-              the Platform.
+              operated by <strong>Mellisa Andrea Ortiz Neciosup</strong>, collects, how we use it, and the
+              choices you have. It applies to tutors and students who use the Platform.
             </p>
           </section>
 
@@ -162,7 +161,7 @@ export default function Privacy() {
             <h2>11. Contact</h2>
             <p>
               Questions about this Policy, or want to exercise a data right described above? Contact us at{" "}
-              <strong>[PLACEHOLDER — support/contact email]</strong>.
+              <strong>mellisa.neciosup@gmail.com</strong>.
             </p>
           </section>
 
