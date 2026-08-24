@@ -1523,9 +1523,18 @@ router.get("/calendar/auth", requireTeacher, async (req, res): Promise<void> => 
     access_type: "offline",
     prompt: "consent",
     state,
+    // Narrowest scopes that cover what calendar.ts actually calls
+    // (calendarList.list, events.list/insert/delete, settings.get) — the full
+    // "auth/calendar" scope is a Google "restricted" scope requiring an
+    // annual paid-tier security assessment (CASA) to verify; these are all
+    // "sensitive" scopes instead, which only need the lighter-weight
+    // sensitive-scope verification (app info + justification + demo video,
+    // no security assessment). Don't widen this back to "auth/calendar"
+    // without a real reason — it changes which verification track applies.
     scope: [
-      "https://www.googleapis.com/auth/calendar",
       "https://www.googleapis.com/auth/calendar.events",
+      "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
+      "https://www.googleapis.com/auth/calendar.settings.readonly",
       "openid",
       "email",
     ],
