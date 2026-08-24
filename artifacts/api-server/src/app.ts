@@ -3,6 +3,8 @@ import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import { pool } from "@workspace/db";
 import { clerkMiddleware } from "@clerk/express";
 import { publishableKeyFromHost } from "@clerk/shared/keys";
 import {
@@ -47,9 +49,15 @@ app.use(cors({ credentials: true, origin: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session for admin auth
+// Session for admin auth and the Google Calendar OAuth handshake. Backed by
+// Postgres (not express-session's default in-memory store) because the
+// in-memory store doesn't survive a deploy landing the OAuth callback on a
+// different server instance (or a restarted one) than the request that
+// started the flow — which silently broke calendar connection in production.
+const PgSession = connectPgSimple(session);
 app.use(
   session({
+    store: new PgSession({ pool, tableName: "session", createTableIfMissing: true }),
     secret: process.env.SESSION_SECRET || "dev-secret-change-in-prod",
     resave: false,
     saveUninitialized: false,
