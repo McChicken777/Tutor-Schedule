@@ -51,6 +51,7 @@ import { isCalendarConnected, getCalendarEmail, deleteCalendarEvent, createOAuth
 import { google } from "googleapis";
 import { calendarTokensTable } from "@workspace/db";
 import { mapHomeworkRow } from "../lib/homeworkMapper";
+import { logger } from "../lib/logger";
 import { mapReportRow } from "../lib/reportMapper";
 import { isKeyForBookingContext } from "../lib/objectStorage";
 
@@ -1635,6 +1636,7 @@ router.get("/admin/calendar/callback", async (req, res): Promise<void> => {
 
     res.redirect("/teacher/availability?calendarConnected=1");
   } catch (err) {
+    logger.error({ err, teacherId: oauthTeacherId }, "Google Calendar OAuth callback failed");
     res.redirect("/teacher/availability?calendarError=1");
   }
 });
