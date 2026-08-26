@@ -54,10 +54,36 @@ app.use(express.urlencoded({ extended: true }));
 // in-memory store doesn't survive a deploy landing the OAuth callback on a
 // different server instance (or a restarted one) than the request that
 // started the flow — which silently broke calendar connection in production.
+//
+// Deliberately NOT using connect-pg-simple's own `createTableIfMissing` —
+// it reads its schema from a `table.sql` file it expects to sit next to its
+// own code at runtime, which esbuild's single-file bundle doesn't carry
+// along, so that path throws ENOENT in the built app. Creating the table
+// ourselves with plain SQL sidesteps it entirely.
+async function ensureSessionTable(): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "session" (
+      "sid" varchar NOT NULL COLLATE "default",
+      "sess" json NOT NULL,
+      "expire" timestamp(6) NOT NULL
+    ) WITH (OIDS=FALSE);
+  `);
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'session_pkey') THEN
+        ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
+      END IF;
+    END $$;
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");`);
+}
+ensureSessionTable().catch((err) => logger.error({ err }, "Failed to ensure session table exists"));
+
 const PgSession = connectPgSimple(session);
 app.use(
   session({
-    store: new PgSession({ pool, tableName: "session", createTableIfMissing: true }),
+    store: new PgSession({ pool, tableName: "session" }),
     secret: process.env.SESSION_SECRET || "dev-secret-change-in-prod",
     resave: false,
     saveUninitialized: false,
