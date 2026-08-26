@@ -22,6 +22,14 @@ const FRONTEND_DIST = path.join(import.meta.dirname, "../../spanish-tutor/dist/p
 
 const app: Express = express();
 
+// The deployed app sits behind a reverse proxy that terminates HTTPS — the
+// Node process itself only ever sees plain HTTP. Without this, Express's
+// req.secure is always false in production, and express-session silently
+// refuses to persist a `cookie.secure: true` session over what it perceives
+// as an insecure connection — which is exactly what broke the Google
+// Calendar OAuth state check with no exception ever thrown to catch.
+app.set("trust proxy", 1);
+
 app.use(
   pinoHttp({
     logger,

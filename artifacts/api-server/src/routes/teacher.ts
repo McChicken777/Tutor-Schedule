@@ -1567,11 +1567,22 @@ router.get("/admin/calendar/callback", async (req, res): Promise<void> => {
   delete (req.session as any).oauthTeacherId;
 
   if (!expectedState || typeof state !== "string" || state !== expectedState || !oauthTeacherId) {
+    logger.warn(
+      {
+        sessionId: req.session.id,
+        hasExpectedState: !!expectedState,
+        hasIncomingState: typeof state === "string",
+        statesMatch: typeof state === "string" && state === expectedState,
+        hasOauthTeacherId: !!oauthTeacherId,
+      },
+      "Google Calendar OAuth callback: state validation failed",
+    );
     res.redirect("/teacher/availability?calendarError=invalid_state");
     return;
   }
 
   if (error || !code || typeof code !== "string") {
+    logger.warn({ error, hasCode: !!code }, "Google Calendar OAuth callback: Google returned an error or no code");
     res.redirect("/teacher/availability?calendarError=1");
     return;
   }
