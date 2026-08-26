@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useGetTeacherMe, useRegisterTeacher, getGetTeacherMeQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,13 @@ export default function TeacherOnboardingPage() {
           <p className="text-sm text-muted-foreground text-center mt-2">
             This Clerk account isn't linked to a teacher profile yet.
           </p>
+        </div>
+
+        <div className="rounded-xl border border-border bg-accent/40 px-4 py-3 mb-5 text-sm text-muted-foreground">
+          <strong className="text-foreground">This creates a tutor account</strong>, not a student one.
+          If you're a student, you don't need to register here — go to{" "}
+          <Link href="/sign-up" className="underline text-primary">student sign-up</Link>{" "}
+          and enter your tutor's code instead.
         </div>
 
         <div className="space-y-3">

@@ -2224,6 +2224,77 @@ export function useGetTeacherMe<TData = Awaited<ReturnType<typeof getTeacherMe>>
 
 
 
+export const getDeleteTeacherAccountUrl = () => {
+
+
+
+
+  return `/api/teachers/me`
+}
+
+/**
+ * @summary Self-delete the current teacher's account — only allowed if it has no bookings or connected students
+ */
+export const deleteTeacherAccount = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteTeacherAccountUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteTeacherAccountMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTeacherAccount>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteTeacherAccount>>, TError,void, TContext> => {
+
+const mutationKey = ['deleteTeacherAccount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteTeacherAccount>>, void> = () => {
+
+
+          return  deleteTeacherAccount(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteTeacherAccountMutationResult = NonNullable<Awaited<ReturnType<typeof deleteTeacherAccount>>>
+
+    export type DeleteTeacherAccountMutationError = ErrorType<void>
+
+    /**
+ * @summary Self-delete the current teacher's account — only allowed if it has no bookings or connected students
+ */
+export const useDeleteTeacherAccount = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTeacherAccount>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteTeacherAccount>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getDeleteTeacherAccountMutationOptions(options));
+    }
+
 export const getRegisterTeacherUrl = () => {
 
 

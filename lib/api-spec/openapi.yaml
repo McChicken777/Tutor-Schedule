@@ -592,6 +592,19 @@ paths:
           description: Unauthorized
         "404":
           description: No teacher row is linked to this Clerk user yet
+    delete:
+      operationId: deleteTeacherAccount
+      tags: [teacher]
+      summary: Self-delete the current teacher's account — only allowed if it has no bookings or connected students
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Unauthorized
+        "404":
+          description: No teacher row is linked to this Clerk user
+        "409":
+          description: This account has real history and can't be self-deleted
 
   /teachers/register:
     post:

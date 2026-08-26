@@ -868,6 +868,12 @@ export const GetTeacherMeResponse = zod.object({
 
 
 /**
+ * @summary Self-delete the current teacher's account — only allowed if it has no bookings or connected students
+ */
+export const DeleteTeacherAccountResponse = zod.void()
+
+
+/**
  * @summary Register a brand-new teacher account for the current Clerk user
  */
 export const RegisterTeacherResponse = zod.object({

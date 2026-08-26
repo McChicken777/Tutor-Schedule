@@ -2,7 +2,18 @@ import { randomBytes } from "node:crypto";
 import { Router, type IRouter } from "express";
 import { clerkClient } from "@clerk/express";
 import { eq, isNull } from "drizzle-orm";
-import { db, teachersTable } from "@workspace/db";
+import {
+  db,
+  teachersTable,
+  bookingsTable,
+  usersTable,
+  lessonTypesTable,
+  availabilityOverridesTable,
+  calendarTokensTable,
+  siteSettingsTable,
+  testimonialsTable,
+  faqsTable,
+} from "@workspace/db";
 import { ClaimTeacherBody } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/requireAuth";
 
@@ -139,6 +150,47 @@ router.post("/teachers/claim", requireAuth, async (req, res): Promise<void> => {
     .where(eq(teachersTable.id, unclaimed.id))
     .returning();
   res.json(serializeTeacher(teacher));
+});
+
+// Self-service deletion — deliberately scoped to unused accounts only. A
+// teacher with any bookings or connected students has real history that a
+// plain hard-delete would orphan or destroy; that case needs a person to
+// handle it (reassignment, export, etc.), not a one-click endpoint.
+router.delete("/teachers/me", requireAuth, async (req, res): Promise<void> => {
+  const clerkUserId = (req as any).clerkUserId;
+  const [teacher] = await db.select().from(teachersTable).where(eq(teachersTable.clerkUserId, clerkUserId));
+  if (!teacher) {
+    res.status(404).json({ error: "No teacher account linked to this user" });
+    return;
+  }
+
+  const [booking] = await db.select({ id: bookingsTable.id }).from(bookingsTable).where(eq(bookingsTable.teacherId, teacher.id));
+  if (booking) {
+    res.status(409).json({ error: "This account has bookings on record and can't be self-deleted. Contact support." });
+    return;
+  }
+  const [student] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.teacherId, teacher.id));
+  if (student) {
+    res.status(409).json({ error: "This account has connected students and can't be self-deleted. Contact support." });
+    return;
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.delete(lessonTypesTable).where(eq(lessonTypesTable.teacherId, teacher.id));
+      await tx.delete(availabilityOverridesTable).where(eq(availabilityOverridesTable.teacherId, teacher.id));
+      await tx.delete(calendarTokensTable).where(eq(calendarTokensTable.teacherId, teacher.id));
+      await tx.delete(siteSettingsTable).where(eq(siteSettingsTable.teacherId, teacher.id));
+      await tx.delete(testimonialsTable).where(eq(testimonialsTable.teacherId, teacher.id));
+      await tx.delete(faqsTable).where(eq(faqsTable.teacherId, teacher.id));
+      await tx.delete(teachersTable).where(eq(teachersTable.id, teacher.id));
+    });
+  } catch {
+    res.status(409).json({ error: "This account still has related data and can't be self-deleted. Contact support." });
+    return;
+  }
+
+  res.status(204).send();
 });
 
 export default router;

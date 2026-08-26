@@ -2,19 +2,25 @@ import { useState } from "react";
 import {
   useGetTeacherMe,
   useRegenerateSignupCode,
+  useDeleteTeacherAccount,
   getGetTeacherMeQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useClerk } from "@clerk/react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, RefreshCw } from "lucide-react";
+import { describeError } from "@/lib/errors";
+import { Copy, RefreshCw, Trash2 } from "lucide-react";
 
 export default function TeacherSettings() {
   const { data: teacher, isLoading } = useGetTeacherMe();
   const regenerateMutation = useRegenerateSignupCode();
+  const deleteMutation = useDeleteTeacherAccount();
   const qc = useQueryClient();
   const { toast } = useToast();
+  const { signOut } = useClerk();
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -31,6 +37,17 @@ export default function TeacherSettings() {
         qc.invalidateQueries({ queryKey: getGetTeacherMeQueryKey() });
       },
       onError: () => toast({ title: "Couldn't regenerate code", variant: "destructive" }),
+    });
+  };
+
+  const handleDelete = () => {
+    if (!confirm("Delete your teacher account permanently? This can't be undone.")) return;
+    deleteMutation.mutate(undefined, {
+      onSuccess: () => {
+        toast({ title: "Account deleted" });
+        signOut({ redirectUrl: basePath || "/" });
+      },
+      onError: (error) => toast({ title: "Couldn't delete account", description: describeError(error).message, variant: "destructive" }),
     });
   };
 
@@ -78,6 +95,23 @@ export default function TeacherSettings() {
             immediately, but students already connected to you stay connected.
           </p>
         </div>
+      </div>
+
+      <div className="max-w-xl bg-card p-6 rounded-2xl border border-destructive/30 mt-6">
+        <h2 className="text-lg font-semibold text-destructive">Danger zone</h2>
+        <p className="text-sm text-muted-foreground mt-1 mb-4">
+          Permanently delete your teacher account. Only available while it has no bookings or
+          connected students — if it does, contact support instead.
+        </p>
+        <Button
+          variant="outline"
+          onClick={handleDelete}
+          disabled={deleteMutation.isPending}
+          className="flex items-center gap-2 text-destructive border-destructive/40 hover:bg-destructive/10"
+        >
+          <Trash2 className="w-4 h-4" />
+          {deleteMutation.isPending ? "Deleting..." : "Delete account"}
+        </Button>
       </div>
     </div>
   );
