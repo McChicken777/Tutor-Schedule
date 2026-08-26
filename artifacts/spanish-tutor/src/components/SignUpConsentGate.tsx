@@ -7,6 +7,22 @@ import { cn } from "@/lib/utils";
 // mounted (Clerk's iframe-like internals don't need to be, and shouldn't be,
 // torn down/remounted) but is visually and interactively disabled until the
 // box is checked.
+// "Sign up with Google" leaves the page entirely and comes back (OAuth
+// round-trip), remounting this component with fresh React state — without
+// persisting the checkbox, that reset the widget to disabled/greyed-out and
+// flashed the consent text back in right in the middle of the redirect
+// chain. sessionStorage survives that round-trip (cleared when the tab
+// closes, which is fine — it only needs to last one signup attempt).
+const CONSENT_STORAGE_KEY = "lacastia-signup-consent";
+
+function readStoredConsent(): boolean {
+  try {
+    return sessionStorage.getItem(CONSENT_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 export default function SignUpConsentGate({
   children,
   variant = "student",
@@ -14,8 +30,18 @@ export default function SignUpConsentGate({
   children: ReactNode;
   variant?: "student" | "teacher";
 }) {
-  const [agreed, setAgreed] = useState(false);
+  const [agreed, setAgreed] = useState(readStoredConsent);
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  const handleChange = (checked: boolean) => {
+    setAgreed(checked);
+    try {
+      sessionStorage.setItem(CONSENT_STORAGE_KEY, checked ? "1" : "0");
+    } catch {
+      // Private browsing etc — consent just won't survive an OAuth
+      // round-trip in that case, not worth failing over.
+    }
+  };
 
   return (
     <div className="w-full flex flex-col items-center gap-4">
@@ -23,7 +49,7 @@ export default function SignUpConsentGate({
         <input
           type="checkbox"
           checked={agreed}
-          onChange={(e) => setAgreed(e.target.checked)}
+          onChange={(e) => handleChange(e.target.checked)}
           className="mt-0.5 w-4 h-4 accent-primary shrink-0"
         />
         <span className="leading-snug">

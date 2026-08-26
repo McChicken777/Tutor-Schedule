@@ -11,7 +11,12 @@ export default function SignUpPage() {
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm"></div>
       <div className="relative z-10 w-full max-w-[440px]">
         <SignUpConsentGate>
-          <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
+          <SignUp
+            routing="path"
+            path={`${basePath}/sign-up`}
+            signInUrl={`${basePath}/sign-in`}
+            forceRedirectUrl={`${basePath}/link-teacher`}
+          />
         </SignUpConsentGate>
       </div>
     </div>
