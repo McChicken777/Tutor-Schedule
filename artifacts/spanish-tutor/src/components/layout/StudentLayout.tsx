@@ -4,6 +4,7 @@ import { useClerk, useUser } from "@clerk/react";
 import { cn } from "@/lib/utils";
 import { useStudentTour } from "@/hooks/use-student-tour";
 import TourCard from "@/components/tour/TourCard";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { LogOut, LayoutDashboard, Calendar, BookOpen, MessageCircle, FileText, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PingDot from "@/components/ui/ping-dot";
@@ -146,36 +147,57 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
             const active = location === item.href || location.startsWith(`${item.href}/`);
             const isTourStep = tour.isHighlighted(item.href);
             return (
-              <div key={item.href} className="relative">
-                <Link
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                    isTourStep && "relative z-[45] ring-2 ring-primary ring-offset-2 ring-offset-card",
-                    active
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                  )}
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span className="flex-1">{item.label}</span>
-                  {item.href === "/homework" && hasPendingHomework && <PingDot />}
-                  {item.href === "/messages" && hasUnreadMessages && <PingDot />}
-                </Link>
+              <Popover key={item.href} open={isTourStep}>
+                <PopoverAnchor asChild>
+                  <div className="relative">
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                        isTourStep && "relative z-[45] ring-2 ring-primary ring-offset-2 ring-offset-card",
+                        active
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                      )}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span className="flex-1">{item.label}</span>
+                      {item.href === "/homework" && hasPendingHomework && <PingDot />}
+                      {item.href === "/messages" && hasUnreadMessages && <PingDot />}
+                    </Link>
+                  </div>
+                </PopoverAnchor>
                 {isTourStep && (
-                  <TourCard
-                    className="absolute z-[45] top-0 left-full ml-3 w-72 max-w-[calc(100vw-2rem)]"
-                    index={tour.index}
-                    total={tour.total}
-                    title={tour.step.title}
-                    description={tour.step.description}
-                    isLast={tour.isLast}
-                    onNext={tour.next}
-                    onBack={tour.back}
-                    onSkip={tour.finish}
-                  />
+                  // Radix's Popover handles keeping this on-screen on its own —
+                  // flips side / shifts along the edge as needed via its
+                  // built-in collision detection, so this never renders off
+                  // the visible viewport the way a fixed CSS offset could on
+                  // a narrower screen. Non-dismissible except via the card's
+                  // own Skip/Next/Close controls, matching the old behavior.
+                  <PopoverContent
+                    side="right"
+                    align="start"
+                    sideOffset={12}
+                    collisionPadding={16}
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                    onEscapeKeyDown={(e) => e.preventDefault()}
+                    onPointerDownOutside={(e) => e.preventDefault()}
+                    onInteractOutside={(e) => e.preventDefault()}
+                    className="z-[45] w-72 max-w-[calc(100vw-2rem)] border-0 bg-transparent p-0 shadow-none"
+                  >
+                    <TourCard
+                      index={tour.index}
+                      total={tour.total}
+                      title={tour.step.title}
+                      description={tour.step.description}
+                      isLast={tour.isLast}
+                      onNext={tour.next}
+                      onBack={tour.back}
+                      onSkip={tour.finish}
+                    />
+                  </PopoverContent>
                 )}
-              </div>
+              </Popover>
             );
           })}
         </nav>
